@@ -1,0 +1,32 @@
+# Visual Studio
+.vs/
+bin/
+obj/
+*.user
+*.suo
+*.sln.docstates
+.vscode/settings.json
+
+# Visual Studio Code
+node_modules/
+dist/
+build/
+*.env
+*.env.local
+*.log
+
+# Android Studio
+.gradle/
+.idea/
+local.properties
+*.iml
+build/
+captures/
+.cxx/
+
+# General
+*.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
