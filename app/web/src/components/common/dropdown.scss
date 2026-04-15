@@ -1,0 +1,39 @@
+// dropdown template
+.dropdown-container{
+    position: absolute;
+    top: 100%;
+    left: 0;
+    min-width: 100%;
+    width: auto;
+    background-color: var(--neutral-0);
+    height: auto;
+    border-radius: var(--border-radius-base);
+    box-shadow: var(--box-shadow-base);
+    margin-top: rem(2);
+    z-index: 10;
+
+    .dropdown-item{
+        transition: 0.25s;
+        margin-left: rem(2);
+        margin-right: rem(2);
+        margin-top: rem(5);
+        margin-bottom: rem(5);
+        padding-top: rem(10);
+        padding-bottom: rem(10);
+
+        .dropdown-item-text{
+            transition: 0.25s;
+            color: var(--neutral-100);
+            padding-left: rem(24);
+            padding-right: rem(24);
+            user-select: none;
+            white-space: nowrap;
+        }
+    }
+    .dropdown-item:hover{
+        background-color: var(--item-hover-color);
+    }
+    .dropdown-item:active{
+        filter: brightness(0.95);
+    }
+}

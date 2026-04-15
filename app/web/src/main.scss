@@ -1,0 +1,79 @@
+:root {
+  /* white theme: 0 - light color to 100 - dark color */
+  /* white: 100, 15, 25, 50, 75% */
+  --neutral-0:  #FFFFFF;
+  --neutral-15: #FFFFFF26;
+  --neutral-25: #FFFFFF40;
+  --neutral-50: #FFFFFF80;
+  --neutral-75: #FFFFFFBF; 
+  /* black: 15, 25, 50, 75, 100 */
+  --neutral-85: #00000026;   
+  --neutral-90: #00000040;  
+  --neutral-95: #00000080;    
+  --neutral-98: #000000BF;   
+  --neutral-100: #000000; 
+
+  --base1-color: #323232;
+  --base2-color: #383838;
+  --base3-color: #484848;
+  --base4-color: #585858;
+  --base5-color: #646464;
+
+  --dropdown-hover-color: #404040;
+  --item-hover-color: #E6E6E6;
+  --bg-color: #F7F7F7;
+
+  --primary-accent: #40B4A4;
+  --secondary-accent: #73CFC2;
+
+  --tag-text-color: #1C7C75;
+  --exit-text-color: #ed3c3c;
+  --exit-text-hover-color: #f24e43;
+
+  --accept-color: #46DD49;
+  --accept-button-color: #43CC45;
+  --in-process-color: #DDB046;
+  --in-process-text-color: #BF9022;
+  --reject-color: #DD5E46;
+  --info-color: #4671DD;
+
+  --new-notification-color: #FF9292;
+
+  --border-radius-base: 8px;
+  --border-radius-small: 4px;
+
+  --font-family-base: "Roboto";
+  --font-family-logo: "Rokkitt";
+
+  --box-shadow-base: 0 4px 4px rgba(0, 0, 0, 0.25);
+  --box-shadow-primary: 0 0 0 1px var(--primary-accent);
+}
+
+@mixin dark-theme-values {
+
+}
+
+*{
+    box-sizing: border-box;
+}
+
+body{
+    margin: 0;
+    padding: 0;
+    background-color: var(--bg-color);
+}
+
+p{
+    margin: 0;
+}
+
+@media (max-width: 1290px) {
+    html{
+        font-size: 14px;
+    }
+}
+@media (max-width: 1125px) {
+    html{
+        font-size: 12px;
+    }
+}
