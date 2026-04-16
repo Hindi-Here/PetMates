@@ -2,11 +2,11 @@ import LogoIcon from '@icons/icon.svg?react'
 import DropdownIcon from '@icons/dropdown.svg?react'
 import NotificationIcon from '@icons/notification.svg?react'
 import MenuIcon from '@icons/menu.svg?react'
-import AvatarIcon from '@icons/18.png';
 
 import './header.scss'
-import { useState, useEffect, useRef } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatedDropdown } from '../config/function';
+import { useIsShort, useIsOpen } from '../config/function';
+import { HeaderDropdownNavigation } from '../common/dropdown';
 
 const Logo = () => {
   return (
@@ -41,7 +41,7 @@ const Profile = () => {
       </div>
       <div ref={menuRef} className={`profile-panel-container ${isOpen ? 'open' : ''}`} onClick={openMenu}>
         <div className='avatar-container'>
-          <img className='avatar-image' src={AvatarIcon} />
+         {/* <img className='avatar-image' src={AvatarIcon} /> */}
         </div>
         <div className='username-container'>
           <p className='username-text'> User#60698 </p>
@@ -51,18 +51,9 @@ const Profile = () => {
           <DropdownIcon className={`dropdown-ico ${isOpen ? 'rotated' : ''}`} fill='white'></DropdownIcon>
         </div>
       </div>
-        <AnimatePresence>
-          {isOpen && (
-            <motion.div
-              className="dropdown-wrapper"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.25 }}>
-              <HeaderDropdownNavigation />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <AnimatedDropdown isOpen={isOpen} className="dropdown-wrapper">
+          <HeaderDropdownNavigation />
+        </AnimatedDropdown>
     </div>
   )
 }
@@ -73,58 +64,10 @@ const ShortMenu = () => {
 
   return(
     <div ref={menuRef} className={`short-menu-container ${isOpen ? 'open' : ''}`} onClick={openMenu}>
-      <MenuIcon className='short-menu-ico' width={20} height={20} fill='white'></MenuIcon>
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            className="dropdown-wrapper"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.25 }}>
-            <HeaderDropdownNavigation />
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  )
-}
-
-const HeaderDropdownNavigation = () => {
-  const isShortVer = useIsShort(965);
-
-  const menuItems = [
-    { id: 'profile', label: 'Профиль', short: false },
-    { id: 'projects', label: 'Мои проекты', short: false },
-    
-    { id: 'applications', label: 'Заявки', short: true },
-    { id: 'events', label: 'Мероприятия', short: true },
-    { id: 'users', label: 'Участники', short: true },
-    
-    { id: 'notifications', label: 'Уведомления', short: false },
-    { id: 'settings', label: 'Настройки', short: false },
-    
-    { id: 'beta', label: 'Бета-тестирование', short: true },
-  ];
-
-  return(
-    <div className='dropdown-nav-container'>
-      <hr className='separator' />
-
-      {menuItems.map((item) => {
-        if (!item.short || isShortVer) {
-          return (
-            <div key={item.id} className='dropdown-nav-item'>
-              <p className='dropdown-nav-item-text'>{item.label}</p>
-            </div>
-          );
-        }
-      })}
-
-      <hr className='separator' />  
-      <div id='logout' className='dropdown-nav-item'>
-        <p id='logout-text' className='dropdown-nav-item-text'> Выйти </p>
-      </div>
+      <MenuIcon className='short-menu-ico'/>
+      <AnimatedDropdown isOpen={isOpen} className="dropdown-wrapper">
+        <HeaderDropdownNavigation />
+      </AnimatedDropdown>
     </div>
   )
 }
@@ -148,44 +91,4 @@ export default function Header() {
       </div>
     </div>
   )
-}
-
-// TSX scripts
-
-// check mobile/small screen
-export function useIsShort(smallPoint = 965): boolean {
-  const [flag, setFlag] = useState(window.innerWidth < smallPoint);
-
-  useEffect(() => {
-    const resize = () => {
-      setFlag(window.innerWidth < smallPoint);
-    };
-
-    window.addEventListener('resize', resize);
-    
-    return () => window.removeEventListener('resize', resize);
-  }, [smallPoint]); 
-
-  return flag;
-}
-
-// check open/close header dropdown menu
-export function useIsOpen(){
-  const [isOpen, setIsOpen] = useState<boolean>(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, [isOpen]);
-
-  return { isOpen, setIsOpen, menuRef };
 }

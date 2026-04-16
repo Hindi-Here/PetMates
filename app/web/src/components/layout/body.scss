@@ -87,6 +87,8 @@
     border-right: 1px solid var(--neutral-85);
     margin-left: rem(325);
 }
+
+// adaptive for smaller screens
 @media (max-width: 965px) {
     .main {
         width: 100%;

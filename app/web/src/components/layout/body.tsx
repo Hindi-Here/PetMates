@@ -6,16 +6,17 @@ import BugIcon from '@icons/bug.svg?react'
 
 import './body.scss'
 import { useState } from 'react';
-import { useIsShort } from './header';
+import { useIsShort } from '../config/function';
 
-import Search from '../common/search';
-import QueryContent from '../pages/vacancy'
+import { Search } from '../common/search';
+import QueryContent from '../pages/vacancy'; 
 
 interface NavigationProps {
   activeId: string;
   setActiveId: (id: string) => void;
 }
 
+// left side navigation
 const Navigation = ({ activeId, setActiveId }: NavigationProps) => {
   const menuItems = [
     { id: 'profile', label: 'Профиль', Icon: ProfileIcon },
@@ -54,11 +55,12 @@ const Navigation = ({ activeId, setActiveId }: NavigationProps) => {
   )
 }
 
+// routed content in dependency of activeId
 const Content = ({ activeId }: { activeId: string }) => {
   return (
     <div className='content-container'>
       <Search activeId={activeId}/>
-      <QueryContent></QueryContent>
+      <QueryContent/>
     </div>
 )}
 

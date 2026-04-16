@@ -3,37 +3,26 @@ import SearchIcon from '@icons/search.svg?react'
 import SortUpIcon from '@icons/sort_up.svg?react'
 import SortDownIcon from '@icons/sort_down.svg?react'
 
-import { useState, useEffect } from 'react'
 import './search.scss'
-import './dropdown.scss'
-import Dropdown from './dropdown'
-import { useIsOpen } from '../layout/header'
+import { useState, useEffect } from 'react'
+import { Dropdown } from './dropdown';
+import { useIsOpen } from '../config/function';
 
-interface SearchProps {
-  activeId: string;
-}
-
+// options for each tab (vacancy, events, users)
 interface SearchOption {
   id: string;
   label: string;
 }
 
-export default function Search ({ activeId }: SearchProps) {
-  const [isSortUp, setIsSortUp] = useState(true);
-  const setSort = () => setIsSortUp(prev => !prev);
-
-  const { isOpen: isNameDropdownOpen, setIsOpen: setIsNameDropdownOpen, menuRef: nameMenuRef } = useIsOpen();
-  const { isOpen: isDateDropdownOpen, setIsOpen: setIsDateDropdownOpen, menuRef: dateMenuRef } = useIsOpen();
-
-  const tabOptions: Record<string, { searchOptions: SearchOption[]; sortOptions: SearchOption[] }> = {
+const tabOpt: Record<string, { searchOpt: SearchOption[]; sortOpt: SearchOption[] }> = {
     vacancy: {
-      searchOptions: [
+      searchOpt: [
         { id: 'name', label: 'Названию' },
         { id: 'tag', label: 'Тегу' },
         { id: 'author', label: 'Автору' },
         { id: 'project', label: 'Проекту' }
       ],
-      sortOptions: [
+      sortOpt: [
         { id: 'date', label: 'Дате добавления' },
         { id: 'alphabet', label: 'Алфавиту' },
         { id: 'count', label: 'Количеству оценок' },
@@ -41,12 +30,12 @@ export default function Search ({ activeId }: SearchProps) {
       ]
     },
     events: {
-      searchOptions: [
+      searchOpt: [
         { id: 'name', label: 'Названию' },
         { id: 'tag', label: 'Тегу' },
         { id: 'author', label: 'Автору' }
       ],
-      sortOptions: [
+      sortOpt: [
         { id: 'date', label: 'Дате добавления' },
         { id: 'alphabet', label: 'Алфавиту' },
         { id: 'count', label: 'Количеству оценок' },
@@ -54,12 +43,12 @@ export default function Search ({ activeId }: SearchProps) {
       ]
     },
     users: {
-      searchOptions: [
+      searchOpt: [
         { id: 'name', label: 'Названию' },
         { id: 'tag', label: 'Тегу' },
         { id: 'role', label: 'Роли' }
       ],
-      sortOptions: [
+      sortOpt: [
         { id: 'date', label: 'Дате регистрации' },
         { id: 'alphabet', label: 'Алфавиту' },
         { id: 'activity', label: 'Активности' },
@@ -69,25 +58,37 @@ export default function Search ({ activeId }: SearchProps) {
     }
   };
 
-  const currentOptions = tabOptions[activeId] || tabOptions.vacancy;
+// search manage
+export function Search ({ activeId }: { activeId: string }) {
+  // sort icon vector change 
+  const [isSortUp, setIsSortUp] = useState(true);
+  const setSort = () => setIsSortUp(prev => !prev);
 
+  // for open/close dropdown, color search/sort-type-container, rotated dropdown-ico 
+  const { isOpen: isSearchDropdownOpen, setIsOpen: setIsNameDropdownOpen, menuRef: searchMenuRef } = useIsOpen();
+  const { isOpen: isSortDropdownOpen, setIsOpen: setIsDateDropdownOpen, menuRef: sortMenuRef } = useIsOpen();
+
+  // get params from `tabOpt` for sort and search dropdown
+  const currentOpt = tabOpt[activeId] || tabOpt['vacancy']; // || for safe click on all tabs outside `tabOpt` 
+
+  // hooks for get params of search and sort & set default/user choice
   const [selectedSearch, setSelectedSearch] = useState<SearchOption | null>(null);
   const [selectedSort, setSelectedSort] = useState<SearchOption | null>(null);
 
+  // default params for each tab
   useEffect(() => {
-    const options = tabOptions[activeId] || tabOptions.vacancy;
-    setSelectedSearch(options.searchOptions[0]);
-    setSelectedSort(options.sortOptions[0]);
+    const options = tabOpt[activeId] || tabOpt['vacancy'];
+    setSelectedSearch(options.searchOpt[0]);
+    setSelectedSort(options.sortOpt[0]);
   }, [activeId]);
 
+  // user choise
   const handleSearchSelect = (item: SearchOption) => {
-    console.log('Selected search:', item);
     setSelectedSearch(item);
     setIsNameDropdownOpen(false);
   };
 
   const handleSortSelect = (item: SearchOption) => {
-    console.log('Selected sort:', item);
     setSelectedSort(item);
     setIsDateDropdownOpen(false);
   };
@@ -104,19 +105,19 @@ export default function Search ({ activeId }: SearchProps) {
             </div>
         </div>
         <div className="sort-line-container">
-            <div className='sort-group'>
-                <div ref={nameMenuRef} className={`sort-type-container ${isNameDropdownOpen ? 'active' : ''}`} onClick={() => setIsNameDropdownOpen(!isNameDropdownOpen)}>
-                    <p className='sort-type-text'>По {selectedSearch?.label.toLowerCase() || 'названию'}</p>
-                    <DropdownIcon className={`sort-type-dropdown-ico ${isNameDropdownOpen ? 'rotated' : ''}`}/>
+            <div className='sort-group-container'>
+                <div ref={searchMenuRef} className={`sort-type-container ${isSearchDropdownOpen ? 'active' : ''}`} onClick={() => setIsNameDropdownOpen(!isSearchDropdownOpen)}>
+                    <p className='sort-type-text'>По {selectedSearch?.label.toLowerCase()}</p>
+                    <DropdownIcon className={`sort-type-dropdown-ico ${isSearchDropdownOpen ? 'rotated' : ''}`}/>
                 </div>
-                <Dropdown isOpen={isNameDropdownOpen} items={currentOptions.searchOptions} onSelect={handleSearchSelect} />
+                <Dropdown isOpen={isSearchDropdownOpen} items={currentOpt.searchOpt} onSelect={handleSearchSelect} />
             </div>
-            <div className='sort-group'>
-                <div ref={dateMenuRef} className={`sort-type-container ${isDateDropdownOpen ? 'active' : ''}`} onClick={() => setIsDateDropdownOpen(!isDateDropdownOpen)}>
-                    <p className='sort-type-text'>Сортировка по {selectedSort?.label.toLowerCase() || 'дате добавления'}</p>
-                    <DropdownIcon className={`sort-type-dropdown-ico ${isDateDropdownOpen ? 'rotated' : ''}`}/>
+            <div className='sort-group-container'>
+                <div ref={sortMenuRef} className={`sort-type-container ${isSortDropdownOpen ? 'active' : ''}`} onClick={() => setIsDateDropdownOpen(!isSortDropdownOpen)}>
+                    <p className='sort-type-text'>Сортировка по {selectedSort?.label.toLowerCase()}</p>
+                    <DropdownIcon className={`sort-type-dropdown-ico ${isSortDropdownOpen ? 'rotated' : ''}`}/>
                 </div>
-                <Dropdown isOpen={isDateDropdownOpen} items={currentOptions.sortOptions} onSelect={handleSortSelect} />
+                <Dropdown isOpen={isSortDropdownOpen} items={currentOpt.sortOpt} onSelect={handleSortSelect} />
             </div>
              <div className='sort-vector-ico-container' onClick={setSort}>
                 {isSortUp ? (<SortUpIcon className='sort-vector-ico'/>) : (<SortDownIcon className='sort-vector-ico'/>)}

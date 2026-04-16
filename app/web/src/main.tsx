@@ -7,8 +7,8 @@ import Footer from './components/layout/footer'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <Header></Header>
-    <Main></Main>
-    <Footer></Footer>
+    <Header/>
+    <Main/>
+    <Footer/>
   </StrictMode>,
 )

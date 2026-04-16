@@ -1,3 +1,4 @@
+// theme and color set
 :root {
   /* white theme: 0 - light color to 100 - dark color */
   /* white: 100, 15, 25, 50, 75% */
@@ -53,6 +54,20 @@
 
 }
 
+// system theme
+@media (prefers-color-scheme: dark) {
+  :root {
+    @include dark-theme-values;
+  }
+}
+
+// user selected theme
+[data-theme='dark'] {
+  @include dark-theme-values;
+}
+
+// global styles
+
 *{
     box-sizing: border-box;
 }
@@ -67,6 +82,7 @@ p{
     margin: 0;
 }
 
+// adaptive global font size
 @media (max-width: 1290px) {
     html{
         font-size: 14px;

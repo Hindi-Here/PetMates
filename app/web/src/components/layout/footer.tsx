@@ -10,9 +10,9 @@ export default function Footer() {
       <div className="contact-container">
         <div className='social-container'>
           <p> Социальные сети: </p>
-          <VkIcon className='social-ico'></VkIcon>
-          <TelegramIcon className='social-ico'></TelegramIcon>
-          <OdnoklassnikiIcon className='social-ico'></OdnoklassnikiIcon>
+          <VkIcon className='social-ico'/>
+          <TelegramIcon className='social-ico'/>
+          <OdnoklassnikiIcon className='social-ico'/>
         </div>
         <div className="mail-container">
           <p> E-mail: </p>
