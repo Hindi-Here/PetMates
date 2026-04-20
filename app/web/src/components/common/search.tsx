@@ -6,7 +6,7 @@ import SortDownIcon from '@icons/sort_down.svg?react'
 import './search.scss'
 import { useState, useEffect } from 'react'
 import { Dropdown } from './dropdown';
-import { useIsOpen } from '../config/function';
+import { useIsOpen } from '../scripts/function';
 
 // options for each tab (vacancy, events, users)
 interface SearchOption {
@@ -59,10 +59,10 @@ const tabOpt: Record<string, { searchOpt: SearchOption[]; sortOpt: SearchOption[
   };
 
 // search manage
-export function Search ({ activeId }: { activeId: string }) {
+export default function Search ({ activeId }: { activeId: string }) {
   // sort icon vector change 
   const [isSortUp, setIsSortUp] = useState(true);
-  const setSort = () => setIsSortUp(prev => !prev);
+  const setSort = () => setIsSortUp(X => !X);
 
   // for open/close dropdown, color search/sort-type-container, rotated dropdown-ico 
   const { isOpen: isSearchDropdownOpen, setIsOpen: setIsNameDropdownOpen, menuRef: searchMenuRef } = useIsOpen();

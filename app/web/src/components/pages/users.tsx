@@ -30,6 +30,7 @@ const FoundContent = () => {
 }
 
 export default function QueryContent () {
+
   return (
     <FoundContent></FoundContent>
   )

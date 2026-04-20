@@ -1,24 +1,25 @@
 import './dropdown.scss'
 import { type JSX } from 'react';
-import { useIsShort } from '../config/function';
-import { AnimatedDropdown } from '../config/function';
+import { useIsShort } from '../scripts/function';
+import { AnimatedDropdown } from '../scripts/function';
+import { NavLink } from 'react-router-dom';
 
 // header dropdown navigation
 export function HeaderDropdownNavigation(): JSX.Element {
   const isShortVer = useIsShort(965);
 
   const menuItems = [
-    { id: 'profile', label: 'Профиль', short: false },
-    { id: 'projects', label: 'Мои проекты', short: false },
+    { id: 'profile', label: 'Профиль', path: '/profile', short: false },
+    { id: 'projects', label: 'Мои проекты', path: '/projects', short: false },
     
-    { id: 'applications', label: 'Заявки', short: true },
-    { id: 'events', label: 'Мероприятия', short: true },
-    { id: 'users', label: 'Участники', short: true },
+    { id: 'applications', label: 'Заявки', path: '/vacancy', short: true },
+    { id: 'events', label: 'Мероприятия', path: '/events', short: true },
+    { id: 'users', label: 'Участники', path: '/users', short: true },
     
-    { id: 'notifications', label: 'Уведомления', short: false },
-    { id: 'settings', label: 'Настройки', short: false },
+    { id: 'notifications', label: 'Уведомления', path: '/notifications', short: false },
+    { id: 'settings', label: 'Настройки', path: '/settings', short: false },
     
-    { id: 'beta', label: 'Бета-тестирование', short: true },
+    { id: 'beta', label: 'Бета-тестирование', path: '/bug', short: true },
   ];
 
   return(
@@ -28,16 +29,21 @@ export function HeaderDropdownNavigation(): JSX.Element {
       {menuItems.map((item) => {
         if (!item.short || isShortVer) {
           return (
-            <div key={item.id} className='dropdown-nav-item'>
+            <NavLink 
+              key={item.id} 
+              to={item.path}
+              draggable={false}
+              className={({ isActive }) => `dropdown-nav-item ${isActive ? 'active' : ''}`}
+              style={{ textDecoration: 'none', color: 'inherit' }}>
               <p className='dropdown-nav-item-text'>{item.label}</p>
-            </div>
+            </NavLink>
           );
         }
       })}
 
       <hr className='separator' />  
-      <div id='logout' className='dropdown-nav-item'>
-        <p id='logout-text' className='dropdown-nav-item-text'> Выйти </p>
+      <div className='dropdown-nav-item logout'>
+        <p className='dropdown-nav-item-text logout-text'> Выйти </p>
       </div>
     </div>
   )
@@ -62,6 +68,7 @@ export function Dropdown({ items, isOpen, onSelect }: DropdownProps) {
         <div
           key={item.id}
           className="dropdown-item"
+          draggable={false}
           onClick={(e) => {
             e.stopPropagation();
             onSelect?.(item);}}> {/* select event for change content in sort-type-container */}

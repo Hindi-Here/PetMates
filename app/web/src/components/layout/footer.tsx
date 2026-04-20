@@ -7,6 +7,7 @@ import './footer.scss'
 export default function Footer() {
   return (
     <div className='footer'>
+      <div className="container">
       <div className="contact-container">
         <div className='social-container'>
           <p> Социальные сети: </p>
@@ -18,6 +19,7 @@ export default function Footer() {
           <p> E-mail: </p>
           <p id="mail"> petmates@yandex.ru </p>
         </div>
+      </div>
       </div>
     </div>
   )

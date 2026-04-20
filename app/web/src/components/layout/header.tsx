@@ -4,9 +4,12 @@ import NotificationIcon from '@icons/notification.svg?react'
 import MenuIcon from '@icons/menu.svg?react'
 
 import './header.scss'
-import { AnimatedDropdown } from '../config/function';
-import { useIsShort, useIsOpen } from '../config/function';
+import { AnimatedDropdown } from '../scripts/function';
+import { useIsShort, useIsOpen } from '../scripts/function';
 import { HeaderDropdownNavigation } from '../common/dropdown';
+
+import { useState } from 'react';
+import AuthorizationForm from '../forms/authorization';
 
 const Logo = () => {
   return (
@@ -21,17 +24,17 @@ const Logo = () => {
   )
 }
 
-const Login = () => {
+const Login = ({ onOpen }: any) => {
   return (
     <div className='login-container'>
-      <button className='login-button'> Войти </button>
+      <button className='login-button' onClick={onOpen}> Войти </button>
     </div>
   )
 }
 
 const Profile = () => {
   const { isOpen, setIsOpen, menuRef } = useIsOpen();
-  const openMenu = () => { setIsOpen(prev => !prev);};
+  const openMenu = () => { setIsOpen(X => !X);};
 
   return(
     <div className='profile-container'>
@@ -60,7 +63,7 @@ const Profile = () => {
 
 const ShortMenu = () => {
   const { isOpen, setIsOpen, menuRef } = useIsOpen();
-  const openMenu = () => setIsOpen(prev => !prev);
+  const openMenu = () => setIsOpen(X => !X);
 
   return(
     <div ref={menuRef} className={`short-menu-container ${isOpen ? 'open' : ''}`} onClick={openMenu}>
@@ -75,20 +78,22 @@ const ShortMenu = () => {
 export default function Header() {
   const isShortVer = useIsShort(965);
 
+  // state authorzation form visible
+  const [isAuthOpen, setIsAuthOpen] = useState(false); 
+
   return (
     <div className='header'>
-      <Logo></Logo>
-      {/* { isShortVer ? <ShortMenu /> : <Profile /> } */}
-      <div className="header-short-unauth-container">
-        {isShortVer ? (
-          <>
-            <Login />
-            <ShortMenu />
-          </>
-        ) : (
-          <Login />
-        )}
+      <div className="container">
+      <Logo />
+      <div className="header-short-container">
+        <Login onOpen={() => setIsAuthOpen(true)} /> {/* change on open, activate isAuthOpen if part*/}
+        {isShortVer && <ShortMenu />}
       </div>
+
+      {isAuthOpen && (
+        <AuthorizationForm onClose={() => setIsAuthOpen(false)} /> /* close rules in authorization.tsx */
+      )}
+    </div>
     </div>
   )
 }

@@ -5,25 +5,25 @@ import UsersIcon from '@icons/users.svg?react'
 import BugIcon from '@icons/bug.svg?react'
 
 import './body.scss'
-import { useState } from 'react';
-import { useIsShort } from '../config/function';
+import { Routes, Route, Navigate, NavLink, useLocation } from 'react-router-dom'
+import { useIsShort } from '../scripts/function';
 
-import { Search } from '../common/search';
-import QueryContent from '../pages/vacancy'; 
+import Search from '../common/search';
 
-interface NavigationProps {
-  activeId: string;
-  setActiveId: (id: string) => void;
-}
+import Profile from '../pages/profile';
+import Vacancy from '../pages/vacancy';
+import Events from '../pages/events';
+import Users from '../pages/users';
+import Bug from '../pages/bug';
 
 // left side navigation
-const Navigation = ({ activeId, setActiveId }: NavigationProps) => {
+const Navigation = () => {
   const menuItems = [
-    { id: 'profile', label: 'Профиль', Icon: ProfileIcon },
-    { id: 'vacancy', label: 'Заявки', Icon: VacancyIcon },
-    { id: 'events', label: 'Мероприятия', Icon: EventsIcon },
-    { id: 'users', label: 'Участники', Icon: UsersIcon },
-    { id: 'bug', label: 'Бета-тестирование', Icon: BugIcon },
+    { id: 'profile', label: 'Профиль', path: '/profile', Icon: ProfileIcon },
+    { id: 'vacancy', label: 'Заявки', path: '/vacancy', Icon: VacancyIcon },
+    { id: 'events', label: 'Мероприятия', path: '/events', Icon: EventsIcon },
+    { id: 'users', label: 'Участники', path: '/users', Icon: UsersIcon },
+    { id: 'bug', label: 'Бета-тестирование', path: '/bug', Icon: BugIcon },
   ];
 
   return (
@@ -33,20 +33,20 @@ const Navigation = ({ activeId, setActiveId }: NavigationProps) => {
         {menuItems.map((item) => (
           <>
             {item.id === 'bug' && <hr className='separator' />}
-
-            <div 
-              key={item.id}
-              className={`navigation-panel-item-container ${activeId === item.id ? 'active' : ''}`}
-              onClick={() => setActiveId(item.id)}>
-
+            
+            {/* auto route and change active element */}
+            <NavLink 
+              to={item.path}
+              draggable={false}
+              className={({ isActive }) => `navigation-panel-item-container ${isActive ? 'active' : ''}`}
+              style={{ textDecoration: 'none', color: 'inherit' }}>
               <div className='navigation-panel-item-ico-container'>
                 <item.Icon className='navigation-panel-item-ico' />
               </div>
               <div className='navigation-panel-item-text-container'>
                 <p className='navigation-panel-item-text'>{item.label}</p>
               </div>
-
-            </div>
+            </NavLink>
           </>
         ))}
 
@@ -56,22 +56,31 @@ const Navigation = ({ activeId, setActiveId }: NavigationProps) => {
 }
 
 // routed content in dependency of activeId
-const Content = ({ activeId }: { activeId: string }) => {
+const Content = () => {
+  const location = useLocation(); // get current locatipn URL
+  const activeId = location.pathname.split('/')[1] || 'vacancy'; // last part of link and equals with path in Route
   return (
     <div className='content-container'>
-      <Search activeId={activeId}/>
-      <QueryContent/>
+      <Routes>
+        <Route path="/profile" element={<Profile />}/>
+        <Route path="/vacancy" element={<><Search activeId={activeId}/><Vacancy /></>} />
+        <Route path="/events" element={<><Search activeId={activeId}/><Events/></>} />
+        <Route path="/users" element={<><Search activeId={activeId}/><Users/></>} />
+        <Route path="/bug" element={<Bug/>}/>
+        <Route path="*" element={<Navigate to="/vacancy" replace />} />
+      </Routes>
     </div>
 )}
 
 export default function Main () {
   const isShortVer = useIsShort(965);
-  const [activeId, setActiveId] = useState('vacancy');
 
   return (
     <div className='main'>
-         { !isShortVer ? <Navigation activeId={activeId} setActiveId={setActiveId} /> : '' }
-         <Content activeId={activeId} />
+      <div className='container'>
+         { !isShortVer ? <Navigation/> : '' }
+         <Content/>
+      </div>
     </div>
   )
 }
