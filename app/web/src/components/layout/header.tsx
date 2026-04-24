@@ -1,6 +1,6 @@
 import LogoIcon from '@icons/icon.svg?react'
-import DropdownIcon from '@icons/dropdown.svg?react'
-import NotificationIcon from '@icons/notification.svg?react'
+// import DropdownIcon from '@icons/dropdown.svg?react'
+// import NotificationIcon from '@icons/notification.svg?react'
 import MenuIcon from '@icons/menu.svg?react'
 
 import './header.scss'
@@ -31,7 +31,7 @@ const Login = ({ onOpen }: any) => {
     </div>
   )
 }
-
+/*
 const Profile = () => {
   const { isOpen, setIsOpen, menuRef } = useIsOpen();
   const openMenu = () => { setIsOpen(X => !X);};
@@ -44,7 +44,7 @@ const Profile = () => {
       </div>
       <div ref={menuRef} className={`profile-panel-container ${isOpen ? 'open' : ''}`} onClick={openMenu}>
         <div className='avatar-container'>
-         {/* <img className='avatar-image' src={AvatarIcon} /> */}
+          <img className='avatar-image' src={AvatarIcon} /> 
         </div>
         <div className='username-container'>
           <p className='username-text'> User#60698 </p>
@@ -60,7 +60,7 @@ const Profile = () => {
     </div>
   )
 }
-
+*/
 const ShortMenu = () => {
   const { isOpen, setIsOpen, menuRef } = useIsOpen();
   const openMenu = () => setIsOpen(X => !X);

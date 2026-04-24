@@ -43,13 +43,13 @@ const UnauthorizedProfile = () => {
     </div>
   )
 }
-
+/*
 const AuthorizedProfile = () => {
   return (
     <div className='main-info-container'>
     </div>
   )
-}
+}*/
 export default function Profile () {
 
   return (
