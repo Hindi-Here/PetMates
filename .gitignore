@@ -1,21 +1,11 @@
-# Visual Studio
 .vs/
 bin/
 obj/
 *.user
 *.sln.docstates
 
-# Visual Studio Code / Web
 *.env
 build/
 
-# Android Studio
-.gradle/
-local.properties
-*.iml
-captures/
-.cxx/
-
-# General
 Thumbs.db
 *~
