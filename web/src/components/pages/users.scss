@@ -7,6 +7,8 @@
   flex-direction: column;
   width: 100%;
   margin-bottom: rem(24);
+  user-select: none;
+  background-color: var(--neutral-0);
   border-radius: var(--border-radius-base);
   box-shadow: inset 0 0 0 0 var(--primary-accent), 0 4px 4px rgba(0, 0, 0, 0.15);
   border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 75%);
@@ -16,6 +18,9 @@
     box-shadow: inset 2px 0 0 0 var(--primary-accent), 0 4px 4px rgba(0, 0, 0, 0.25);
     border-color: color-mix(in srgb, var(--primary-accent), transparent 75%);
     border-left-color: var(--primary-accent);
+  }
+  &:active{
+    background-color: color-mix(in srgb, var(--neutral-100), transparent 98%);;
   }
 }
 
@@ -35,6 +40,7 @@
       width: rem(75);
       height: rem(75);
       border-radius: 50%;
+      object-fit: cover;
     }
 }
 
@@ -52,7 +58,8 @@
       display: flex;
       align-items: center;
       gap: 12px;
-      flex-wrap: wrap;
+      overflow: hidden;
+      white-space: nowrap;
       width: 100%;
       margin-bottom: 0;
   }
@@ -66,7 +73,8 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    flex-wrap: wrap;
+    overflow: hidden;
+    flex-shrink: 1;  
 
     .meta-separator {
       width: rem(4);
@@ -121,18 +129,20 @@
 
 .tag-place-container {
   display: flex;
-  flex-wrap: wrap;
   gap: rem(8);
   padding-left: rem(16);
   padding-right: rem(16);
   padding-top: rem(8);
   padding-bottom: rem(16);
   border-bottom: 1px solid color-mix(in srgb, var(--neutral-100), transparent 85%);
+  flex-wrap: nowrap;
+  overflow: hidden;
 
   .tag-item {
     padding: rem(6) rem(12);
     background: color-mix(in srgb, var(--primary-accent), transparent 85%);
     border-radius: var(--border-radius-small);
+    flex-shrink: 0; 
 
     .tag-text {
       font-size: rem(12);
@@ -168,6 +178,7 @@
       display: flex;
       justify-content: center;
       align-items: center;
+      outline: none;
       width: rem(175);
       height: rem(40);
       background-color: var(--primary-accent);
@@ -185,9 +196,8 @@
           transform: scale(0.98);
         }
         &:disabled {
-            opacity: 0.5;
-            filter: grayscale(1);
-            pointer-events: none;
+            opacity: 0.4;
+            pointer-events: none; 
         }
     }
 

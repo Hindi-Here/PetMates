@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { profileApi } from '../services/profile';
 
-export interface UserProfileData {
+export interface ThirdProfileData {
   userId: string;
   nickname: string;
   avatarUrl?: string;
@@ -22,32 +22,17 @@ export interface UserProfileData {
   lastSeen: string;
 }
 
-interface UseUserProfileReturn {
-  data: UserProfileData | null;
-  loading: boolean;
-  error: string | null;
-  refresh: () => Promise<void>;
-}
-
-export const useUserProfile = (userId: string | undefined): UseUserProfileReturn => {
-  const [data, setData] = useState<UserProfileData | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+export const useUserProfile = (userId: string | undefined) => {
+  const [data, setData] = useState<ThirdProfileData | null>(null);
 
   const fetchProfile = useCallback(async () => {
     if (!userId) return;
-    
-    setLoading(true);
-    setError(null);
     
     try {
       const responseData = await profileApi.getUserById(userId);
       setData(responseData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Неизвестная ошибка');
       setData(null);
-    } finally {
-      setLoading(false);
     }
   }, [userId]);
 
@@ -56,15 +41,11 @@ export const useUserProfile = (userId: string | undefined): UseUserProfileReturn
       fetchProfile();
     } else {
       setData(null);
-      setError(null);
-      setLoading(false);
     }
   }, [userId, fetchProfile]);
 
   return {
     data,
-    loading,
-    error,
     refresh: fetchProfile, 
   };
 };

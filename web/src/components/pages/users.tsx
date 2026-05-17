@@ -3,7 +3,7 @@ import './users.scss'
 
 import NotFoundContentIcon from '@icons/not_found_content.svg?react'
 
-import { useState } from 'react'; 
+import { useState, useEffect, useRef } from 'react'; 
 import InviteForm from '../forms/invite_user';
 import { useAuth } from '../hooks/useAuth';
 import type { UserData } from '../services/users';
@@ -57,6 +57,76 @@ const UserCard = ({
     }
   };
 
+  // only one row meta
+  const rowRef = useRef<HTMLDivElement>(null);
+  const [visibleCount, setVisibleCount] = useState(metaInfo.length);
+
+  useEffect(() => {
+  const row = rowRef.current;
+  if (!row) return;
+
+  requestAnimationFrame(() => {
+    if (!row) return;
+    
+    const rowWidth = row.clientWidth;
+    const nickEl = row.querySelector('.nickname-text') as HTMLElement;
+    if (!nickEl) return;
+
+    let usedWidth = nickEl.offsetWidth + 12;
+    let count = 0;
+
+    const items = row.querySelectorAll('.meta-item') as NodeListOf<HTMLElement>;
+    const separators = row.querySelectorAll('.meta-separator') as NodeListOf<HTMLElement>;
+
+    items.forEach((item, i) => {
+      const sepWidth = i > 0 ? (separators[i - 1]?.offsetWidth ?? 0) + 8 : 0;
+      usedWidth += item.offsetWidth + 8 + sepWidth;
+      if (usedWidth <= rowWidth) count++;
+    });
+
+    setVisibleCount(count);
+  });
+}, [metaInfo]);
+
+// only one row tags
+const tagRowRef = useRef<HTMLDivElement>(null);
+const [visibleTagCount, setVisibleTagCount] = useState(skills.length);
+
+useEffect(() => {
+  const row = tagRowRef.current;
+  if (!row) return;
+
+  requestAnimationFrame(() => {
+    if (!row) return;
+
+    const rowWidth = row.clientWidth - 32;
+    let usedWidth = 0;
+    let count = 0;
+
+    const items = row.querySelectorAll('.tag-item:not(.more-tag)') as NodeListOf<HTMLElement>;
+
+    items.forEach((item) => {
+      usedWidth += item.offsetWidth + 8;
+      if (usedWidth <= rowWidth) count++;
+    });
+
+    if (count < skills.length) {
+      const moreTag = row.querySelector('.more-tag') as HTMLElement;
+      const moreWidth = moreTag ? moreTag.offsetWidth + 8 : 50;
+
+      let recalc = 0;
+      usedWidth = 0;
+      items.forEach((item) => {
+        usedWidth += item.offsetWidth + 8;
+        if (usedWidth + moreWidth <= rowWidth) recalc++;
+      });
+      count = recalc;
+    }
+
+    setVisibleTagCount(count);
+  });
+}, [skills]);
+
   return (
     <div className='user-card-container' onClick={handleCardClick}>
       <div className='info-place-container'>
@@ -64,18 +134,18 @@ const UserCard = ({
           <img className='avatar-ico' src={user.avatarUrl}/>
         </div>
         <div className='info-container'>
-          <div className='nickname-row'>
+          <div className='nickname-row' ref={rowRef}>
             <p className='nickname-text'>{user.nickname}</p>
-            {metaInfo.length > 0 && (
-              <div className='meta-info'>
-                {metaInfo.map((item, index) => (
-                  <>
-                    {index > 0 && <div className='meta-separator'/>}
-                    <p className='meta-item'>{item}</p>
-                  </>
-                ))}
-              </div>
-            )}
+            {visibleCount > 0 && (
+            <div className='meta-info'>
+              {metaInfo.slice(0, visibleCount).map((item, index) => (
+              <>
+                {index > 0 && <div className='meta-separator'/>}
+                <p className='meta-item'>{item}</p>
+              </>
+            ))}
+            </div>
+          )}
           </div>
           <p className='role-text'>{user.profileRole || 'Нет указанной роли'}</p>
           {user.isOnline ? (
@@ -89,24 +159,31 @@ const UserCard = ({
         </div>
       </div>
 
-      <div className='tag-place-container'>
-        {skills.length === 0 ? (
-          <div className='tag-item empty'>
-            <p className='tag-text empty'>Нет указанных ключевых навыков</p>
-          </div>
-        ) : (
-          skills.slice(0, 7).map((skill, index) => (
-            <div key={index} className='tag-item'>
-              <p className='tag-text'>{skill}</p>
-            </div>
-          ))
-        )}
-        {skills.length > 7 && (
-          <div className='tag-item more-tag'>
-            <p className='tag-text'>+{skills.length - 7}</p>
-          </div>
-        )}
+      <div className='tag-place-container' ref={tagRowRef}>
+  {skills.length === 0 ? (
+    <div className='tag-item empty'>
+      <p className='tag-text empty'>Нет указанных ключевых навыков</p>
+    </div>
+  ) : (
+    <>
+      {skills.map((skill, index) => (
+        <div 
+          key={index} 
+          className='tag-item'
+          style={index >= visibleTagCount ? { position: 'absolute', visibility: 'hidden', pointerEvents: 'none' } : {}}
+        >
+          <p className='tag-text'>{skill}</p>
+        </div>
+      ))}
+      <div
+        className='tag-item more-tag'
+        style={visibleTagCount >= skills.length ? { position: 'absolute', visibility: 'hidden', pointerEvents: 'none' } : {}}
+      >
+        <p className='tag-text'>+{skills.length - visibleTagCount}</p>
       </div>
+    </>
+  )}
+</div>
 
       <div className='invite-place-container'>
         <button className='invite-button' disabled={!canInvite} onClick={() => onInvite(user)}>
@@ -121,7 +198,7 @@ const UserCard = ({
 // fount content column
 const FoundContent = () => {
   const { users } = useUsers();
-  const [invitingUser, setInvitingUser] = useState<UserData | null>(null);
+  const [showInviteForm, setShowInviteForm] = useState<UserData | null>(null);
 
   return (
     <div className='found-content-container'>
@@ -137,15 +214,15 @@ const FoundContent = () => {
           </>
         ) : (
           users.map(user => (
-            <UserCard key={user.userId} user={user} onInvite={setInvitingUser} />
+            <UserCard key={user.userId} user={user} onInvite={setShowInviteForm} />
           ))
         )}
       </div>
 
-      {invitingUser && (
+      {showInviteForm && (
         <InviteForm
-          onClose={() => setInvitingUser(null)}
-          invitedUser={invitingUser}            
+          onClose={() => setShowInviteForm(null)}
+          invitedUser={showInviteForm}            
         />
       )}
 

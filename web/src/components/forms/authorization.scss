@@ -9,7 +9,6 @@
         margin-bottom: rem(6);
         color: var(--primary-accent);
         font-size: rem(12);
-        cursor: default;
 
         &:hover{
             filter: brightness(0.95);
@@ -81,9 +80,8 @@
             filter: brightness(0.95);
         }
         &:disabled {
-            opacity: 0.5;
-            filter: grayscale(1);
-            pointer-events: none;
+            opacity: 0.4;
+            pointer-events: none; 
         }
     }
 
@@ -181,7 +179,6 @@
         font-size: rem(12);
         color: var(--primary-accent);
         font-weight: bold;
-        cursor: default;
 
         &:hover{
             filter: brightness(0.95);

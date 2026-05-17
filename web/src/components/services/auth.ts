@@ -3,11 +3,11 @@ import { supabase } from './cfg';
 
 export const authApi = {
 
-  register: async (nickname: string, email: string, password: string) => {
+  register: async (nickname: string, email: string, password: string, confirmPassword: string) => {
     const response = await fetch(`${API_BASE}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nickname, email, password }),
+      body: JSON.stringify({ nickname, email, password, confirmPassword }),
     });
 
     if (!response.ok) {

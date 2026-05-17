@@ -2,8 +2,10 @@ import InfoIcon from '@icons/info_circle.svg?react'
 
 import './bug.scss'
 import { validatorFormat, useChangeInput } from '../scripts/function';
+import {useAuth} from '../hooks/useAuth'
 
 export default function Bug () {
+  const { isAuthenticated } = useAuth();
   const { data, handleChange } = useChangeInput({ report: '',},{});
   const isInvalid = validate(data);
 
@@ -63,7 +65,7 @@ export default function Bug () {
             <textarea className='send-area' name='report' value={data.report} onChange={handleChange}></textarea>
             <div className='send-manage-container'>
                 <button className='send-manage-button' disabled={isInvalid}> Отправить </button>
-                <input type="checkbox" className='send-anonymous-box'/>
+                <input type="checkbox" className='send-anonymous-box' checked={!isAuthenticated ? false : undefined} disabled={!isAuthenticated}/>
                 <p className='send-anonymous-text'> Анонимное сообщение </p>
                 <div className="send-anonymous-helper-container">
                     <InfoIcon className='send-anonymous-helper-ico'/>

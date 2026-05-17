@@ -1,3 +1,7 @@
+a{
+    outline: none;
+}
+
 .bug-container{
     width: 80%;
     margin-left: 10%;
@@ -106,9 +110,8 @@
             transform: scale(0.98);
         }
         &:disabled {
-            opacity: 0.5;
-            filter: grayscale(1);
-            pointer-events: none;
+            opacity: 0.4;
+            pointer-events: none; 
         }
     }
 

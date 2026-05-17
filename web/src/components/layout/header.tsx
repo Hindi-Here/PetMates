@@ -53,8 +53,8 @@ const Profile = () => {
           <img className='avatar-image' src={user?.avatarUrl} alt="Avatar" />
         </div>
         <div className='username-container'>
-          <p className='username-text'> {user?.nickname} </p>
-          <p className='mail-text'> {user?.email} </p>
+          <p className='username-text'> {user?.nickname && user.nickname.length > 15 ? user.nickname.slice(0, 15) + '…' : user?.nickname}</p>
+          <p className='mail-text'>  {user?.email && user.email.length > 25 ? user.email.slice(0, 25) + '…' : user?.email} </p>
         </div>
         <div className='dropdown-ico-container'>
           <DropdownIcon className={`dropdown-ico ${isOpen ? 'rotated' : ''}`} fill='white'></DropdownIcon>
@@ -93,8 +93,10 @@ export default function Header() {
       <div className="container">
       <Logo />
       <div className="header-short-container">
-        {isAuthenticated ? <Profile /> : <Login onOpen={() => setIsAuthOpen(true)} />} {/* change on open, activate isAuthOpen if part*/}
-        {isShortVer && <ShortMenu />}
+        {/* change on open, activate isAuthOpen if part*/}
+        {isAuthenticated && <Profile />}
+        {!isAuthenticated && <Login onOpen={() => setIsAuthOpen(true)} />}
+        {isShortVer && !isAuthenticated && <ShortMenu />}
       </div>
 
       {isAuthOpen && (

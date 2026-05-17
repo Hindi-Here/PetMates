@@ -63,7 +63,7 @@ const Form = ({ onClose }: any) => {
                 <p className='form-field-text'> Имя пользователя </p>
                 <input className={`form-field-input ${touched.name && dirty.name && checkFormat('name', data.name, data, isRegister) ? 'input-error' : ''}`}
                     name='name'
-                    maxLength={50}
+                    maxLength={30}
                     value={data.name}
                     onChange={handleChange}
                     onBlur={handleBlur}/>
@@ -242,7 +242,7 @@ const checkForm = (data: any, isRegister: boolean): boolean => {
 const Register = async (data: any, onError: (msg: string | null) => void, onClose?: () => void) => {
     onError(null); 
     try {
-        await authApi.register(data.name, data.email, data.password);
+        await authApi.register(data.name, data.email, data.password, data.confirmPassword);
         onClose?.();
     }
     catch (err: any) {

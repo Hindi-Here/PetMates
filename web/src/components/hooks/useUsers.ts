@@ -2,47 +2,24 @@ import { useEffect, useState, useCallback } from 'react';
 import { usersApi } from '../services/users';
 import type { UserData } from '../services/users';
 
-interface UseUsersReturn {
-  users: UserData[];
-  loading: boolean;
-  error: string | null;
-  refresh: () => Promise<void>;
-}
-
-export const useUsers = (): UseUsersReturn => {
+export const useUsers = () => {
   const [users, setUsers] = useState<UserData[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
 
   const fetchUsers = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    
     try {
       const data = await usersApi.getAll();
       setUsers(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Неизвестная ошибка');
+      console.error('Users fetch error:', err);
       setUsers([]);
-    } finally {
-      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     fetchUsers();
-
-    const interval = setInterval(() => {
-      fetchUsers();
-    }, 120000); 
-
+    const interval = setInterval(fetchUsers, 120000);
     return () => clearInterval(interval);
   }, [fetchUsers]);
 
-  return {
-    users,
-    loading,
-    error,
-    refresh: fetchUsers,
-  };
+  return { users, refresh: fetchUsers };
 };

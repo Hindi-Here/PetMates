@@ -16,6 +16,10 @@ namespace api.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
+            var error = Validator.ValidateRegister(request.Nickname, request.Email, request.Password, request.ConfirmPassword);
+            if (error != null)
+                return BadRequest(new { message = error });
+
             try
             {
                 var options = new SignUpOptions
@@ -80,6 +84,6 @@ namespace api.Controllers
         }
     }
 
-    public record RegisterRequest(string Nickname, string Email, string Password);
+    public record RegisterRequest(string Nickname, string Email, string Password, string ConfirmPassword);
     public record LoginRequest(string Email, string Password);
 }

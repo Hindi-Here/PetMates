@@ -22,49 +22,52 @@ export interface ProfileData {
   createdAt?: string | null;
 }
 
-interface UseProfileReturn {
-  data: ProfileData | null;
-  loading: boolean;
-  error: string | null;
-  refresh: () => Promise<void>;
-}
+let sharedProfileData: ProfileData | null = null;
+const profileSubscribers = new Set<(value: ProfileData | null) => void>();
 
-export const useProfile = (isAuth: boolean): UseProfileReturn => {
-  const [data, setData] = useState<ProfileData | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+const notifyProfileSubscribers = () => {
+  profileSubscribers.forEach(callback => callback(sharedProfileData));
+};
 
-  const fetchProfile = useCallback(async () => {
-    if (!isAuth) return;
-    
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const responseData = await profileApi.getMe();
-      setData(responseData);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Неизвестная ошибка');
-      setData(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [isAuth]);
+const fetchSharedProfile = async (isAuth: boolean) => {
+  if (!isAuth) {
+    sharedProfileData = null;
+    notifyProfileSubscribers();
+    return null;
+  }
+
+  try {
+    const responseData = await profileApi.getMe();
+    sharedProfileData = responseData;
+    notifyProfileSubscribers();
+    return responseData;
+  } catch (err) {
+    console.error('Profile fetch error:', err);
+    sharedProfileData = null;
+    notifyProfileSubscribers();
+    return null;
+  }
+};
+
+export const useProfile = (isAuth: boolean) => {
+  const [data, setData] = useState<ProfileData | null>(() => isAuth ? sharedProfileData : null);
 
   useEffect(() => {
-    if (isAuth) {
-      fetchProfile();
-    } else {
-      setData(null);
-      setError(null);
-      setLoading(false);
-    }
-  }, [isAuth, fetchProfile]);
+    const callback = (value: ProfileData | null) => setData(value);
+    profileSubscribers.add(callback);
 
-  return {
-    data,
-    loading,
-    error,
-    refresh: fetchProfile, 
-  };
+    return () => {
+      profileSubscribers.delete(callback);
+    };
+  }, []);
+
+  useEffect(() => {
+    fetchSharedProfile(isAuth);
+  }, [isAuth]);
+
+  const refresh = useCallback(async () => {
+    return await fetchSharedProfile(isAuth);
+  }, [isAuth]);
+
+  return { data, refresh };
 };

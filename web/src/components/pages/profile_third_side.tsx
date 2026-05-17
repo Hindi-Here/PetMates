@@ -1,18 +1,25 @@
 import './profile_third_side.scss'
 
 import HardSkills from '@icons/hard_skills.svg?react'
-import SoftSkills from '@icons/soft_skillV2.svg?react'
+import SoftSkills from '@icons/soft_skills.svg?react'
 import Contacts from '@icons/contacts.svg?react'
-import Edit from '@icons/edit.svg?react'
+import UserDescription from '@icons/user_description.svg?react'
 
 import { useState } from 'react'
-import { useUserProfile } from '../hooks/useUserProfile'
 import { useParams } from 'react-router-dom'
+
+import { useUserProfile } from '../hooks/useThirdProfile'
+import { useAuth } from '../hooks/useAuth' 
+import type { ThirdProfileData } from '../hooks/useThirdProfile'
+import InviteForm from '../forms/invite_user' 
 
 export default function ThirdProfile () {
   const [activeTab, setActiveTab] = useState('Информация')
+  const [showInviteForm, setShowInviteForm] = useState(false) 
+
   const { userId } = useParams<{ userId: string }>()
-  const { data: user, loading, error } = useUserProfile(userId)
+  const { data: user } = useUserProfile(userId)
+  const { isAuthenticated } = useAuth()
 
   const contactsList: Array<{name: string, link: string}> = (() => {
     try {
@@ -23,22 +30,19 @@ export default function ThirdProfile () {
   })()
 
   const renderOnlineStatus = () => {
-  if (!user) return null
+    if (!user) return null
   
-  if (user.isOnline) {
-    return (
-      <div className='online-container'>
-        <div className='circle-online'></div> 
-        <p className='online-text'>Онлайн</p>   
-      </div>
-    )
+    if (user.isOnline) {
+      return (
+        <div className='online-container'>
+          <div className='circle-online'></div> 
+          <p className='online-text'>Онлайн</p>   
+        </div>
+      )
+    }
+  
+    return <p className='online-text offline'>Был(а) {user.lastSeen}</p>
   }
-  
-  return <p className='online-text offline'>Был(а) {user.lastSeen}</p>
-}
-
-  if (loading) return <div className='loading-container'>Загрузка...</div>
-  if (error || !user) return <div className='error-container'>Профиль не найден</div>
 
   return (
     <div className='profile-content-container third-profile'>
@@ -50,38 +54,38 @@ export default function ThirdProfile () {
       {activeTab === 'Информация' && (
         <>
           <div className='profile-header-container'>
-            <img className='profile-avatar' src={user.avatarUrl || '/default-avatar.png'} alt={user.nickname} />
+            <img className='profile-avatar' src={user?.avatarUrl || '/default-avatar.png'} alt={user?.nickname} />
             <div className='profile-username-container'>
               <div className='username-main'>
-                <h1 className='username'>{user.nickname}</h1>
-                {user.realName && <span className='real-name'>({user.realName})</span>}
+                <h1 className='username'>{user?.nickname}</h1>
+                {user?.realName && <span className='real-name'>({user?.realName})</span>}
               </div>
-              <p className='profile-role'>{user.profileRole || 'Не указана роль'}</p>
-              {renderOnlineStatus()}
+              <p className='profile-role'>{user?.profileRole || 'Не указана роль'}</p>
+                {renderOnlineStatus()}
             </div>
           </div>
 
           <div className='profile-meta-container'>
             {[
-              { label: 'Страна', value: user.country },
-              { label: 'Город', value: user.city },
-              { label: 'Место учебы/работы', value: user.workplace },
-              { label: 'Возраст', value: user.age ? `${user.age} лет` : null },
-              { label: 'Пол', value: user.gender === 'male' ? 'Мужской' : user.gender === 'female' ? 'Женский' : null }
+              { label: 'Страна', value: user?.country },
+              { label: 'Город', value: user?.city },
+              { label: 'Место учебы/работы', value: user?.workplace },
+              { label: 'Возраст', value: user?.age ? `${user?.age} лет` : null },
+              { label: 'Пол', value: user?.gender === 'male' ? 'Мужской' : user?.gender === 'female' ? 'Женский' : null }
             ]
               .filter(item => item.value)
               .map((item, i) => (
                 <div key={i} className='meta-item'>
-                  <span className='meta-label'>{item.label}:</span>
-                  <span className='meta-value'>{item.value}</span>
+                  <p className='meta-label'>{item.label}:</p>
+                  <p className='meta-value'>{item.value}</p>
                 </div>
               ))}
           </div>
 
-          {user.description && (
+          {user?.description && (
             <div className='profile-area-container'>
               <div className='profile-area-text-container'>
-                <Edit className='profile-area-ico' />
+                <UserDescription className='profile-area-ico' />
                 <p className='profile-area-text'> Описание:</p>
               </div>
               <p className='description-text'>{user.description}</p>
@@ -94,7 +98,7 @@ export default function ThirdProfile () {
               <p className='profile-area-text'>hard-skills:</p>
             </div>
             <div className='tag-container'>
-              {user.hardSkills && user.hardSkills.length > 0 ? (
+              {user?.hardSkills && user.hardSkills.length > 0 ? (
                 user.hardSkills.map((skill, index) => (
                   <div key={index} className='tag-item'>
                     <p className='tag-text'>{skill}</p>
@@ -114,7 +118,7 @@ export default function ThirdProfile () {
               <p className='profile-area-text'>soft-skills:</p>
             </div>
             <div className='tag-container'>
-              {user.softSkills && user.softSkills.length > 0 ? (
+              {user?.softSkills && user.softSkills.length > 0 ? (
                 user.softSkills.map((skill, index) => (
                   <div key={index} className='tag-item'>
                     <p className='tag-text'>{skill}</p>
@@ -138,9 +142,7 @@ export default function ThirdProfile () {
                 {contactsList.map((contact, index) => (
                   <div key={index} className='contact-item'>
                     <p className='contact-name'>{contact.name}:</p>
-                    <a href={contact.link} className='contact-link' target="_blank" rel="noopener noreferrer">
-                      {contact.link}
-                    </a>
+                    <p className='contact-link'>{contact.link}</p>
                   </div>
                 ))}
               </div>
@@ -151,9 +153,15 @@ export default function ThirdProfile () {
             )}
           </div>
 
-          <div className='invite-place-container third-side'>
-            <button className='invite-button third-side'>Пригласить</button>
-          </div>
+          {isAuthenticated && (
+            <div className='invite-place-container third-side'>
+              <button 
+                className='invite-button third-side' 
+                onClick={() => setShowInviteForm(true)}>
+                Пригласить
+              </button>
+            </div>
+          )}
         </>
       )}
 
@@ -162,6 +170,14 @@ export default function ThirdProfile () {
           <p className='activity-placeholder'>История активности пользователя</p>
         </div>
       )}
+
+      {showInviteForm && user && (
+        <InviteForm
+          onClose={() => setShowInviteForm(false)}
+          invitedUser={user as ThirdProfileData} 
+        />
+      )}
+
     </div>
   )
 }

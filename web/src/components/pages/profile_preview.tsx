@@ -1,12 +1,12 @@
 import HardSkills from '@icons/hard_skills.svg?react'
-import SoftSkills from '@icons/soft_skillV2.svg?react'
+import SoftSkills from '@icons/soft_skills.svg?react'
 import Contacts from '@icons/contacts.svg?react'
-import Edit from '@icons/edit.svg?react'
+import UserDescription from '@icons/user_description.svg?react'
 
-import type { UserProfileData } from '../hooks/useUserProfile'
+import type { ThirdProfileData } from '../hooks/useThirdProfile'
 
 interface ProfilePreviewProps {
-  user: UserProfileData
+  user: ThirdProfileData
 }
 
 export const ProfilePreview = ({ user }: ProfilePreviewProps) => {
@@ -18,7 +18,7 @@ export const ProfilePreview = ({ user }: ProfilePreviewProps) => {
     }
   })()
 
-  const normalizeSkills = (value: string | string[] | undefined): string[] => {
+  const StringToTag = (value: string | string[] | undefined): string[] => {
     if (Array.isArray(value)) return value;
     if (typeof value === 'string' && value.trim()) {
       return value.split(/\s+/).filter(t => t.startsWith('#')).map(t => t.replace(/^#/, ''));
@@ -26,8 +26,8 @@ export const ProfilePreview = ({ user }: ProfilePreviewProps) => {
     return [];
   };
 
-  const hardSkills = normalizeSkills(user.hardSkills);
-  const softSkills = normalizeSkills(user.softSkills);
+  const hardSkills = StringToTag(user.hardSkills);
+  const softSkills = StringToTag(user.softSkills);
 
   return (
     <>
@@ -71,7 +71,7 @@ export const ProfilePreview = ({ user }: ProfilePreviewProps) => {
       {user.description && (
         <div className='profile-area-container'>
           <div className='profile-area-text-container'>
-            <Edit className='profile-area-ico' />
+            <UserDescription className='profile-area-ico' />
             <p className='profile-area-text'>Описание:</p>
           </div>
           <p className='description-text'>{user.description}</p>
@@ -128,9 +128,7 @@ export const ProfilePreview = ({ user }: ProfilePreviewProps) => {
             {contactsList.map((contact, index) => (
               <div key={index} className='contact-item'>
                 <p className='contact-name'>{contact.name}:</p>
-                <a href={contact.link} className='contact-link' target="_blank" rel="noopener noreferrer">
-                  {contact.link}
-                </a>
+                <p className='contact-link'>{contact.link}</p>
               </div>
             ))}
           </div>

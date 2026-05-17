@@ -1,7 +1,7 @@
 import { API_BASE } from './cfg';
 import { supabase } from './cfg';
 import type { ProfileData } from '../hooks/useProfile';
-import type { UserProfileData } from '../hooks/useUserProfile'; 
+import type { ThirdProfileData } from '../hooks/useThirdProfile'; 
 
 export const profileApi = {
    getMe: async (): Promise<ProfileData> => {
@@ -13,7 +13,7 @@ export const profileApi = {
     return await response.json();
   },
 
-  updateMe: async (updateData: any) => {  
+  updateMe: async (updateData: ProfileData) => {  
   const { data: { session } } = await supabase.auth.getSession();  
   
   const response = await fetch(`${API_BASE}/api/profile/me`, {
@@ -27,13 +27,31 @@ export const profileApi = {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
-    throw new Error(error.error || 'Ошибка обновления профиля');
+    throw new Error(error.message || 'Ошибка обновления профиля');
   }
   
   return await response.json();
 },
 
-getUserById: async (userId: string): Promise<UserProfileData> => {
+uploadAvatar: async (file: File): Promise<{ avatarUrl: string }> => {
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch(`${API_BASE}/api/profile/me/avatar`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${session?.access_token}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) throw new Error('Ошибка загрузки аватара');
+  return await response.json();
+},
+
+getUserById: async (userId: string): Promise<ThirdProfileData> => {
     const { data: { session } } = await supabase.auth.getSession();
     const response = await fetch(`${API_BASE}/api/users/${userId}`, {
       headers: { 

@@ -121,6 +121,7 @@ export const validatorFormat = {
   required: (value: string) => value.trim().length > 0,
   minLength: (value: string, min: number) => value.length >= min,
   maxLength: (value: string, max: number) => value.length <= max,
+  number: (value: string) => /^[0-9]+$/.test(value),
 
   // format checker
   email: (value: string) => /^[^\s@]+@([^\s@.,]+\.)+[^\s@.,]{2,}$/.test(value),
@@ -136,44 +137,59 @@ export const validatorFormat = {
     if (!value || typeof value !== 'string')
       return false;
 
-      const tags = value.trim().split(/\s+/);
-      return tags.every(tag => /^#[\wА-Яа-я]+$/.test(tag));
-    }
+    const tags = value.trim().split(/\s+/);
+    return tags.every(tag => /^#[a-zA-Zа-яА-Я0-9_\/]+$/.test(tag));
+  },
 };
 
 // validator input cleaner (level 2)
 export const validatorRegex = {
-  username: (value: string) => {
-    return value.replace(/[^a-zA-Zа-яА-Я0-9_-]/g, '');
-  },
 
-  email: (value: string) => {
-  return value
-    .replace(/[^a-zA-Zа-яА-Я0-9@._-]/g, '')
-    .replace(/([@.])\1+/g, '$1'); 
-  },
-
-  password: (value: string) => {
-    return value.replace(/[^a-zA-Zа-яА-Я0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/g, '');
-  },
-
-  role: (value: string) => {
+  // common
+  text: (value: string, max: number) => {
     return value
-      .replace(/[^a-zA-Zа-яА-Я0-9\/[\]\-\s]/g, '')
+      .replace(/[^a-zA-Zа-яА-Я0-9ёЁ\s\-"'.,()\/]/g, '')
       .replace(/^\s+/, '')
-      .replace(/\s\s+/g, ' ');  
+      .replace(/\s\s+/g, ' ')
+      .slice(0, max);
   },
+
+  number: (value: string) => value.replace(/[^\d]/g, ''),
 
   message: (value: string) => value,
 
-  tags: (value: string) => {
-    let val = value.replace(/\n/g, '');
-    val = val.replace(/-/g, '_');
-    val = val.replace(/[^\w\sа-яА-ЯёЁ#]/g, '');
-    val = val.replace(/__+/g, '_');
-    val = val.replace(/\s\s+/g, ' ');
-    return val;
+  // special
+  username: (value: string, max: number = 50) => {
+    return value.replace(/[^a-zA-Zа-яА-Я0-9_-]/g, '').slice(0, max);
   },
+
+  email: (value: string, max: number = 255) => {
+    return value
+      .replace(/[^a-zA-Zа-яА-Я0-9@._-]/g, '')
+      .replace(/([@.])\1+/g, '$1')
+      .slice(0, max); 
+  },
+
+  password: (value: string) => {
+    return value.replace(/\s/g, '');
+  },
+
+  role: (value: string, max: number = 50) => {
+    return value
+      .replace(/[^a-zA-Zа-яА-Я0-9ёЁ\/[\]\-\s]/g, '')
+      .replace(/^\s+/, '')
+      .replace(/\s\s+/g, ' ')
+      .slice(0, max);  
+  },
+
+  tags: (value: string) => {
+    return value
+      .replace(/\n/g, '')
+      .replace(/-/g, '_')
+      .replace(/[^\w\sа-яА-ЯёЁ#\/]/g, '')
+      .replace(/__+/g, '_')
+      .replace(/\s\s+/g, ' ');
+    },
 };
 
 // template input change events (level 2 support)
@@ -201,5 +217,12 @@ export function useChangeInput<T>(initialState: T, rules: Partial<Record<keyof T
     setTouched(prev => ({ ...prev, [name]: true }));
   };
 
-  return { data, touched, dirty, handleChange, handleBlur };
+  // reset effects
+  const reset = () => {
+  setData(initialState);
+  setTouched({});
+  setDirty({});
+};
+
+  return { data, touched, dirty, handleChange, handleBlur, reset };
 }

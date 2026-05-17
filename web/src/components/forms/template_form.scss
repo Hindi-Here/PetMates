@@ -122,14 +122,14 @@
         }
 
         &.input-error {
-            border-color: var(--important-color, #DD5E46);
+            border-color: var(--important-color);
 
             &:focus {
-                box-shadow: 0 0 0 1px color-mix(in srgb, var(--important-color, #DD5E46), transparent 50%);
+                box-shadow: 0 0 0 1px color-mix(in srgb, var(--important-color), transparent 50%);
             }
 
             &::selection {
-                background-color: color-mix(in srgb, var(--important-color, #DD5E46), transparent 85%);
+                background-color: color-mix(in srgb, var(--important-color), transparent 85%);
             }
         }
     }
@@ -185,9 +185,8 @@
             transform: scale(0.98);
         }
         &:disabled {
-            opacity: 0.5;
-            filter: grayscale(1);
-            pointer-events: none;
+            opacity: 0.4;
+            pointer-events: none; 
         }
     }
     .form-manage-button.cancellation{

@@ -1,4 +1,5 @@
 ﻿using api.Models;
+using api.Support;
 using Microsoft.AspNetCore.Mvc;
 using Supabase;
 
@@ -50,6 +51,10 @@ namespace api.Controllers
 
             var token = authHeader["Bearer ".Length..];
 
+            var error = Validator.ValidateProfile(data);
+            if (error != null)
+                return BadRequest(new { message = error });
+
             try
             {
                 var userAuth = await _client.Auth.GetUser(token);
@@ -72,12 +77,7 @@ namespace api.Controllers
                 if (data.AvatarUrl != null) query = query.Set(x => x.AvatarUrl!, data.AvatarUrl);
 
                 var updated = await query.Update();
-
-                var result = updated.Models.FirstOrDefault();
-                if (result == null)
-                    return NotFound(new { error = "Не удалось обновить профиль" });
-
-                return Ok(ModelFromResponse(data, userAuth.Email));
+                return Ok(ModelFromResponse(updated.Models.First(), userAuth.Email));
             }
             catch (Exception)
             {
@@ -109,6 +109,53 @@ namespace api.Controllers
                 lastOnlineAt = profile.LastOnlineAt,
                 createdAt = profile.CreatedAt,
             };
+        }
+
+        // update avatar
+        [HttpPost("me/avatar")]
+        public async Task<IActionResult> UploadAvatar(IFormFile file)
+        {
+            var authHeader = Request.Headers.Authorization.ToString();
+            if (string.IsNullOrWhiteSpace(authHeader) || !authHeader.StartsWith("Bearer "))
+                return Unauthorized();
+
+            var token = authHeader["Bearer ".Length..];
+
+            try
+            {
+                var userAuth = await _client.Auth.GetUser(token);
+                if (userAuth == null) return Unauthorized();
+
+                using var stream = file.OpenReadStream();
+                var bytes = new byte[file.Length];
+                await stream.ReadAsync(bytes);
+
+                var ext = Path.GetExtension(file.FileName);
+                var fileName = $"{userAuth.Id}/avatar{ext}";
+
+                await _client.Storage
+                    .From("Avatar")
+                    .Upload(bytes, fileName, new Supabase.Storage.FileOptions { Upsert = true });
+
+                // get public url
+                var publicUrl = _client.Storage
+                    .From("Avatar")
+                    .GetPublicUrl(fileName);
+
+                var urlWithCacheBuster = $"{publicUrl}?t={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+
+                // save on table users
+                await _client.From<User>()
+                    .Where(x => x.UserId == userAuth.Id)
+                    .Set(x => x.AvatarUrl!, urlWithCacheBuster)
+                    .Update();
+
+                return Ok(new { avatarUrl = urlWithCacheBuster });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500);
+            }
         }
 
     }
