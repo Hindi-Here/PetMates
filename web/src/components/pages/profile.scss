@@ -323,10 +323,10 @@
     height: rem(40);
     background-color: var(--primary-accent);
     color: var(--neutral-0);
-    font-weight: 600;
+    font-weight: bold;
     border-radius: rem(12);
     border: none;
-    transition: 0.2s ease;
+    transition: 0.25s;
 
     &:not(:disabled):hover {
       filter: brightness(0.95);
@@ -345,7 +345,6 @@
       width: rem(125);
       background-color: var(--neutral-0);
       color: var(--neutral-100);
-      font-weight: 500;
       border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 85%);
 
       &:not(:disabled):hover {
@@ -464,21 +463,23 @@
   }
 }
 
-.save-error-text {
-    font-size: rem(14);
-    color: var(--important-color);
-    padding: rem(10) rem(16);
-    background-color: color-mix(in srgb, var(--important-color), transparent 90%);
-    border: 1px solid color-mix(in srgb, var(--important-color), transparent 70%);
-    border-radius: rem(10);
-    margin: 0;
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
 }
+
+.message-auto-hide {
+  animation: fadeOut 0.25s ease 2.75s forwards;
+}
+
+.save-error-text,
 .save-success-text {
-    font-size: rem(14);
-    color: var(--primary-accent);
-    padding: rem(10) rem(16);
-    background-color: color-mix(in srgb, var(--primary-accent), transparent 90%);
-    border: 1px solid color-mix(in srgb, var(--primary-accent), transparent 70%);
-    border-radius: rem(10);
-    margin: 0;
+  font-size: rem(14);
+  color: var(--primary-accent);
+  padding: rem(10) rem(16);
+  background-color: color-mix(in srgb, var(--primary-accent), transparent 90%);
+  border: 1px solid color-mix(in srgb, var(--primary-accent), transparent 70%);
+  border-radius: rem(10);
+  margin: 0;
+  transition: 0.25s;
 }

@@ -1,4 +1,5 @@
 import './profile.scss'
+import { useNavigate, useLocation } from 'react-router-dom'
 
 import LockIcon from '@icons/lock.svg?react'
 import UserDescription from '@icons/user_description.svg?react'
@@ -8,6 +9,10 @@ import Contacts from '@icons/contacts.svg?react'
 import Add from '@icons/plus.svg?react'
 import Reject from '@icons/reject.svg?react'
 import Delete from '@icons/delete.svg?react'
+
+import { Activity } from './activity'
+import { Notification } from './notification'
+import { Setting } from './setting'
 
 import { useEffect, useMemo, useState, useRef } from 'react'
 import { useChangeInput, validatorFormat, validatorRegex } from '../scripts/function'
@@ -34,7 +39,6 @@ const UnauthorizedProfile = () => {
 
 // auth profile
 const AuthorizedProfile = () => {
-  const [activeTab, setActiveTab] = useState('Информация');
   const [isPreview, setIsPreview] = useState(false);
   const { isAuthenticated } = useAuth();
   const { data: user, refresh } = useProfile(isAuthenticated); 
@@ -166,9 +170,11 @@ const AuthorizedProfile = () => {
 
       await refresh();
       setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
     }
     catch(err: any) {
       setSaveError(err.message || 'Ошибка сохранения');
+      setTimeout(() => setSaveError(null), 3000);
     }
     finally {
     setIsLoading(false);
@@ -266,23 +272,38 @@ const AuthorizedProfile = () => {
     e.target.value = '';
   };
 
+  // tab router
+  const tabRoutes: Record<string, string> = {
+    'Информация': 'info',
+    'Активность': 'activity',
+    'Уведомления': 'notifications',
+    'Настройки': 'settings',
+  };
+
+  const routeTabs: Record<string, string> = Object.fromEntries(
+    Object.entries(tabRoutes).map(([k, v]) => [v, k])
+  );
+
+  const navigate = useNavigate();
+  const location = useLocation();
+  const activeTab = routeTabs[location.pathname.split('/').pop() ?? 'info'] ?? 'Информация';
+
   return (
     <div className='profile-content-container'>
-      <div className='tab-container'>
-        <button className={`tab ${activeTab === 'Информация' ? 'active' : ''}`} onClick={() => setActiveTab('Информация')} >
-          Информация
+    <div className='tab-container'>
+      {['Информация', 'Активность', 'Уведомления', 'Настройки'].map(tab => (
+        <button
+          key={tab}
+          className={`tab ${activeTab === tab ? 'active' : ''}`}
+          onClick={() => navigate(`/profile/${tabRoutes[tab]}`)}
+        >
+          {tab}
         </button>
-        <button className={`tab ${activeTab === 'Активность' ? 'active' : ''}`} onClick={() => setActiveTab('Активность')}>
-          Активность
-        </button>
-        <button className={`tab ${activeTab === 'Уведомления' ? 'active' : ''}`} onClick={() => setActiveTab('Уведомления')}>
-          Уведомления
-        </button>
-        <button className={`tab ${activeTab === 'Настройки' ? 'active' : ''}`} onClick={() => setActiveTab('Настройки')}>
-          Настройки
-        </button>
-      </div>
+      ))}
+    </div>
 
+    {activeTab === 'Информация' && (
+    <>
       {isPreview && user ? (
       <ProfilePreview user={user as ThirdProfileData} />
       ) : (
@@ -432,8 +453,18 @@ const AuthorizedProfile = () => {
           <Toggle checked={isPreview} onChange={setIsPreview}/>
         </div>
       </div>
-      {saveError && <p className='save-error-text'>{saveError}</p>}
-      {saveSuccess && <p className='save-success-text'>Профиль успешно обновлён</p>}
+      {saveError && (<p className='save-error-text message-auto-hide' onAnimationEnd={() => setSaveError(null)}>
+            {saveError}
+        </p>)}
+        {saveSuccess && (<p className='save-success-text message-auto-hide' onAnimationEnd={() => setSaveSuccess(false)}>
+            Профиль успешно обновлен
+        </p>)}
+    </>
+    )}
+
+      {activeTab === 'Активность' && <Activity />}
+      {activeTab === 'Уведомления' && <Notification />}
+      {activeTab === 'Настройки' && <Setting />}
     </div>
   )
 }

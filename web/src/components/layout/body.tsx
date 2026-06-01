@@ -26,7 +26,8 @@ const location = useLocation();
     const pathname = location.pathname;
     
     if (itemId === 'profile') {
-      return pathname === '/profile' || /^\/users\/[^/]+$/.test(pathname);
+      return pathname === '/profile' || 
+      pathname.startsWith('/profile/') || /^\/users\/[^/]+$/.test(pathname);
     }
     
     if (itemId === 'users') {
@@ -83,7 +84,13 @@ const Content = () => {
   return (
     <div className='content-container'>
       <Routes>
-        <Route path="/profile" element={<Profile />}/>
+        <Route path="/profile" element={<Profile />}>
+          <Route index element={<Navigate to="info" replace />} />
+          <Route path="info" element={null} />
+          <Route path="activity" element={null} />
+          <Route path="notifications" element={null} />
+          <Route path="settings" element={null} />
+        </Route>
         <Route path="/vacancy" element={<><Search activeId={activeId}/><Vacancy /></>} />
         <Route path="/events" element={<><Search activeId={activeId}/><Events/></>} />
         <Route path="/users" element={<><Search activeId={activeId}/><Users/></>} />

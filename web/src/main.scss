@@ -31,18 +31,17 @@
 }
 
 @mixin dark-theme-values {
-
 }
 
 // system theme
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     @include dark-theme-values;
   }
 }
 
-// user selected theme
-[data-theme='dark'] {
+// uset select theme
+:root[data-theme='dark'] {
   @include dark-theme-values;
 }
 
@@ -55,6 +54,7 @@
 
 *{
     box-sizing: border-box;
+    outline: none;
 }
 
 body{

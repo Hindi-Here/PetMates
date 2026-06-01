@@ -21,7 +21,7 @@ export const ProfilePreview = ({ user }: ProfilePreviewProps) => {
   const StringToTag = (value: string | string[] | undefined): string[] => {
     if (Array.isArray(value)) return value;
     if (typeof value === 'string' && value.trim()) {
-      return value.split(/\s+/).filter(t => t.startsWith('#')).map(t => t.replace(/^#/, ''));
+      return value.split(/\s+/).filter(t => t.startsWith('#'));
     }
     return [];
   };

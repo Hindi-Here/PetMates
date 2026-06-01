@@ -1,0 +1,72 @@
+.activity-header {
+  margin-bottom: rem(20);
+
+  .section-title {
+    font-size: rem(20);
+    font-weight: bold;
+    color: var(--neutral-100);
+    margin: 0;
+
+    .projects-count {
+      font-weight: bold;
+      color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+    }
+  }
+}
+
+.add-project-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: rem(16);
+  width: 100%;
+  padding: rem(24);
+  background-color: var(--neutral-0);
+  border: 2px dashed color-mix(in srgb, var(--primary-accent), transparent 50%);
+  border-radius: var(--border-radius-base);
+  transition: 0.25s;
+
+  &:hover {
+    border-color: var(--primary-accent);
+    background-color: color-mix(in srgb, var(--primary-accent), transparent 97%);
+  }
+
+  &:active {
+    transform: scale(0.99);
+    background-color: color-mix(in srgb, var(--primary-accent), transparent 95%);
+  }
+
+  .add-icon-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: rem(42);
+    height: rem(42);
+    background-color: color-mix(in srgb, var(--primary-accent), transparent 70%);
+    border-radius: 50%;
+    transition: 0.25s;
+
+    .add-project-card:hover & {
+      background-color: color-mix(in srgb, var(--primary-accent), transparent 97%);
+    }
+  }
+
+  .add-icon {
+    width: rem(18);
+    height: rem(18);
+    color: var(--primary-accent);
+    transition: 0.25s;
+
+    .add-project-card:hover & {
+      color: var(--neutral-0);
+    }
+  }
+
+  .add-project-text {
+    font-size: rem(14);
+    font-weight: bold;
+    color: var(--primary-accent);
+    transition: 0.25s;
+  }
+}

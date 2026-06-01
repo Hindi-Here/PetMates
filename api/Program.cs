@@ -1,6 +1,7 @@
 using api.Support;
 using DotNetEnv;
 using Supabase;
+using Telegram.Bot;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,6 +9,7 @@ Env.Load();
 
 var url = Environment.GetEnvironmentVariable("SUPABASE_URL");
 var key = Environment.GetEnvironmentVariable("SUPABASE_KEY");
+var botToken = Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN")!;
 
 var options = new SupabaseOptions
 {
@@ -17,6 +19,8 @@ var options = new SupabaseOptions
 
 var supabaseClient = new Client(url!, key, options);
 builder.Services.AddSingleton(supabaseClient);
+
+builder.Services.AddSingleton<ITelegramBotClient>(new TelegramBotClient(botToken));
 
 builder.Services.AddControllers();
 builder.Services.AddScoped<SupportManager>(_ => new SupportManager(supabaseClient));

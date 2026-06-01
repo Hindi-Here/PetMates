@@ -1,0 +1,169 @@
+// setting section
+.section-container {
+
+  .section-title {
+    font-size: rem(20);
+    font-weight: bold;
+    color: var(--neutral-100);
+    margin-bottom: rem(20);
+  }
+
+  .setting-container {
+    background-color: color-mix(in srgb, var(--base4-color), transparent 50%);
+    border-radius: var(--border-radius-base);
+    padding: rem(24);
+    margin-bottom: rem(20);
+    border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 75%);
+
+    .setting-title {
+      font-size: rem(16);
+      font-weight: bold;
+      color: var(--neutral-100);
+      margin-bottom: rem(20);
+    }
+
+    .setting-field-container {
+      display: flex;
+      align-items: center;
+      margin-bottom: rem(16);
+      gap: rem(16);
+      padding-right: rem(32);
+
+      .field-name {
+        min-width: rem(200);
+        font-size: rem(14);
+        color: var(--neutral-100);
+        margin-left: rem(16);
+      }
+
+      .field-input {
+        flex: 1;
+        height: rem(30);
+        padding: 0 rem(8);
+        border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 80%);
+        border-radius: var(--border-radius-base);
+        background-color: var(--neutral-0);
+        font-size: rem(14);
+        font-family: var(--font-family-base);
+        color: var(--neutral-100);
+        transition: 0.25s;
+
+        &:focus {
+          outline: none;
+          border-color: var(--primary-accent);
+        }
+      }
+    }
+  }
+}
+
+// account delete
+.warning-container {
+  background-color: color-mix(in srgb, var(--important-color), transparent 92%);
+  border: 1px solid color-mix(in srgb, var(--important-color), transparent 70%);
+  border-radius: rem(16);
+  padding: rem(24);
+
+  .warning-tittle-container {
+    display: flex;
+    align-items: center;
+    gap: rem(12);
+    margin-bottom: rem(12);
+
+    .svg-ico {
+      width: rem(18);
+      height: rem(18);
+      color: var(--important-color);
+      flex-shrink: 0;
+    }
+
+    .warning-tittle {
+      font-size: rem(16);
+      font-weight: bold;
+      color: var(--important-color);
+      margin: 0;
+    }
+  }
+
+  .warning-description {
+    font-size: rem(14);
+    color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+    margin-bottom: rem(20);
+    line-height: 1.5;
+  }
+
+  .warning-button {
+    display: flex;
+    align-items: center;
+    gap: rem(8);
+    padding: rem(10) rem(20);
+    background-color: color-mix(in srgb, var(--important-color), transparent 85%);
+    border: 1px solid color-mix(in srgb, var(--important-color), transparent 60%);
+    border-radius: var(--border-radius-base);
+    color: var(--important-color);
+    font-size: rem(14);
+    font-weight: bold;
+    font-family: var(--font-family-base);
+    transition: 0.25s;
+
+    .svg-ico {
+      width: rem(18);
+      height: rem(18);
+      color: var(--important-color);
+    }
+
+    &:hover {
+      background-color: color-mix(in srgb, var(--important-color), transparent 80%);
+      border-color: color-mix(in srgb, var(--important-color), transparent 50%);
+    }
+
+    &:active {
+      transform: scale(0.98);
+    }
+  }
+}
+
+// manage block
+.manage-container {
+  display: flex;
+  align-items: center;
+  gap: rem(12);
+
+  .manage-button {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: rem(175);
+    height: rem(40);
+    background-color: var(--primary-accent);
+    color: var(--neutral-0);
+    font-weight: bold;
+    border-radius: var(--border-radius-base);
+    border: none;
+    transition: 0.25s;
+
+    &:not(:disabled):hover {
+      filter: brightness(0.95);
+    }
+
+    &:not(:disabled):active {
+      transform: scale(0.98);
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      pointer-events: none; 
+    }
+
+    &.cancellation {
+      width: rem(125);
+      background-color: var(--neutral-0);
+      color: var(--neutral-100);
+      border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 85%);
+
+      &:not(:disabled):hover {
+        background-color: var(--base4-color);
+      }
+    }
+  }
+}
