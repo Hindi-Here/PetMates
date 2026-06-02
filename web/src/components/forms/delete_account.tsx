@@ -83,7 +83,7 @@ const Form = ({ onClose }: any) => {
                         Назад
                     </button>
                 )}
-                <button className='form-manage-button cancellation'> Отмена </button>
+                <button className='form-manage-button cancellation' onClick={onClose}> Отмена </button>
             </div>
         </div>
     </div>

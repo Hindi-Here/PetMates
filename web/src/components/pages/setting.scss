@@ -48,10 +48,28 @@
         color: var(--neutral-100);
         transition: 0.25s;
 
-        &:focus {
+        &:focus:not(.input-error) {
           outline: none;
           border-color: var(--primary-accent);
         }
+
+        &.input-error {
+          border-color: var(--important-color);
+          box-shadow: 0 0 0 1px var(--important-color);
+    
+          &::selection{
+            background-color: color-mix(in srgb, var(--important-color), transparent 75%);
+          }
+        }
+
+        &::selection{
+          background-color: color-mix(in srgb, var(--primary-accent), transparent 85%);
+        }
+      }
+      .field-input.readonly {
+        opacity: 0.5;
+        user-select: none;
+        pointer-events: none;
       }
     }
   }
@@ -135,6 +153,7 @@
     align-items: center;
     width: rem(175);
     height: rem(40);
+    margin-top: rem(12);
     background-color: var(--primary-accent);
     color: var(--neutral-0);
     font-weight: bold;
@@ -166,4 +185,34 @@
       }
     }
   }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+.message-auto-hide {
+  animation: fadeOut 0.25s ease 2.75s forwards;
+}
+
+.save-error-text,
+.save-success-text {
+  font-size: rem(14);
+  padding: rem(10) rem(16);
+  border-radius: rem(10);
+  margin: 0;
+  transition: opacity 0.25s ease;
+}
+
+.save-error-text {
+  color: var(--important-color);
+  background-color: color-mix(in srgb, var(--important-color), transparent 90%);
+  border: 1px solid color-mix(in srgb, var(--important-color), transparent 70%);
+}
+
+.save-success-text {
+  color: var(--primary-accent);
+  background-color: color-mix(in srgb, var(--primary-accent), transparent 90%);
+  border: 1px solid color-mix(in srgb, var(--primary-accent), transparent 70%);
 }

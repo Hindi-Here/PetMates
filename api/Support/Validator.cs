@@ -121,5 +121,38 @@ namespace api.Support
 
             return errors.Count > 0 ? errors[0] : null;
         }
+
+        public static string? ValidateChangePassword(string newPassword, string confirmPassword)
+        {
+            if (string.IsNullOrWhiteSpace(newPassword))
+                return "[Пароль] введите новый пароль";
+            if (newPassword.Length < 8)
+                return "[Пароль] минимум 8 символов";
+
+            var hasLetter = Regex.IsMatch(newPassword, @"[A-Za-zА-Яа-я]");
+            var hasNumber = Regex.IsMatch(newPassword, @"[0-9]");
+            var hasSpecial = Regex.IsMatch(newPassword, @"[!@#$%^&*()\-_=+\[\]{};':""\\|,.<>\/?]");
+            if (!hasLetter || !hasNumber || !hasSpecial)
+                return "[Пароль] должен содержать букву, цифру и спецсимвол";
+
+            if (string.IsNullOrWhiteSpace(confirmPassword))
+                return "[Подтверждение] подтвердите пароль";
+            if (newPassword != confirmPassword)
+                return "[Подтверждение] пароли не совпадают";
+
+            return null;
+        }
+
+        public static string? ValidateChangeEmail(string newEmail)
+        {
+            if (string.IsNullOrWhiteSpace(newEmail))
+                return "[Email] введите новую почту";
+            if (newEmail.Length > 255)
+                return "[Email] максимум 255 символов";
+            if (!Regex.IsMatch(newEmail, @"^[^\s@]+@([^\s@.,]+\.)+[^\s@.,]{2,}$"))
+                return "[Email] некорректный формат";
+
+            return null;
+        }
     }
 }

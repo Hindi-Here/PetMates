@@ -166,11 +166,20 @@ a{
 .save-error-text,
 .save-success-text {
   font-size: rem(14);
-  color: var(--primary-accent);
   padding: rem(10) rem(16);
-  background-color: color-mix(in srgb, var(--primary-accent), transparent 90%);
-  border: 1px solid color-mix(in srgb, var(--primary-accent), transparent 70%);
   border-radius: rem(10);
   margin: 0;
-  transition: 0.25s;
+  transition: opacity 0.25s ease;
+}
+
+.save-error-text {
+  color: var(--important-color);
+  background-color: color-mix(in srgb, var(--important-color), transparent 90%);
+  border: 1px solid color-mix(in srgb, var(--important-color), transparent 70%);
+}
+
+.save-success-text {
+  color: var(--primary-accent);
+  background-color: color-mix(in srgb, var(--primary-accent), transparent 90%);
+  border: 1px solid color-mix(in srgb, var(--primary-accent), transparent 70%);
 }
