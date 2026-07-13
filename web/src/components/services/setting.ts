@@ -2,6 +2,7 @@ import { API_BASE } from './cfg';
 import { supabase } from './cfg';
 
 export const settingApi = {
+  // Сменить пароль
   changePassword: async (oldPassword: string, newPassword: string, confirmPassword: string) => {
     const { data: { session } } = await supabase.auth.getSession();
     const response = await fetch(`${API_BASE}/api/setting/password`, {
@@ -19,6 +20,7 @@ export const settingApi = {
     return response.json();
   },
 
+  // Сменить почту
   changeEmail: async (newEmail: string, confirmCode: string) => {
     const { data: { session } } = await supabase.auth.getSession();
     const response = await fetch(`${API_BASE}/api/setting/email`, {

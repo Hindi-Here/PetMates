@@ -17,13 +17,29 @@ var options = new SupabaseOptions
     AutoConnectRealtime = true
 };
 
-var supabaseClient = new Client(url!, key, options);
-builder.Services.AddSingleton(supabaseClient);
+builder.Services.AddHttpContextAccessor();
+
+builder.Services.AddScoped<Supabase.Client>(sp =>
+{
+    var client = new Client(url!, key, options);
+
+    var httpContextAccessor = sp.GetRequiredService<IHttpContextAccessor>();
+    var authHeader = httpContextAccessor.HttpContext?.Request.Headers.Authorization.ToString();
+
+    if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer "))
+    {
+        var token = authHeader["Bearer ".Length..];
+        client.Postgrest.Options.Headers["Authorization"] = $"Bearer {token}";
+    }
+
+    return client;
+});
 
 builder.Services.AddSingleton<ITelegramBotClient>(new TelegramBotClient(botToken));
 
 builder.Services.AddControllers();
-builder.Services.AddScoped<SupportManager>(_ => new SupportManager(supabaseClient));
+
+builder.Services.AddScoped<SupportManager>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

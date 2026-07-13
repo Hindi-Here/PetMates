@@ -14,14 +14,16 @@ import { useBlockScroll, useChangeInput, validatorFormat, validatorRegex } from 
 
 import { authApi } from '../services/auth';
 
-const Form = ({ onClose }: any) => {
-  // switching between registration and login state
-  const [isRegister, setIsRegister] = useState(true);
-  // state for error type
-  const [error, setError] = useState<string | null>(null);
+import EyeIcon from '@icons/eye.svg?react'
+import EyeHiddenIcon from '@icons/eye_hidden.svg?react'
 
-  // regex field validate (level 2)
-  const { data, touched, dirty, handleChange, handleBlur } = useChangeInput({
+const Form = ({ onClose }: any) => {
+  const [isRegister, setIsRegister] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  
+  const { data, touched, dirty, handleChange, handleBlur } = useChangeInput(
+    {
       name: '',
       email: '',
       password: '',
@@ -29,7 +31,6 @@ const Form = ({ onClose }: any) => {
       rememberMe: false
     },
     {
-      /* rules input */
       name: validatorRegex.username,
       email: validatorRegex.email, 
       password: validatorRegex.password, 
@@ -37,7 +38,6 @@ const Form = ({ onClose }: any) => {
     }
   );
 
-  // check on disabled for button (level 1)
   const isInvalid = !checkForm(data, isRegister);
 
   useEffect(() => {
@@ -46,140 +46,169 @@ const Form = ({ onClose }: any) => {
 
   return (
     <div className='form-container'> 
+      <div className='form-header-container'>
+        {isRegister ? <RegisterIcon className='form-header-ico'/> : <SignIcon className='form-header-ico'/>}
+        <p className='form-header-text'> 
+          {isRegister ? 'Регистрация аккаунта' : 'Вход в аккаунт'} 
+        </p>
+        <button className='form-header-close-button' onClick={onClose}>
+          <RejectIcon className='form-header-close-ico' />
+        </button>
+      </div>
 
-        <div className='form-header-container'>
-            {isRegister ? <RegisterIcon className='form-header-ico'/> : <SignIcon className='form-header-ico'/>}
-            <p className='form-header-text'> 
-            {isRegister ? 'Регистрация аккаунта' : 'Вход в аккаунт'} 
-            </p>
-            <button className='form-header-close-button' onClick={onClose}>
-                <RejectIcon className='form-header-close-ico' />
+      <div className='form-content-container'>
+        {isRegister && (
+          <div className='form-field-container'>
+            <p className='form-field-text'> Имя пользователя </p>
+            <input 
+              className={`form-field-input ${touched.name && dirty.name && checkFormat('name', data.name, data, isRegister) ? 'input-error' : ''}`}
+              name='name'
+              maxLength={30}
+              value={data.name}
+              onChange={handleChange}
+              onBlur={handleBlur}
+            />
+            <div className="form-field-helper-container">
+              <InfoIcon className='form-field-helper-ico'/>
+              <p className="form-field-helper-text"> Имя пользователя должно быть от 3 до 50 символов </p>
+            </div>
+          </div>
+        )}
+        
+        <div className='form-field-container'>
+          <p className='form-field-text'> Email </p>
+          <input 
+            className={`form-field-input ${touched.email && dirty.email && checkFormat('email', data.email, data, isRegister) ? 'input-error' : ''}`}
+            name='email'
+            maxLength={255}
+            value={data.email}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            placeholder='example@mail.su'
+          />
+        </div>
+        
+        <div className='form-field-container'>
+          <p className='form-field-text'> Пароль </p>
+          <div className='form-field-password-container'>
+            <input 
+              className={`form-field-input ${touched.password && dirty.password && checkFormat('password', data.password, data, isRegister) ? 'input-error' : ''}`}
+              type={showPassword ? 'text' : 'password'}
+              name='password'
+              maxLength={255}
+              value={data.password}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              placeholder='!78uf_Hr93*'
+            />
+            <button 
+              type='button'
+              className='password-toggle-btn'
+              onClick={() => setShowPassword(!showPassword)}
+              tabIndex={-1}
+            >
+              {showPassword 
+                ? <EyeIcon className='password-toggle-icon' /> 
+                : <EyeHiddenIcon className='password-toggle-icon' />
+              }
             </button>
+          </div>
+          {isRegister && (
+            <div className="form-field-helper-container">
+              <InfoIcon className='form-field-helper-ico'/>
+              <p className="form-field-helper-text"> Пароль должен содержать не менее 8 символов, включая цифры, буквы, спец. символы </p>
+            </div>
+          )}
+          {!isRegister && (
+            <div className="form-field-forgot-password-container">
+              <p className='form-field-forgot-password-text'>Забыли пароль?</p>
+            </div>
+          )}
         </div>
+        
+        {isRegister && (
+          <div className='form-field-container'>
+            <p className='form-field-text'> Подтверждение пароля </p>
+            <input 
+              className={`form-field-input ${touched.confirmPassword && dirty.confirmPassword && checkFormat('confirmPassword', data.confirmPassword, data, isRegister) ? 'input-error' : ''}`}
+              type='password'
+              name='confirmPassword'
+              maxLength={255}
+              value={data.confirmPassword}
+              onChange={handleChange}
+              onBlur={handleBlur}
+            />
+          </div>
+        )}
+        
+        <div className='form-remember-me-container'>
+          <input 
+            type="checkbox" 
+            className='form-remember-me-checkbox' 
+            name='rememberMe' 
+            checked={data.rememberMe} 
+            onChange={handleChange}
+          />
+          <p className='form-remember-me-text'>Запомнить меня на этом устройстве </p>
+        </div>
+        
+        <div className='form-complete-container'>
+          <button 
+            className='form-complete-button'
+            disabled={isInvalid}
+            onClick={isRegister ? () => Register(data, setError, onClose) : () => Login(data, setError, onClose)}
+          >
+            {isRegister ? <RegisterIcon className='form-header-ico' /> : <SignIcon className='form-header-ico' />}
+            {isRegister ? 'Зарегистрироваться' : 'Войти'}
+          </button>
+          {error && <p className='complete-error-type'>{error}</p>}
+        </div>
+      </div>
 
-        <div className='form-content-container'>
-            {isRegister && (
-            <div className='form-field-container'>
-                <p className='form-field-text'> Имя пользователя </p>
-                <input className={`form-field-input ${touched.name && dirty.name && checkFormat('name', data.name, data, isRegister) ? 'input-error' : ''}`}
-                    name='name'
-                    maxLength={30}
-                    value={data.name}
-                    onChange={handleChange}
-                    onBlur={handleBlur}/>
-                <div className="form-field-helper-container">
-                    <InfoIcon className='form-field-helper-ico'/>
-                    <p className="form-field-helper-text"> Имя пользователя должно быть от 3 до 50 символов </p>
-                </div>
-            </div>
-            )}
-            <div className='form-field-container'>
-                <p className='form-field-text'> Email </p>
-                <input className={`form-field-input ${touched.email && dirty.email && checkFormat('email', data.email, data, isRegister) ? 'input-error' : ''}`}
-                    name='email'
-                    maxLength={255}
-                    value={data.email}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    placeholder='example@mail.su'/>
-            </div>
-            <div className='form-field-container'>
-                <p className='form-field-text'> Пароль </p>
-                <input className={`form-field-input ${touched.password && dirty.password && checkFormat('password', data.password, data, isRegister) ? 'input-error' : ''}`}
-                    type='password'
-                    name='password'
-                    maxLength={255}
-                    value={data.password}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    placeholder='!78uf_Hr93*'/>
-                {isRegister && (
-                <div className="form-field-helper-container">
-                    <InfoIcon className='form-field-helper-ico'/>
-                    <p className="form-field-helper-text"> Пароль должен содержать не менее 8 символов, включая цифры, буквы, спец. символы </p>
-                </div>
-                )}
-                {!isRegister && (
-                <div className="form-field-forgot-password-container">
-                    <p className='form-field-forgot-password-text'>Забыли пароль?</p>
-                </div>
-                )}
-            </div>
-            {isRegister && (
-            <div className='form-field-container'>
-                <p className='form-field-text'> Подтверждение пароля </p>
-                <input className={`form-field-input ${touched.confirmPassword && dirty.confirmPassword && checkFormat('confirmPassword', data.confirmPassword, data, isRegister) ? 'input-error' : ''}`}
-                    type='password'
-                    name='confirmPassword'
-                    maxLength={255}
-                    value={data.confirmPassword}
-                    onChange={handleChange}
-                    onBlur={handleBlur}/>
-            </div>
-            )}
-            <div className='form-remember-me-container'>
-                <input type="checkbox" className='form-remember-me-checkbox' name='rememberMe' checked={data.rememberMe} onChange={handleChange}/>
-                <p className='form-remember-me-text'>Запомнить меня на этом устройстве </p>
-            </div>
-            <div className='form-complete-container'>
-                <button className='form-complete-button'
-                        disabled={isInvalid}
-                        onClick={isRegister ? () => Register(data, setError, onClose) : () => Login(data, setError, onClose)}>
-                    {isRegister ? <RegisterIcon className='form-header-ico' /> : <SignIcon className='form-header-ico' />}
-                    {isRegister ? 'Зарегистрироваться' : 'Войти'}
-                </button>
-                {error && <p className='complete-error-type'>{error}</p>}
-            </div>
+      <div className='auth-service-container'>
+        <div className='auth-service-separator-container'>
+          <p className='auth-service-separator-text'> или </p>
         </div>
+        <div className='auth-service-items-container'>
+          <div className='auth-service-item-container' onClick={GoogleLogin}>
+            <GoogleColorIcon className='auth-service-item-ico google'/>
+            <p className='auth-service-item-text'> Google </p>
+          </div>
+          <div className='auth-service-item-container' onClick={GitHubLogin}>
+            <GithubColorIcon className='auth-service-item-ico git'/>
+            <p className='auth-service-item-text'> Github </p>
+          </div>
+          <div className='auth-service-item-container' onClick={TwitchLogin}>
+            <TwitchColorIcon className='auth-service-item-ico twitch'/>
+            <p className='auth-service-item-text'> Twitch </p>
+          </div>
+        </div>
+      </div>
 
-        <div className='auth-service-container'>
-            <div className='auth-service-separator-container'>
-                <p className='auth-service-separator-text'> или </p>
-            </div>
-            <div className='auth-service-items-container'>
-                <div className='auth-service-item-container' onClick={GoogleLogin}>
-                    <GoogleColorIcon className='auth-service-item-ico google'/>
-                    <p className='auth-service-item-text'> Google </p>
-                </div>
-                <div className='auth-service-item-container' onClick={GitHubLogin}>
-                    <GithubColorIcon className='auth-service-item-ico git'/>
-                    <p className='auth-service-item-text'> Github </p>
-                </div>
-                <div className='auth-service-item-container' onClick={TwitchLogin}>
-                    <TwitchColorIcon className='auth-service-item-ico twitch'/>
-                    <p className='auth-service-item-text'> Twitch </p>
-                </div>
-            </div>
-        </div>
-
-        <div className='auth-change-format-container'>
-            <p className='auth-change-format-text'> 
-            {isRegister ? 'Уже есть аккаунт?' : 'Еще нет аккаунта?'} 
-            </p>
-            <p className='auth-change-format-link' onClick={() => setIsRegister(!isRegister)}> 
-            {isRegister ? 'Войти' : 'Зарегистрироваться'} 
-            </p>
-        </div>
+      <div className='auth-change-format-container'>
+        <p className='auth-change-format-text'> 
+          {isRegister ? 'Уже есть аккаунт?' : 'Еще нет аккаунта?'} 
+        </p>
+        <p className='auth-change-format-link' onClick={() => setIsRegister(!isRegister)}> 
+          {isRegister ? 'Войти' : 'Зарегистрироваться'} 
+        </p>
+      </div>
     </div>
   )
 }
 
-export default function AuthorizationForm({ onClose }: any) { {/* onClose - you can close outside */}
+export default function AuthorizationForm({ onClose }: any) { 
   useBlockScroll(true); 
   return (
-     <div className='dark-area-container' onClick={onClose}> 
-        <div onClick={(e) => e.stopPropagation()}> {/* do not close when clicking on the form */}
-            <Form onClose={onClose}/>
-        </div>
+    <div className='dark-area-container' onClick={onClose}> 
+      <div onClick={(e) => e.stopPropagation()}>
+        <Form onClose={onClose}/>
+      </div>
     </div>
   )
 }
 
-
-
-// validate format and color support (level 1)
 const checkFormat = (fieldName: string, value: string, data: any, isRegister: boolean): string | null => {
-  
   const isLogin = !isRegister;
   
   const rules: Record<string, Array<[boolean, string]>> = {
@@ -237,53 +266,48 @@ const checkForm = (data: any, isRegister: boolean): boolean => {
   );
 };
 
-// handle event
-// click register event
 const Register = async (data: any, onError: (msg: string | null) => void, onClose?: () => void) => {
-    onError(null); 
-    try {
-        await authApi.register(data.name, data.email, data.password, data.confirmPassword);
-        onClose?.();
-    }
-    catch (err: any) {
-        const errorMessage = err.message || 'Ошибка регистрации';
-        onError(errorMessage);
-    }
-};
-// click login event
-const Login = async (data: any, onError: (msg: string | null) => void, onClose?: () => void) => {
-    onError(null);
-    try {
-        await authApi.login(data.email, data.password, data.rememberMe);
-        onClose?.();
-    }
-    catch (err: any) {
-        const errorMessage = err.message || 'Неверный email или пароль';
-        onError(errorMessage);
-    }
-};
-// github login event
-const GitHubLogin = async () => {
-    try{
-    await authApi.signInWithGitHub();
-    } catch (error) {
-        console.error('Ошибка при входе через GitHub:', error);
-    }
-};
-// google login event
-const GoogleLogin = async () => {
-    try {
-        await authApi.signInWithGoogle();
-    } catch (error) {
-        console.error('Ошибка при входе через Google:', error);
-    }
+  onError(null); 
+  try {
+    await authApi.register(data.name, data.email, data.password, data.confirmPassword);
+    onClose?.();
+  } catch (err: any) {
+    const errorMessage = err.message || 'Ошибка регистрации';
+    onError(errorMessage);
+  }
 };
 
-// twitch login event
+const Login = async (data: any, onError: (msg: string | null) => void, onClose?: () => void) => {
+  onError(null);
+  try {
+    await authApi.login(data.email, data.password, data.rememberMe);
+    onClose?.();
+  } catch (err: any) {
+    const errorMessage = err.message || 'Неверный email или пароль';
+    onError(errorMessage);
+  }
+};
+
+const GitHubLogin = async () => {
+  try {
+    await authApi.signInWithGitHub();
+  } catch (error) {
+    console.error('Ошибка при входе через GitHub:', error);
+  }
+};
+
+const GoogleLogin = async () => {
+  try {
+    await authApi.signInWithGoogle();
+  } catch (error) {
+    console.error('Ошибка при входе через Google:', error);
+  }
+};
+
 const TwitchLogin = async () => {
-    try {
-        await authApi.signInWithTwitch();
-    } catch (error) {
-        console.error('Ошибка при входе через Twitch:', error);
-    }
+  try {
+    await authApi.signInWithTwitch();
+  } catch (error) {
+    console.error('Ошибка при входе через Twitch:', error);
+  }
 };

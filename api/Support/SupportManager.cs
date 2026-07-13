@@ -10,8 +10,7 @@ namespace api.Support
         private readonly Client _client = client;
         private const int ONLINE_THRESHOLD_MINUTES = 2;
 
-        // get user id from token access
-        private string? GetToken(string token)
+        private static string? GetToken(string token)
         {
             try
             {
@@ -36,7 +35,6 @@ namespace api.Support
             return GetToken(token);
         }
 
-        // update last online by user id in database
         public async Task UpdateLastOnlineAsync(string userId)
         {
             try
@@ -52,7 +50,6 @@ namespace api.Support
             }
         }
 
-        // formatted last online for user-client
         public static string FormatLastSeen(DateTimeOffset? lastOnlineAt)
         {
             if (!lastOnlineAt.HasValue) return "давно";
@@ -99,7 +96,6 @@ namespace api.Support
             return $"{years} год{endingYear} назад";
         }
 
-        // check on online user
         public static bool IsOnline(DateTimeOffset? lastOnlineAt)
         {
             if (!lastOnlineAt.HasValue) return false;
@@ -107,7 +103,6 @@ namespace api.Support
             return diff.TotalMinutes < ONLINE_THRESHOLD_MINUTES && diff.TotalMinutes >= 0;
         }
 
-        // parse skill line in tags
         public static List<string> ParseSkills(string? skills)
         {
             if (string.IsNullOrEmpty(skills)) return [];

@@ -3,23 +3,25 @@ import { type JSX } from 'react';
 import { useIsShort } from '../scripts/function';
 import { AnimatedDropdown } from '../scripts/function';
 import { NavLink } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 
 import { authApi } from '../services/auth';
 
-// header dropdown navigation
 export function HeaderDropdownNavigation(): JSX.Element {
   const isShortVer = useIsShort(965);
+  const { userId } = useAuth();
 
   const menuItems = [
-    { id: 'profile', label: 'Профиль', path: '/profile', short: false },
-    { id: 'projects', label: 'Мои проекты', path: '/projects', short: false },
+    { id: 'profile', label: 'Профиль', path: `/profile/${userId}/info`, short: false },
+    { id: 'activity', label: 'Активность', path: `/profile/${userId}/activity`, short: false },
     
     { id: 'applications', label: 'Заявки', path: '/vacancy', short: true },
     { id: 'events', label: 'Мероприятия', path: '/events', short: true },
     { id: 'users', label: 'Участники', path: '/users', short: true },
     
-    { id: 'notifications', label: 'Уведомления', path: '/notifications', short: false },
-    { id: 'settings', label: 'Настройки', path: '/settings', short: false },
+    { id: 'responses', label: 'Отклики', path: `/profile/${userId}/responces`, short: false },
+    { id: 'notifications', label: 'Уведомления', path: `/profile/${userId}/notifications`, short: false },
+    { id: 'settings', label: 'Настройки', path: `/profile/${userId}/settings`, short: false },
     
     { id: 'beta', label: 'Бета-тестирование', path: '/bug', short: true },
   ];
@@ -51,7 +53,6 @@ export function HeaderDropdownNavigation(): JSX.Element {
   )
 }
 
-// all dropdown component
 interface MenuItem {
   id: string;
   label: string;
@@ -73,7 +74,8 @@ export function Dropdown({ items, isOpen, onSelect }: DropdownProps) {
           draggable={false}
           onClick={(e) => {
             e.stopPropagation();
-            onSelect?.(item);}}> {/* select event for change content in sort-type-container */}
+            onSelect?.(item);
+          }}>
           <p className="dropdown-item-text">{item.label}</p>
         </div>
       ))}

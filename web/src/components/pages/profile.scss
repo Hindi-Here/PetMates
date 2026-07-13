@@ -36,7 +36,6 @@
     }
 }
 
-// Auth profile
 .profile-content-container {
   display: flex;
   flex-direction: column;
@@ -46,7 +45,6 @@
   width: 80%;
   margin-left: 10%;
 
-  // tabs
   .tab-container {
     display: flex;
     gap: rem(36);
@@ -74,7 +72,6 @@
   }
 }
 
-// avatar block
 .profile-header-container {
   display: flex;
   align-items: center;
@@ -132,7 +129,6 @@
   }
 }
 
-// info block
 .profile-body-field-container {
   display: flex;
   flex-direction: column;
@@ -216,7 +212,6 @@
   }
 }
 
-// area block
 .profile-body-area-container {
   display: flex;
   flex-direction: column;
@@ -309,7 +304,6 @@
   }
 }
 
-// manage block
 .manage-container {
   display: flex;
   align-items: center;
@@ -321,6 +315,8 @@
     align-items: center;
     width: rem(175);
     height: rem(40);
+    padding: 0 rem(16);
+    line-height: 1;
     background-color: var(--primary-accent);
     color: var(--neutral-0);
     font-weight: bold;
@@ -358,15 +354,17 @@
     align-items: center;
     gap: rem(12);
     margin-left: auto;
+    min-height: rem(40);
+    padding-top: rem(12);
   }
   .preview-label {
+    line-height: 1;
     font-size: rem(14);
     color: color-mix(in srgb, var(--neutral-100), transparent 50%);
     margin: 0;
   }
 }
 
-// counter
 .profile-area-text-wrapper {
   display: flex;
   justify-content: space-between;
@@ -388,7 +386,6 @@
   }
 }
 
-// contacts
 .contacts-list {
   display: flex;
   flex-direction: column;

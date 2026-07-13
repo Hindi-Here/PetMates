@@ -1,0 +1,148 @@
+.vacancy-card-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin-bottom: rem(24);
+  user-select: none;
+  background-color: var(--neutral-0);
+  border-radius: var(--border-radius-base);
+  box-shadow: inset 0 0 0 0 var(--primary-accent), 0 4px 4px rgba(0, 0, 0, 0.15);
+  border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 75%);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  cursor: pointer;
+
+  &:hover {
+    box-shadow: inset 2px 0 0 0 var(--primary-accent), 0 4px 4px rgba(0, 0, 0, 0.25);
+    border-color: color-mix(in srgb, var(--primary-accent), transparent 75%);
+    border-left-color: var(--primary-accent);
+  }
+
+  &:active {
+    background-color: color-mix(in srgb, var(--neutral-100), transparent 98%);
+  }
+
+  .vacancy-info-container {
+    padding: rem(16);
+    padding-bottom: rem(8);
+
+    .vacancy-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: rem(8);
+
+      .vacancy-header-left {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .vacancy-title {
+        font-size: rem(20);
+        font-weight: bold;
+        color: var(--neutral-100);
+        margin: 0 0 rem(4);
+      }
+
+      .vacancy-project-name {
+        font-size: rem(16);
+        font-weight: bold;
+        color: var(--primary-accent);
+        margin: 0;
+        display: block;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    }
+
+    .vacancy-description {
+      font-size: rem(14);
+      color: color-mix(in srgb, var(--neutral-100), transparent 30%);
+      line-height: 1.5;
+      margin: 0;
+      white-space: pre-line; 
+    }
+  }
+
+  .tag-place-container {
+    display: flex;
+    gap: rem(8);
+    flex-wrap: wrap;
+    padding: rem(8) rem(16);
+    margin-bottom: 0;
+    border: none;
+
+    .tag-item {
+      padding: rem(6) rem(12);
+      background: color-mix(in srgb, var(--primary-accent), transparent 85%);
+      border-radius: var(--border-radius-small);
+      flex-shrink: 0;
+
+      .tag-text {
+        font-size: rem(12);
+        color: var(--primary-tag-text-color);
+        margin: 0;
+      }
+
+      &.more-tag {
+        background-color: var(--base2-color);
+        .tag-text { color: var(--neutral-0); }
+      }
+    }
+  }
+
+  .vacancy-footer-container {
+    display: flex;
+    align-items: center;
+    padding: rem(16);
+    padding-top: rem(16);
+    border: none;
+
+    .vacancy-left-group {
+      display: flex;
+      align-items: center;
+      gap: rem(16);
+
+      .vacancy-apply-button {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        outline: none;
+        width: rem(175);
+        height: rem(40);
+        background-color: var(--primary-accent);
+        color: var(--neutral-0);
+        font-weight: bold;
+        border-radius: var(--border-radius-base);
+        border: none;
+        transition: 0.25s;
+        cursor: pointer;
+
+        &:hover:not(:disabled) { filter: brightness(0.975); }
+        &:active:not(:disabled) { filter: brightness(0.95); transform: scale(0.98); }
+        &:disabled { opacity: 0.5; pointer-events: none; cursor: not-allowed; }
+      }
+
+      .vacancy-rating {
+        display: flex;
+        align-items: center;
+        gap: rem(4);
+        font-size: rem(12);
+        color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+
+        .star-ico { width: rem(14); height: rem(14); }
+      }
+    }
+
+    .vacancy-date {
+      display: flex;
+      align-items: center;
+      gap: rem(4);
+      font-size: rem(12);
+      color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+      margin-left: auto;
+
+      .calendar-ico { width: rem(14); height: rem(14); }
+    }
+  }
+}

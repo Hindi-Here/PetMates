@@ -1,3 +1,329 @@
+.form-content-container {
+  padding-top: rem(12);
+  padding-bottom: rem(12);
+  padding-left: rem(24);
+  padding-right: rem(24);
+  
+  .form-field-container:first-child {
+    margin-top: rem(8); 
+  }
+}
+
+.form-field-container {
+  margin-top: rem(16); 
+  margin-bottom: rem(6);
+
+  .form-field-label {
+    padding-top: rem(6);
+    padding-bottom: rem(12);
+    font-weight: normal; 
+  
+    &::after {
+      content: '*';
+      color: var(--important-color);
+      font-size: rem(12);
+      display: inline-block;
+      transform: translateY(rem(-4));
+      margin-left: rem(2);
+    }
+  }
+}
+
+.project-list {
+  display: flex;
+  flex-direction: column;
+  gap: rem(8);
+  max-height: rem(240);
+  overflow-y: auto;
+  padding-right: rem(4);
+  
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: color-mix(in srgb, var(--neutral-100), transparent 95%);
+    border-radius: rem(3);
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--neutral-100), transparent 70%);
+    border-radius: rem(3);
+    
+    &:hover {
+      background: color-mix(in srgb, var(--neutral-100), transparent 60%);
+    }
+  }
+}
+
+.project-item {
+  display: flex;
+  align-items: center;
+  gap: rem(12);
+  padding: rem(12) rem(16);
+  background: var(--neutral-0);
+  border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 85%);
+  border-radius: var(--border-radius-base);
+  transition: all 0.25s ease;
+  
+  &:hover {
+    border-color: color-mix(in srgb, var(--primary-accent), transparent 70%);
+    background: color-mix(in srgb, var(--primary-accent), transparent 97%);
+  }
+  
+  &.selected {
+    border-color: var(--primary-accent);
+    background: color-mix(in srgb, var(--primary-accent), transparent 95%);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-accent), transparent 90%);
+  }
+}
+
+.project-avatar {
+  width: rem(40);
+  height: rem(40);
+  border-radius: var(--border-radius-base);
+  background: var(--primary-accent);
+  color: var(--neutral-0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: rem(16);
+  flex-shrink: 0;
+}
+
+.project-info {
+  flex: 1;
+  min-width: 0;
+  
+  .project-title {
+    font-weight: 600;
+    color: var(--neutral-100);
+    font-size: rem(14);
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .project-members {
+    font-size: rem(12);
+    color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+    margin: rem(2) 0 0 0;
+  }
+}
+
+.project-checkmark,
+.invite-vacancy-checkmark {
+  width: rem(24);
+  height: rem(24);
+  background: var(--primary-accent);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  
+  .checkmark-icon {
+    width: rem(14);
+    height: rem(14);
+    fill: var(--neutral-0);
+  }
+}
+
+.vacancy-placeholder {
+  padding: rem(20);
+  text-align: center;
+  color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+  font-size: rem(13);
+  background: color-mix(in srgb, var(--neutral-100), transparent 97%);
+  border-radius: var(--border-radius-base);
+  border: 1px dashed color-mix(in srgb, var(--neutral-100), transparent 80%);
+}
+
+.invite-vacancy-list {
+  display: flex;
+  flex-direction: column;
+  gap: rem(8);
+  max-height: rem(240);
+  overflow-y: auto;
+  padding-right: rem(4);
+  
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: color-mix(in srgb, var(--neutral-100), transparent 95%);
+    border-radius: rem(3);
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--neutral-100), transparent 70%);
+    border-radius: rem(3);
+    
+    &:hover {
+      background: color-mix(in srgb, var(--neutral-100), transparent 60%);
+    }
+  }
+}
+
+.invite-vacancy-item {
+  display: flex;
+  align-items: center;
+  gap: rem(12);
+  padding: rem(12) rem(16);
+  background: var(--neutral-0);
+  border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 85%);
+  border-radius: var(--border-radius-base);
+  transition: all 0.25s ease;
+  
+  &:hover:not(.disabled) {
+    border-color: color-mix(in srgb, var(--primary-accent), transparent 70%);
+    background: color-mix(in srgb, var(--primary-accent), transparent 97%);
+  }
+  
+  &.selected {
+    border-color: var(--primary-accent);
+    background: color-mix(in srgb, var(--primary-accent), transparent 95%);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-accent), transparent 90%);
+  }
+  
+  &.disabled {
+    opacity: 0.5;
+    background: color-mix(in srgb, var(--neutral-100), transparent 97%);
+  }
+}
+
+.invite-vacancy-avatar {
+  width: rem(40);
+  height: rem(40);
+  border-radius: var(--border-radius-base);
+  background: var(--primary-accent);
+  color: var(--neutral-0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: rem(16);
+  flex-shrink: 0;
+}
+
+.invite-vacancy-info {
+  flex: 1;
+  min-width: 0;
+  
+  .invite-vacancy-title {
+    font-weight: 600;
+    color: var(--neutral-100);
+    font-size: rem(14);
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .invite-vacancy-date {
+    font-size: rem(12);
+    color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+    margin: rem(2) 0 0 0;
+  }
+}
+
+.project-loading,
+.project-empty,
+.vacancy-empty,
+.vacancy-placeholder {
+  padding: rem(20);
+  text-align: center;
+  color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+  font-size: rem(13);
+  background: color-mix(in srgb, var(--neutral-100), transparent 97%);
+  border-radius: var(--border-radius-base);
+  border: 1px dashed color-mix(in srgb, var(--neutral-100), transparent 80%);
+}
+
+.form-warning {
+  display: flex;
+  align-items: center;
+  gap: rem(8);
+  padding: rem(12) rem(16);
+  margin-top: rem(16);
+  background: color-mix(in srgb, var(--important-color), transparent 95%);
+  border: 1px solid color-mix(in srgb, var(--important-color), transparent 80%);
+  border-radius: var(--border-radius-base);
+  
+  .warning-icon {
+    width: rem(16);
+    height: rem(16);
+    fill: var(--important-color);
+    flex-shrink: 0;
+  }
+  
+  p {
+    margin: 0;
+    font-size: rem(13);
+    color: var(--important-color);
+  }
+  
+  &.error {
+    background: color-mix(in srgb, var(--important-color), transparent 95%);
+    border-color: color-mix(in srgb, var(--important-color), transparent 70%);
+    
+    .warning-icon {
+      fill: var(--important-color);
+    }
+    
+    p {
+      color: var(--important-color);
+    }
+  }
+}
+
+.form-manage {
+  margin-top: rem(24); 
+  margin-bottom: rem(24);
+  height: rem(40);
+  width: 100%;
+  display: flex;
+  gap: rem(12);
+
+  .form-manage-button {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: rem(6);
+    width: rem(175);
+    height: inherit;
+    background-color: var(--primary-accent);
+    color: var(--neutral-0);
+    font-weight: bold;
+    border-radius: var(--border-radius-base);
+    border: none;
+    transition: 0.25s;
+
+    &:hover {
+      filter: brightness(0.975);
+    }
+    &:active {
+      filter: brightness(0.95);
+      transform: scale(0.98);
+    }
+    &:disabled {
+      opacity: 0.4;
+      pointer-events: none; 
+    }
+  }
+  .form-manage-button.cancellation {
+    width: rem(125);
+    background-color: var(--neutral-0);
+    color: var(--neutral-100);
+    font-weight: normal;
+    border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 75%);
+    transition: 0.25s;
+  }
+}
+
 .form-field-text.no-required::after {
-    content: none;
+  content: none;
 }

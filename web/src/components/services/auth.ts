@@ -3,6 +3,7 @@ import { supabase } from './cfg';
 
 export const authApi = {
 
+  // Регистрация аккаунта
   register: async (nickname: string, email: string, password: string, confirmPassword: string) => {
     const response = await fetch(`${API_BASE}/api/auth/register`, {
       method: 'POST',
@@ -26,6 +27,7 @@ export const authApi = {
     return await data;
   },
 
+   // Логин аккаунт
    login: async (email: string, password: string, rememberMe: boolean = false) => {
     const response = await fetch(`${API_BASE}/api/auth/login`, {
       method: 'POST',

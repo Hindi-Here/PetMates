@@ -15,7 +15,6 @@ export const Setting = () => {
     const { isAuthenticated } = useAuth()
     const { data: user } = useProfile(isAuthenticated)
 
-    // dark theme control
     const [isDarkTheme, setIsDarkTheme] = useState(() => {
         if (typeof window !== 'undefined') {
             const saved = localStorage.getItem('theme')
@@ -36,7 +35,6 @@ export const Setting = () => {
         }
     }, [isDarkTheme])
 
-    // password fields (level 2)
     const { data: passData, touched: passTouched, dirty: passDirty, handleChange: handlePassChange, handleBlur: handlePassBlur } = useChangeInput(
         { oldPassword: '', newPassword: '', confirmPassword: '' },
         {
@@ -46,13 +44,11 @@ export const Setting = () => {
         }
     )
 
-    // email fields (level 2)
     const { data: emailData, touched: emailTouched, dirty: emailDirty, handleChange: handleEmailChange, handleBlur: handleEmailBlur } = useChangeInput(
         { newEmail: '', confirmCode: '' },
         { newEmail: validatorRegex.email }
     )
 
-    // password validation (level 1)
     const checkPasswordFormat = (fieldName: string, value: string): string | null => {
         const rules: Record<string, Array<[boolean, string]>> = {
             oldPassword: [
@@ -76,7 +72,6 @@ export const Setting = () => {
         return error?.[1] ?? null
     }
 
-    // email validation (level 1)
     const checkEmailFormat = (fieldName: string, value: string): string | null => {
         const rules: Record<string, Array<[boolean, string]>> = {
             newEmail: [
@@ -88,12 +83,13 @@ export const Setting = () => {
             ],
         }
         const fieldRules = rules[fieldName]
-        if (!fieldRules) return null
+        if (!fieldRules)
+            return null
+
         const error = fieldRules.find(([isInvalid]) => isInvalid)
         return error?.[1] ?? null
     }
 
-    // button disable check
     const isPasswordValid = useMemo(() => {
         return (
             validatorFormat.required(passData.oldPassword) &&

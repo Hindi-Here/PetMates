@@ -4,6 +4,7 @@ import type { ProfileData } from '../hooks/useProfile';
 import type { ThirdProfileData } from '../hooks/useThirdProfile'; 
 
 export const profileApi = {
+  // Получить свой профиль
    getMe: async (): Promise<ProfileData> => {
     const { data: { session } } = await supabase.auth.getSession();
     const response = await fetch(`${API_BASE}/api/profile/me`, {
@@ -13,6 +14,7 @@ export const profileApi = {
     return await response.json();
   },
 
+  // Обновить профиль
   updateMe: async (updateData: ProfileData) => {  
   const { data: { session } } = await supabase.auth.getSession();  
   
@@ -33,6 +35,7 @@ export const profileApi = {
   return await response.json();
 },
 
+// Загрузить аватар
 uploadAvatar: async (file: File): Promise<{ avatarUrl: string }> => {
   const { data: { session } } = await supabase.auth.getSession();
   
@@ -51,6 +54,7 @@ uploadAvatar: async (file: File): Promise<{ avatarUrl: string }> => {
   return await response.json();
 },
 
+// Получить чужой профиль
 getUserById: async (userId: string): Promise<ThirdProfileData> => {
     const { data: { session } } = await supabase.auth.getSession();
     const response = await fetch(`${API_BASE}/api/users/${userId}`, {

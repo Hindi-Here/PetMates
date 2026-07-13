@@ -8,7 +8,7 @@
     position: fixed;
     left: 0;
     top: 0;
-    z-index: 10000000000; // this index is 10 billion percent higher
+    z-index: 10000000000; // Этот индекс на 10 миллиардов процентов выше
 }
 
 .form-container{
@@ -24,7 +24,6 @@
     overflow-y: scroll;
 }
 
-// header
 .form-header-container{
     min-height: rem(75);
     width: inherit;
@@ -76,7 +75,6 @@
     }
 }
 
-// main content
 .form-content-container{
     padding-top: rem(12);
     padding-bottom: rem(12);
@@ -154,7 +152,6 @@
     }
 }
 
-// button footer
 .form-manage{
     margin-top: rem(12);
     margin-bottom: rem(24);
@@ -199,7 +196,6 @@
     }
 }
 
-// red color form
 .form-header-container.red{
     background-color: var(--important-color);
 
@@ -208,7 +204,7 @@
     }
 }
 .form-manage-button.red{
-    background-color: var(--important-color);
+    background-color: var(--important-color) !important;
     width: rem(125);
 }
 .form-field-input.red{
@@ -223,7 +219,6 @@
     }
 }
 
-// just info content
 .form-info-container{
     margin-top: rem(6);
     margin-bottom: rem(6);
@@ -243,7 +238,6 @@
     }
 }
 
-// message for users on form
 .form-field-input.message {
     height: rem(105);
     width: 100%;

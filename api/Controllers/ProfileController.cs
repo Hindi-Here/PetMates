@@ -2,6 +2,7 @@
 using api.Support;
 using Microsoft.AspNetCore.Mvc;
 using Supabase;
+using System.Text.Json;
 
 namespace api.Controllers
 {
@@ -11,7 +12,6 @@ namespace api.Controllers
     {
         private readonly Client _client = client;
 
-        // get info about yourself
         [HttpGet("me")]
         public async Task<IActionResult> GetProfile()
         {
@@ -41,9 +41,8 @@ namespace api.Controllers
             }
         }
 
-        // update info about yourself
         [HttpPut("me")]
-        public async Task<IActionResult> UpdateProfile([FromBody] User data)
+        public async Task<IActionResult> UpdateProfile([FromBody] Dictionary<string, JsonElement> data)
         {
             var authHeader = Request.Headers.Authorization.ToString();
             if (string.IsNullOrWhiteSpace(authHeader) || !authHeader.StartsWith("Bearer "))
@@ -51,9 +50,12 @@ namespace api.Controllers
 
             var token = authHeader["Bearer ".Length..];
 
-            var error = Validator.ValidateProfile(data);
-            if (error != null)
-                return BadRequest(new { message = error });
+            var jsonString = JsonSerializer.Serialize(data);
+            var userObject = JsonSerializer.Deserialize<User>(jsonString);
+
+            var validationError = Validator.ValidateProfile(userObject!);
+            if (validationError != null)
+                return BadRequest(new { message = validationError });
 
             try
             {
@@ -61,22 +63,64 @@ namespace api.Controllers
                 if (userAuth == null) return Unauthorized();
 
                 var query = _client.From<User>().Where(x => x.UserId == userAuth.Id);
+                var fieldsToUpdate = new List<string>();
 
-                if (data.Nickname != null) query = query.Set(x => x.Nickname!, data.Nickname);
-                if (data.RealName != null) query = query.Set(x => x.RealName!, data.RealName);
-                if (data.Age.HasValue) query = query.Set(x => x.Age!, data.Age);
-                if (data.Gender != null) query = query.Set(x => x.Gender!, data.Gender);
-                if (data.Country != null) query = query.Set(x => x.Country!, data.Country);
-                if (data.City != null) query = query.Set(x => x.City!, data.City);
-                if (data.Workplace != null) query = query.Set(x => x.Workplace!, data.Workplace);
-                if (data.ProfileRole != null) query = query.Set(x => x.ProfileRole!, data.ProfileRole);
-                if (data.Description != null) query = query.Set(x => x.Description!, data.Description);
-                if (data.HardSkills != null) query = query.Set(x => x.HardSkills!, data.HardSkills);
-                if (data.SoftSkills != null) query = query.Set(x => x.SoftSkills!, data.SoftSkills);
-                if (data.Contacts != null) query = query.Set(x => x.Contacts!, data.Contacts);
-                if (data.AvatarUrl != null) query = query.Set(x => x.AvatarUrl!, data.AvatarUrl);
+                var nullableStringFields = new Dictionary<string, Action<string?>>
+                {
+                    ["realName"] = v => query = query.Set(x => x.RealName!, v),
+                    ["gender"] = v => query = query.Set(x => x.Gender!, v),
+                    ["country"] = v => query = query.Set(x => x.Country!, v),
+                    ["city"] = v => query = query.Set(x => x.City!, v),
+                    ["workplace"] = v => query = query.Set(x => x.Workplace!, v),
+                    ["description"] = v => query = query.Set(x => x.Description!, v),
+                    ["hardSkills"] = v => query = query.Set(x => x.HardSkills!, v),
+                    ["softSkills"] = v => query = query.Set(x => x.SoftSkills!, v),
+                    ["contacts"] = v => query = query.Set(x => x.Contacts!, v),
+                };
+
+                foreach (var (key, setter) in nullableStringFields)
+                {
+                    if (data.TryGetValue(key, out var el))
+                    {
+                        setter(el.ValueKind == JsonValueKind.Null ? null : el.GetString());
+                        fieldsToUpdate.Add(key);
+                    }
+                }
+
+                foreach (var key in new[] { "nickname", "profileRole" })
+                {
+                    if (data.TryGetValue(key, out var el) && el.ValueKind != JsonValueKind.Null)
+                    {
+                        var val = el.GetString();
+                        if (val != null)
+                        {
+                            if (key == "nickname") query = query.Set(x => x.Nickname!, val);
+                            else query = query.Set(x => x.ProfileRole!, val);
+                            fieldsToUpdate.Add(key);
+                        }
+                    }
+                }
+
+                if (data.TryGetValue("age", out var age))
+                {
+                    int? val = null;
+                    if (age.ValueKind == JsonValueKind.Number && age.TryGetInt32(out var i)) val = i;
+                    else if (age.ValueKind == JsonValueKind.String && int.TryParse(age.GetString(), out var p)) val = p;
+                    query = query.Set(x => x.Age!, val);
+                    fieldsToUpdate.Add("age");
+                }
+
+                if (fieldsToUpdate.Count == 0)
+                    return Ok(new { message = "Нет полей для обновления" });
 
                 var updated = await query.Update();
+
+                if (updated.Models == null || updated.Models.Count == 0)
+                {
+                    var current = await _client.From<User>().Where(x => x.UserId == userAuth.Id).Get();
+                    return Ok(ModelFromResponse(current.Models.First(), userAuth.Email));
+                }
+
                 return Ok(ModelFromResponse(updated.Models.First(), userAuth.Email));
             }
             catch (Exception)
@@ -85,7 +129,6 @@ namespace api.Controllers
             }
         }
 
-        // model from response
         private static object ModelFromResponse(User profile, string? email = null)
         {
             return new
@@ -111,7 +154,6 @@ namespace api.Controllers
             };
         }
 
-        // update avatar
         [HttpPost("me/avatar")]
         public async Task<IActionResult> UploadAvatar(IFormFile file)
         {
@@ -126,9 +168,10 @@ namespace api.Controllers
                 var userAuth = await _client.Auth.GetUser(token);
                 if (userAuth == null) return Unauthorized();
 
+                using var memoryStream = new MemoryStream();
                 using var stream = file.OpenReadStream();
-                var bytes = new byte[file.Length];
-                await stream.ReadAsync(bytes);
+                await stream.CopyToAsync(memoryStream);
+                var bytes = memoryStream.ToArray();
 
                 var ext = Path.GetExtension(file.FileName);
                 var fileName = $"{userAuth.Id}/avatar{ext}";
@@ -137,14 +180,12 @@ namespace api.Controllers
                     .From("Avatar")
                     .Upload(bytes, fileName, new Supabase.Storage.FileOptions { Upsert = true });
 
-                // get public url
                 var publicUrl = _client.Storage
                     .From("Avatar")
                     .GetPublicUrl(fileName);
 
                 var urlWithCacheBuster = $"{publicUrl}?t={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
 
-                // save on table users
                 await _client.From<User>()
                     .Where(x => x.UserId == userAuth.Id)
                     .Set(x => x.AvatarUrl!, urlWithCacheBuster)
@@ -154,9 +195,9 @@ namespace api.Controllers
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"❌ [UploadAvatar] Exception: {ex.Message}");
                 return StatusCode(500);
             }
         }
-
     }
 }

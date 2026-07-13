@@ -8,7 +8,6 @@ import { useState, useEffect } from 'react'
 import { Dropdown } from './dropdown';
 import { useIsOpen } from '../scripts/function';
 
-// options for each tab (vacancy, events, users)
 interface SearchOption {
   id: string;
   label: string;
@@ -58,31 +57,24 @@ const tabOpt: Record<string, { searchOpt: SearchOption[]; sortOpt: SearchOption[
     }
   };
 
-// search manage
 export default function Search ({ activeId }: { activeId: string }) {
-  // sort icon vector change 
   const [isSortUp, setIsSortUp] = useState(true);
   const setSort = () => setIsSortUp(X => !X);
 
-  // for open/close dropdown, color search/sort-type-container, rotated dropdown-ico 
   const { isOpen: isSearchDropdownOpen, setIsOpen: setIsNameDropdownOpen, menuRef: searchMenuRef } = useIsOpen();
   const { isOpen: isSortDropdownOpen, setIsOpen: setIsDateDropdownOpen, menuRef: sortMenuRef } = useIsOpen();
 
-  // get params from `tabOpt` for sort and search dropdown
-  const currentOpt = tabOpt[activeId] || tabOpt['vacancy']; // || for safe click on all tabs outside `tabOpt` 
+  const currentOpt = tabOpt[activeId] || tabOpt['vacancy']; 
 
-  // hooks for get params of search and sort & set default/user choice
   const [selectedSearch, setSelectedSearch] = useState<SearchOption | null>(null);
   const [selectedSort, setSelectedSort] = useState<SearchOption | null>(null);
 
-  // default params for each tab
   useEffect(() => {
     const options = tabOpt[activeId] || tabOpt['vacancy'];
     setSelectedSearch(options.searchOpt[0]);
     setSelectedSort(options.sortOpt[0]);
   }, [activeId]);
 
-  // user choise
   const handleSearchSelect = (item: SearchOption) => {
     setSelectedSearch(item);
     setIsNameDropdownOpen(false);

@@ -8,18 +8,29 @@ import UserDescription from '@icons/user_description.svg?react'
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 
-import { useUserProfile } from '../hooks/useThirdProfile'
 import { useAuth } from '../hooks/useAuth' 
 import type { ThirdProfileData } from '../hooks/useThirdProfile'
 import InviteForm from '../forms/invite_user' 
 
+import { useQuery } from '@tanstack/react-query'
+import { queryKeys } from '../scripts/query/queryKeys'
+import { usersApi } from '../services/users'
+
 export default function ThirdProfile () {
-  const [activeTab, setActiveTab] = useState('Информация')
   const [showInviteForm, setShowInviteForm] = useState(false) 
 
-  const { userId } = useParams<{ userId: string }>()
-  const { data: user } = useUserProfile(userId)
+  const { profileId } = useParams<{ profileId: string }>()
   const { isAuthenticated } = useAuth()
+
+  const { data: user } = useQuery<ThirdProfileData>({
+    queryKey: queryKeys.profile.byId(profileId!),
+    queryFn: () => usersApi.getUserById(profileId!),
+    enabled: !!profileId,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: true,
+  })
 
   const contactsList: Array<{name: string, link: string}> = (() => {
     try {
@@ -45,13 +56,8 @@ export default function ThirdProfile () {
   }
 
   return (
-    <div className='profile-content-container third-profile'>
-      <div className='tab-container'>
-        <button className={`tab ${activeTab === 'Информация' ? 'active' : ''}`} onClick={() => setActiveTab('Информация')}>Информация</button>
-        <button className={`tab ${activeTab === 'Активность' ? 'active' : ''}`} onClick={() => setActiveTab('Активность')}>Активность</button>
-      </div>
-
-      {activeTab === 'Информация' && (
+    <div className='third-profile-content'>
+      {user && (
         <>
           <div className='profile-header-container'>
             <img className='profile-avatar' src={user?.avatarUrl || '/default-avatar.png'} alt={user?.nickname} />
@@ -163,12 +169,6 @@ export default function ThirdProfile () {
             </div>
           )}
         </>
-      )}
-
-      {activeTab === 'Активность' && (
-        <div className='activity-tab'>
-          <p className='activity-placeholder'>История активности пользователя</p>
-        </div>
       )}
 
       {showInviteForm && user && (

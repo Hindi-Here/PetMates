@@ -2,6 +2,7 @@ import { API_BASE } from './cfg';
 import { supabase } from './cfg';
 
 export const reportApi = {
+  // Отправить сообщение от пользователя (bug страница)
   send: async (message: string, isAnonymous: boolean, nickname?: string) => {
     const { data: { session } } = await supabase.auth.getSession();
 

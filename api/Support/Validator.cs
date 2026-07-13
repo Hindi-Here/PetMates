@@ -2,8 +2,33 @@
 
 namespace api.Support
 {
-    public class Validator
+    public partial class Validator
     {
+
+        [GeneratedRegex(@"^[a-zA-Zа-яА-Я0-9_-]+$")]
+        private static partial Regex NicknameRegex();
+
+        [GeneratedRegex(@"^[a-zA-Zа-яА-Я0-9ёЁ\s\-""'.,()\/]+$")]
+        private static partial Regex NameLocationRegex();
+
+        [GeneratedRegex(@"^[a-zA-Zа-яА-Я0-9ёЁ\/\[\]\-\s]+$")]
+        private static partial Regex RoleRegex();
+
+        [GeneratedRegex(@"^#[a-zA-Zа-яА-Я0-9_\/]+$")]
+        private static partial Regex TagRegex();
+
+        [GeneratedRegex(@"^[^\s@]+@([^\s@.,]+\.)+[^\s@.,]{2,}$")]
+        private static partial Regex EmailRegex();
+
+        [GeneratedRegex(@"[A-Za-zА-Яа-я]")]
+        private static partial Regex PasswordLetterRegex();
+
+        [GeneratedRegex(@"[0-9]")]
+        private static partial Regex PasswordNumberRegex();
+
+        [GeneratedRegex(@"[!@#$%^&*()\-_=+\[\]{};':""\\|,.<>\/?]")]
+        private static partial Regex PasswordSpecialRegex();
+
         public static string? ValidateProfile(Models.User data)
         {
             var errors = new List<string>();
@@ -14,7 +39,7 @@ namespace api.Support
                     errors.Add("[Никнейм] введите никнейм");
                 else if (data.Nickname.Length > 50)
                     errors.Add("[Никнейм] максимум 50 символов");
-                else if (!Regex.IsMatch(data.Nickname, @"^[a-zA-Zа-яА-Я0-9_-]+$"))
+                else if (!NicknameRegex().IsMatch(data.Nickname))
                     errors.Add("[Никнейм] недопустимые символы");
             }
 
@@ -22,7 +47,7 @@ namespace api.Support
             {
                 if (data.RealName.Length > 100)
                     errors.Add("[Имя] максимум 100 символов");
-                else if (data.RealName.Length > 0 && !Regex.IsMatch(data.RealName, @"^[a-zA-Zа-яА-Я0-9ёЁ\s\-""'.,()\/]+$"))
+                else if (data.RealName.Length > 0 && !NameLocationRegex().IsMatch(data.RealName))
                     errors.Add("[Имя] недопустимые символы");
             }
 
@@ -30,7 +55,7 @@ namespace api.Support
             {
                 if (data.Country.Length > 50)
                     errors.Add("[Страна] максимум 50 символов");
-                else if (data.Country.Length > 0 && !Regex.IsMatch(data.Country, @"^[a-zA-Zа-яА-Я0-9ёЁ\s\-""'.,()\/]+$"))
+                else if (data.Country.Length > 0 && !NameLocationRegex().IsMatch(data.Country))
                     errors.Add("[Страна] недопустимые символы");
             }
 
@@ -38,7 +63,7 @@ namespace api.Support
             {
                 if (data.City.Length > 50)
                     errors.Add("[Город] максимум 50 символов");
-                else if (data.City.Length > 0 && !Regex.IsMatch(data.City, @"^[a-zA-Zа-яА-Я0-9ёЁ\s\-""'.,()\/]+$"))
+                else if (data.City.Length > 0 && !NameLocationRegex().IsMatch(data.City))
                     errors.Add("[Город] недопустимые символы");
             }
 
@@ -46,7 +71,7 @@ namespace api.Support
             {
                 if (data.Workplace.Length > 100)
                     errors.Add("[Место работы] максимум 100 символов");
-                else if (data.Workplace.Length > 0 && !Regex.IsMatch(data.Workplace, @"^[a-zA-Zа-яА-Я0-9ёЁ\s\-""'.,()\/]+$"))
+                else if (data.Workplace.Length > 0 && !NameLocationRegex().IsMatch(data.Workplace))
                     errors.Add("[Место работы] недопустимые символы");
             }
 
@@ -56,7 +81,7 @@ namespace api.Support
                     errors.Add("[Роль] введите роль");
                 else if (data.ProfileRole.Length > 50)
                     errors.Add("[Роль] максимум 50 символов");
-                else if (!Regex.IsMatch(data.ProfileRole, @"^[a-zA-Zа-яА-Я0-9ёЁ\/\[\]\-\s]+$"))
+                else if (!RoleRegex().IsMatch(data.ProfileRole))
                     errors.Add("[Роль] недопустимые символы");
             }
 
@@ -75,7 +100,7 @@ namespace api.Support
         private static bool ValidateTags(string value)
         {
             var tags = value.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            return tags.All(tag => Regex.IsMatch(tag, @"^#[a-zA-Zа-яА-Я0-9_\/]+$"));
+            return tags.All(tag => TagRegex().IsMatch(tag));
         }
 
         public static string? ValidateRegister(string nickname, string email, string password, string confirmPassword)
@@ -88,14 +113,14 @@ namespace api.Support
                 errors.Add("[Никнейм] минимум 3 символа");
             else if (nickname.Length > 50)
                 errors.Add("[Никнейм] максимум 50 символов");
-            else if (!Regex.IsMatch(nickname, @"^[a-zA-Zа-яА-Я0-9_-]+$"))
+            else if (!NicknameRegex().IsMatch(nickname))
                 errors.Add("[Никнейм] недопустимые символы");
 
             if (string.IsNullOrWhiteSpace(email))
                 errors.Add("[Email] введите email");
             else if (email.Length > 255)
                 errors.Add("[Email] максимум 255 символов");
-            else if (!Regex.IsMatch(email, @"^[^\s@]+@([^\s@.,]+\.)+[^\s@.,]{2,}$"))
+            else if (!EmailRegex().IsMatch(email))
                 errors.Add("[Email] некорректный формат");
 
             if (string.IsNullOrWhiteSpace(password))
@@ -104,9 +129,9 @@ namespace api.Support
                 errors.Add("[Пароль] минимум 8 символов");
             else
             {
-                var hasLetter = Regex.IsMatch(password, @"[A-Za-zА-Яа-я]");
-                var hasNumber = Regex.IsMatch(password, @"[0-9]");
-                var hasSpecial = Regex.IsMatch(password, @"[!@#$%^&*()\-_=+\[\]{};':""\\|,.<>\/?]");
+                var hasLetter = PasswordLetterRegex().IsMatch(password);
+                var hasNumber = PasswordNumberRegex().IsMatch(password);
+                var hasSpecial = PasswordSpecialRegex().IsMatch(password);
                 if (!hasLetter || !hasNumber || !hasSpecial)
                     errors.Add("[Пароль] должен содержать букву, цифру и спецсимвол");
             }
@@ -129,9 +154,9 @@ namespace api.Support
             if (newPassword.Length < 8)
                 return "[Пароль] минимум 8 символов";
 
-            var hasLetter = Regex.IsMatch(newPassword, @"[A-Za-zА-Яа-я]");
-            var hasNumber = Regex.IsMatch(newPassword, @"[0-9]");
-            var hasSpecial = Regex.IsMatch(newPassword, @"[!@#$%^&*()\-_=+\[\]{};':""\\|,.<>\/?]");
+            var hasLetter = PasswordLetterRegex().IsMatch(newPassword);
+            var hasNumber = PasswordNumberRegex().IsMatch(newPassword);
+            var hasSpecial = PasswordSpecialRegex().IsMatch(newPassword);
             if (!hasLetter || !hasNumber || !hasSpecial)
                 return "[Пароль] должен содержать букву, цифру и спецсимвол";
 
@@ -149,10 +174,62 @@ namespace api.Support
                 return "[Email] введите новую почту";
             if (newEmail.Length > 255)
                 return "[Email] максимум 255 символов";
-            if (!Regex.IsMatch(newEmail, @"^[^\s@]+@([^\s@.,]+\.)+[^\s@.,]{2,}$"))
+            if (!EmailRegex().IsMatch(newEmail))
                 return "[Email] некорректный формат";
 
             return null;
+        }
+
+        public static string? ValidateProject(string? title, string? shortDescription)
+        {
+            var errors = new List<string>();
+
+            if (title != null)
+            {
+                if (title.Trim().Length == 0)
+                    errors.Add("[Название проекта] введите название проекта");
+                else if (title.Length > 50)
+                    errors.Add("[Название проекта] максимум 50 символов");
+            }
+
+            if (shortDescription != null && shortDescription.Length > 150)
+                errors.Add("[Краткое описание] максимум 150 символов");
+
+            return errors.Count > 0 ? errors[0] : null;
+        }
+
+        public static string? ValidateRole(string? role)
+        {
+            if (string.IsNullOrWhiteSpace(role))
+                return "[Роль] введите роль";
+            if (role.Length > 50)
+                return "[Роль] максимум 50 символов";
+            if (role.Length < 2)
+                return "[Роль] минимум 2 символа";
+
+            return null;
+        }
+
+        public static string? ValidateVacancy(string? title, string? description, string? tags)
+        {
+            var errors = new List<string>();
+
+            if (string.IsNullOrWhiteSpace(title))
+                errors.Add("[Название роли] введите название роли");
+            else if (title.Length > 50)
+                errors.Add("[Название роли] максимум 50 символов");
+
+            if (string.IsNullOrWhiteSpace(description))
+                errors.Add("[Описание] введите описание");
+            else if (description.Length > 500)
+                errors.Add("[Описание] максимум 500 символов");
+
+            if (string.IsNullOrWhiteSpace(tags))
+                errors.Add("[Теги] введите теги");
+            else if (!ValidateTags(tags))
+                errors.Add("[Теги] теги должны начинаться с # и содержать только буквы, цифры и _");
+
+            return errors.Count > 0 ? errors[0] : null;
         }
     }
 }

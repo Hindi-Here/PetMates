@@ -1,11 +1,9 @@
-// TSX scripts
-
 import type { ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from "react-router-dom";
 
-// every route move - scroll top
+// Подъем скролла в топ
 export const ScrollToTop = () => {
   const { pathname } = useLocation();
 
@@ -16,7 +14,7 @@ export const ScrollToTop = () => {
   return null;
 };
 
-// animated dropdown
+// Анимированный выпадающий список
 interface AnimatedDropdownProps {
   isOpen: boolean;
   children: ReactNode;
@@ -39,7 +37,7 @@ export const AnimatedDropdown = ({ isOpen, children, className }: AnimatedDropdo
   </AnimatePresence>
 );
 
-// check mobile/small screen
+// Проверка маленького экрана
 export function useIsShort(smallPoint = 965) {
   const [flag, setFlag] = useState(window.innerWidth < smallPoint);
 
@@ -56,7 +54,7 @@ export function useIsShort(smallPoint = 965) {
   return flag;
 }
 
-// check open/close header dropdown menu
+// Проверка открытости окна
 export function useIsOpen(){
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -77,7 +75,7 @@ export function useIsOpen(){
   return { isOpen, setIsOpen, menuRef };
 }
 
-// block scroll when modal is open
+// Блок скролла
 export function useBlockScroll(isVisible: boolean) {
   useEffect(() => {
     if (isVisible) {
@@ -91,18 +89,16 @@ export function useBlockScroll(isVisible: boolean) {
   }, [isVisible]);
 }
 
-// tag box autosize
+// Автоматическое определение длины tag блока
 export function useTagInput() {
   
   const handleInput = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const target = e.currentTarget;
 
-    // autosize in dipendency content
     target.style.height = 'auto';
     target.style.height = `${target.scrollHeight}px`;  
   }, []);
 
-  // ban enter
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -113,17 +109,17 @@ export function useTagInput() {
 }
 
 
-// --- SECURITY AND VALIDATION SCRIPTS --- \\
+// --- ВАЛДИАЦИЯ --- \\
 
-// validator format (level 1)
+// Первый уровень
 export const validatorFormat = {
-  // length checker
+  // Длина валидация
   required: (value: string) => value.trim().length > 0,
   minLength: (value: string, min: number) => value.length >= min,
   maxLength: (value: string, max: number) => value.length <= max,
   number: (value: string) => /^[0-9]+$/.test(value),
 
-  // format checker
+  // Формат валидация
   email: (value: string) => /^[^\s@]+@([^\s@.,]+\.)+[^\s@.,]{2,}$/.test(value),
   
   password: (value: string) => {
@@ -142,10 +138,10 @@ export const validatorFormat = {
   },
 };
 
-// validator input cleaner (level 2)
+// Валидация вводимых символов
 export const validatorRegex = {
 
-  // common
+  // Общее
   text: (value: string, max: number) => {
     return value
       .replace(/[^a-zA-Zа-яА-Я0-9ёЁ\s\-"'.,()\/]/g, '')
@@ -158,7 +154,7 @@ export const validatorRegex = {
 
   message: (value: string) => value,
 
-  // special
+  // Специальные поля
   username: (value: string, max: number = 50) => {
     return value.replace(/[^a-zA-Zа-яА-Я0-9_-]/g, '').slice(0, max);
   },
@@ -192,13 +188,13 @@ export const validatorRegex = {
     },
 };
 
-// template input change events (level 2 support)
+// События валидации
 export function useChangeInput<T>(initialState: T, rules: Partial<Record<keyof T, (value: string) => string>>) {
   const [data, setData] = useState<T>(initialState);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [dirty, setDirty] = useState<Record<string, boolean>>({});
 
-  // every symbol change in input - validate and set state
+  // Обработка ввода символа
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target as HTMLInputElement;
     let val = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
@@ -211,13 +207,13 @@ export function useChangeInput<T>(initialState: T, rules: Partial<Record<keyof T
     setData(prev => ({ ...prev, [name]: val }));
   };
 
-  // every focus out - set touched for show error
+  // Маркировка прожатых полей
   const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name } = e.target;
     setTouched(prev => ({ ...prev, [name]: true }));
   };
 
-  // reset effects
+  // Сброс эффектов
   const reset = () => {
   setData(initialState);
   setTouched({});

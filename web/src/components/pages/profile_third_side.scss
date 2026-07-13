@@ -1,40 +1,10 @@
-.profile-content-container.third-profile {
+.third-profile-content {
   display: flex;
   flex-direction: column;
   gap: rem(24);
-  padding-top: rem(36);
   padding-bottom: rem(36);
-  width: 80%;
-  margin-left: 10%;
-
-  // tabs
-  .tab-container {
-    display: flex;
-    gap: rem(36);
-    padding-bottom: rem(8);
-
-    .tab {
-      background: none;
-      border: none;
-      font-size: rem(16);
-      color: color-mix(in srgb, var(--neutral-100), transparent 25%);
-      padding: rem(8) 0;
-      transition: color 0.25s;
-      border-bottom: 2px solid transparent;
-
-      &:hover {
-        color: var(--neutral-100);
-      }
-
-      &.active {
-        color: var(--primary-accent);
-        border-bottom: 2px solid var(--primary-accent);
-      }
-    }
-  }
 }
 
-// profile header
 .profile-header-container {
     display: flex;
     align-items: center;
@@ -113,7 +83,6 @@
     }
   }
 
-// meta
 .profile-meta-container {
     display: flex;
     flex-wrap: wrap;
@@ -140,7 +109,6 @@
     }
   }
 
-// area
 .profile-area-container {
     display: flex;
     flex-direction: column;
@@ -204,13 +172,13 @@
     }
 }
 
-// invite
 .invite-place-container.third-side {
     display: flex;
     gap: rem(16);
     align-items: center;
     padding: 0;
     margin: 0;
+    border-top: none;
 
     .invite-button.third-side{
         display: flex;
@@ -240,7 +208,6 @@
     }
 }
 
-// contacts
 .contact-item.empty {
     width: fit-content; 
     padding: rem(8) rem(16);
