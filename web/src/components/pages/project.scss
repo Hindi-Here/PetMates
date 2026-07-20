@@ -11,8 +11,6 @@
   gap: rem(32);
 }
 
-
-
 .project-section {
   display: flex;
   flex-direction: column;
@@ -40,9 +38,11 @@
   display: flex;
   flex-direction: column;
   gap: rem(12);
-  background: var(--base4-color);
+  background: transparent;
   border-radius: var(--border-radius-base);
-  padding: rem(20);
+  padding: rem(18);
+  padding-right: 0;
+  // background-color: var(--base4-color);
 }
 
 .project-field-row {
@@ -55,6 +55,11 @@
 .project-field-label {
   font-size: rem(14);
   color: var(--neutral-100);
+}
+
+.required-mark {
+  color: var(--important-color);
+  font-weight: bold;
 }
 
 .project-field-input {
@@ -70,6 +75,32 @@
 
   &:focus {
     border-color: var(--primary-accent);
+  }
+}
+
+.project-short-desc-editor {
+  width: 100%;
+  min-height: rem(80);
+  max-height: rem(120);
+  padding: rem(12) rem(16);
+  font-family: inherit;
+  font-size: rem(14);
+  line-height: 1.5;
+  color: var(--neutral-100);
+  background: var(--neutral-0);
+  border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 80%);
+  border-radius: var(--border-radius-base);
+  resize: none;
+  overflow-y: auto;
+  outline: none;
+  transition: 0.2s;
+
+  &:focus {
+    border-color: var(--primary-accent);
+  }
+
+  &::placeholder {
+    color: color-mix(in srgb, var(--neutral-100), transparent 60%);
   }
 }
 
@@ -1207,7 +1238,8 @@
 }
 
 .project-field-input,
-.project-md-editor {
+.project-md-editor,
+.project-short-desc-editor {
   &.input-error {
     border-color: var(--important-color) !important;
     box-shadow: 0 0 0 1px var(--important-color);
@@ -1224,4 +1256,61 @@
   overflow-y: auto;
   font-family: inherit;
   line-height: 1.5;
+}
+
+.privacy-toggle-container {
+  display: flex;
+  align-items: center;
+  gap: rem(12);
+}
+
+.privacy-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: rem(8);
+  padding: rem(8) rem(12);
+  background: var(--neutral-0);
+  border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 80%);
+  border-radius: var(--border-radius-base);
+  transition: 0.25s;
+  font-size: rem(14);
+  color: var(--neutral-100);
+  width: fit-content;
+
+  &:hover {
+    border-color: var(--primary-accent);
+    background: color-mix(in srgb, var(--primary-accent), transparent 95%);
+  }
+
+  .lock-ico {
+    width: rem(16);
+    height: rem(16);
+    color: var(--important-color);
+    transition: 0.25s;
+
+    &.unlocked {
+      color: var(--success-color);
+    }
+  }
+}
+
+.privacy-hint {
+  font-size: rem(12);
+  color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+  margin: 0;
+  white-space: nowrap;
+}
+
+.section-header-wrapper {
+  display: flex;
+  align-items: center;
+  gap: rem(8);
+  margin-bottom: rem(16);
+}
+
+.draft-indicator {
+  font-size: rem(14);
+  color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+  font-weight: normal;
+  font-style: italic;
 }

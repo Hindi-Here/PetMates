@@ -5,6 +5,7 @@ import CalendarIcon from '@icons/calendar.svg?react'
 import StatusEndIcon from '@icons/status_end.svg?react'
 import StatusPauseIcon from '@icons/status_pause.svg?react'
 import StatusWorkingIcon from '@icons/status_working.svg?react'
+import LockIcon from '@icons/lock.svg?react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import type { ProjectData } from '../services/project'
@@ -57,7 +58,12 @@ const ProjectCard = ({ project }: { project: ProjectData }) => {
   return (
     <div className="project-card" onClick={handleClick}>
       <div className="project-card-header">
-        <h3 className="project-card-title">{project.title}</h3>
+        <h3 className="project-card-title">
+          {project.title}
+          {project.isPrivate && (
+            <LockIcon className="private-icon" title="Приватный проект" />
+          )}
+        </h3>
         <span className={`project-card-status ${statusConfig.className}`}>
           <StatusIcon className="status-icon" />
           {statusConfig.text}
@@ -149,7 +155,8 @@ export const Activity = () => {
       shortDescription: '',
       fullDescription: '',
       status: 'В процессе',
-      ownerId: authUserId
+      ownerId: authUserId,
+      isPrivate: false
     })
   }
 

@@ -1,4 +1,5 @@
 import './project.scss'
+import '../common/comment.scss' 
 
 import Add from '@icons/plus.svg?react'
 import Delete from '@icons/delete.svg?react'
@@ -6,22 +7,26 @@ import Edit from '@icons/edit.svg?react'
 import Accept from '@icons/accept.svg?react'
 import Reject from '@icons/reject.svg?react'
 import ImportantIcon from '@icons/important_warning.svg?react'
-import AdminProjectIcon from '@icons/admin_project.svg?react' 
+import AdminProjectIcon from '@icons/admin_project.svg?react'
+import LockIcon from '@icons/lock.svg?react'
+import UnlockIcon from '@icons/unlock.svg?react'
 
 import { useEffect, useState, useRef, Fragment } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Toggle } from '../common/toggle'
 import { validatorFormat, validatorRegex, useChangeInput } from '../scripts/function'
+import { useAuth } from '../hooks/useAuth'
 
 import { Dropdown } from '../common/dropdown' 
 import { useIsOpen } from '../scripts/function'  
 import DropdownIcon from '@icons/dropdown.svg?react'
 
 import { ProjectPreview } from './project_preview'
-import { projectsApi } from '../services/project'
+import { projectsApi, projectDraftApi, type ProjectDraftData } from '../services/project'
 import { projectMembersApi } from '../services/project_members'
 import { usersApi, type UserData } from '../services/users'
 import { vacanciesApi, type VacancyData } from '../services/vacancy'
+import { commentApi, type CommentData } from '../services/comment'
 
 import DeleteProjectForm from '../forms/delete_project'
 import InfoCircleIcon from '@icons/info_circle.svg?react' 
@@ -50,6 +55,10 @@ interface LocalVacancy extends VacancyData {
   _isModified?: boolean
 }
 
+interface CommentNode extends CommentData {
+  replies: CommentNode[];
+}
+
 const STATUS_OPTIONS = ['В процессе', 'Завершён', 'Приостановлен']
 
 const getVisualLineCount = (text: string, element: HTMLElement) => {
@@ -69,7 +78,7 @@ const getVisualLineCount = (text: string, element: HTMLElement) => {
     line-height: ${computed.lineHeight};
     white-space: pre-wrap;
     word-wrap: break-word;
-    padding: 0; /* УБРАЛИ PADDING */
+    padding: 0;
     box-sizing: border-box;
   `;
   mirror.textContent = text || '.';
@@ -324,10 +333,27 @@ export const Project = ({ onCancel }: ProjectProps) => {
   const profilePath = profileId ? `/profile/${profileId}` : '/profile'
   const [isPreview, setIsPreview] = useState(false)
   
+  const { userId: currentUserId } = useAuth()
+
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [projectRating, setProjectRating] = useState(0)
+  const [isPrivate, setIsPrivate] = useState(false)
+  
+  const [hasBasicInfoDraft, setHasBasicInfoDraft] = useState(false)
+  const [hasDescriptionDraft, setHasDescriptionDraft] = useState(false)
+  const [hasTeamDraft, setHasTeamDraft] = useState(false)
+  const [hasVacanciesDraft, setHasVacanciesDraft] = useState(false)
+  
+  const [loadedDraft, setLoadedDraft] = useState<ProjectDraftData | null | undefined>(undefined)
+  const draftTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const [newComment, setNewComment] = useState('')
+  const [replyingTo, setReplyingTo] = useState<string | null>(null)
+  const [replyContent, setReplyContent] = useState('')
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
+  const [editContent, setEditContent] = useState('')
 
   const [name, setName] = useState('Unnamed')
   const [shortDesc, setShortDesc] = useState('')
@@ -365,8 +391,24 @@ export const Project = ({ onCancel }: ProjectProps) => {
   const [initialTeamState, setInitialTeamState] = useState<TeamMemberWithUser[]>([])
   const teamInitializedRef = useRef(false)
 
+  const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set())
+
+  const toggleReplies = (commentId: string) => {
+  setExpandedComments(prev => {
+    const newSet = new Set(prev)
+    if (newSet.has(commentId)) {
+      newSet.delete(commentId)
+    } else {
+      newSet.add(commentId)
+    }
+    return newSet
+  })
+}
+
+const isExpanded = (commentId: string) => expandedComments.has(commentId)
+
   const [initialState, setInitialState] = useState(() => ({
-    name: 'Unnamed', shortDesc: '', status: STATUS_OPTIONS[0], description: '',
+    name: 'Unnamed', shortDesc: '', status: STATUS_OPTIONS[0], description: '', isPrivate: false,
   }))
 
   const queryClient = useQueryClient()
@@ -410,6 +452,8 @@ export const Project = ({ onCancel }: ProjectProps) => {
     enabled: !!projectId,
     staleTime: 0,
   })
+
+  const isOwner = project?.ownerId === currentUserId
 
   const { data: teamMembers = [] } = useQuery({
     queryKey: queryKeys.projects.memberProjects(projectId!),
@@ -460,7 +504,19 @@ export const Project = ({ onCancel }: ProjectProps) => {
     staleTime: 0,
   })
 
+  const { data: comments = [], refetch: refetchComments } = useQuery({
+    queryKey: ['comments', 'project', projectId],
+    queryFn: () => commentApi.getComments('project', projectId!),
+    enabled: !!projectId,
+  })
+
   const projectInvites = allInvites.filter(invite => invite.projectId === projectId)
+
+  useEffect(() => {
+    setLoadedDraft(undefined)
+    teamInitializedRef.current = false
+    vacanciesSyncedRef.current = false
+  }, [projectId])
 
   useEffect(() => {
     const fetchNickname = async () => {
@@ -478,55 +534,255 @@ export const Project = ({ onCancel }: ProjectProps) => {
   }, [])
 
   useEffect(() => {
-    if (teamMembers.length > 0 && !teamInitializedRef.current) {
-      const membersCopy = teamMembers.map(m => ({ ...m }))
-      setLocalTeamMembers(membersCopy)
-      setInitialTeamState(membersCopy)
-      teamInitializedRef.current = true
-    }
-  }, [teamMembers])
+    if (vacanciesFromDb.length > 0 && !vacanciesSyncedRef.current && loadedDraft !== undefined) {
+      let vacancies: LocalVacancy[] = vacanciesFromDb.map(v => ({ ...v } as LocalVacancy))
+      const draftVacancies = loadedDraft?.vacancies || []
+      const draftDeletedVacancyIds = loadedDraft?.deletedVacancyIds || []
 
-  useEffect(() => {
-    if (vacanciesFromDb.length > 0 && !vacanciesSyncedRef.current) {
-      setLocalVacancies(vacanciesFromDb.map(v => ({ ...v })))
+      draftVacancies.forEach(dv => {
+        const idx = vacancies.findIndex(v => v.vacancyId === dv.vacancyId)
+        if (idx >= 0) {
+          vacancies[idx] = { ...vacancies[idx], title: dv.title, description: dv.description, requiredTags: dv.requiredTags, _isModified: dv.isModified }
+        } else if (dv.isNew) {
+          vacancies.push({ ...dv, projectId: projectId!, role: dv.title, projectTitle: name, ratingCount: 0, _isNew: true } as LocalVacancy)
+        }
+      })
+
+      vacancies = vacancies.filter(v => !draftDeletedVacancyIds.includes(v.vacancyId))
+
+      setLocalVacancies(vacancies)
+      setDeletedVacancyIds(draftDeletedVacancyIds)
       vacanciesSyncedRef.current = true
     }
-  }, [vacanciesFromDb])
+  }, [vacanciesFromDb, loadedDraft, projectId, name])
 
   useEffect(() => {
-    if (project) {
-      setName(project.title)
-      setShortDesc(project.shortDescription || '')
-      setStatus(project.status)
-      setDescription(project.fullDescription || '')
-      setProjectRating(project.ratingCount || 0)
-      setInitialState({
+    if (teamMembers.length > 0 && !teamInitializedRef.current && loadedDraft !== undefined) {
+      const membersCopy = teamMembers.map(m => ({ ...m }))
+      setInitialTeamState(membersCopy)
+
+      const draftDeletedMemberIds = loadedDraft?.deletedMemberIds || []
+      const draftEditedRoles = loadedDraft?.editedRoles || {}
+
+      let restored = membersCopy.filter(m => !draftDeletedMemberIds.includes(m.memberId))
+      restored = restored.map(m => draftEditedRoles[m.memberId] ? { ...m, role: draftEditedRoles[m.memberId] } : m)
+
+      setLocalTeamMembers(restored)
+      setDeletedMemberIds(draftDeletedMemberIds)
+      setEditedRoles(draftEditedRoles)
+      teamInitializedRef.current = true
+    }
+  }, [teamMembers, loadedDraft])
+
+  useEffect(() => {
+    if (project && projectId) {
+      const cleanState = {
         name: project.title,
         shortDesc: project.shortDescription || '',
         status: project.status,
         description: project.fullDescription || '',
-      })
+        isPrivate: project.isPrivate || false,
+      }
+      
+      setInitialState(cleanState)
+      setProjectRating(project.ratingCount || 0)
       
       handleProjectChange({ target: { name: 'name', value: project.title } } as any)
       handleProjectChange({ target: { name: 'shortDesc', value: project.shortDescription || '' } } as any)
       handleProjectChange({ target: { name: 'status', value: project.status } } as any)
       handleProjectChange({ target: { name: 'description', value: project.fullDescription || '' } } as any)
+
+      const statusMap: Record<string, string> = {'in_progress': 'В процессе', 'completed': 'Завершён', 'paused': 'Приостановлен'}
+
+      const loadDraft = async () => {
+        try {
+          const draft = await projectDraftApi.getDraft(projectId)
+          setLoadedDraft(draft)
+
+          if (draft) {
+            const draftStatus = draft.status ? (statusMap[draft.status] || draft.status) : cleanState.status
+            
+            setName(draft.title ?? cleanState.name)
+            setShortDesc(draft.shortDescription ?? cleanState.shortDesc)
+            setStatus(draftStatus)
+            setDescription(draft.fullDescription ?? cleanState.description)
+            setIsPrivate(draft.isPrivate ?? cleanState.isPrivate)
+            
+            setHasBasicInfoDraft(
+              (draft.title && draft.title !== cleanState.name) ||
+              (draft.shortDescription !== undefined && draft.shortDescription !== cleanState.shortDesc) ||
+              (draft.status && draft.status !== cleanState.status) ||
+              (draft.isPrivate !== undefined && draft.isPrivate !== cleanState.isPrivate)
+            )
+            setHasDescriptionDraft(!!(draft.fullDescription && draft.fullDescription !== cleanState.description))
+          } else {
+            const projectStatus = project.status ? (statusMap[project.status] || project.status) : STATUS_OPTIONS[0]
+            
+            setName(cleanState.name)
+            setShortDesc(cleanState.shortDesc)
+            setStatus(projectStatus)
+            setDescription(cleanState.description)
+            setIsPrivate(cleanState.isPrivate)
+            
+            setHasBasicInfoDraft(false)
+            setHasDescriptionDraft(false)
+          }
+        }
+        catch (error) {
+          console.error('Ошибка загрузки черновика:', error)
+          setLoadedDraft(null)
+          const projectStatus = project.status ? (statusMap[project.status] || project.status) : STATUS_OPTIONS[0]
+          setName(cleanState.name)
+          setShortDesc(cleanState.shortDesc)
+          setStatus(projectStatus)
+          setDescription(cleanState.description)
+          setIsPrivate(cleanState.isPrivate)
+        }
+      }
+      loadDraft()
     }
-  }, [project])
+  }, [project, projectId])
+
+  const reverseStatusMap: Record<string, string> = {'В процессе': 'in_progress','Завершён': 'completed','Приостановлен': 'paused'}
+
+  useEffect(() => {
+    if (!projectId) return
+
+    const isBasicInfoChanged = 
+      name !== initialState.name ||
+      shortDesc !== initialState.shortDesc ||
+      status !== initialState.status ||
+      isPrivate !== initialState.isPrivate
+
+    const isDescriptionChanged = description !== initialState.description
+    const isTeamChanged = deletedMemberIds.length > 0 || Object.keys(editedRoles).length > 0
+    const isVacanciesChanged = deletedVacancyIds.length > 0 || localVacancies.some(v => v._isNew || v._isModified)
+
+    if (draftTimeoutRef.current) clearTimeout(draftTimeoutRef.current)
+
+    if (!isBasicInfoChanged && !isDescriptionChanged && !isTeamChanged && !isVacanciesChanged) return
+
+    draftTimeoutRef.current = setTimeout(async () => {
+      try {
+        await projectDraftApi.saveDraft(projectId, {
+          title: name,
+          shortDescription: shortDesc,
+          fullDescription: description,
+          status: reverseStatusMap[status] || status,
+          isPrivate: isPrivate,
+          vacancies: localVacancies
+            .filter(v => v._isNew || v._isModified)
+            .map(v => ({
+              vacancyId: v.vacancyId,
+              title: v.title,
+              description: v.description,
+              requiredTags: v.requiredTags || [],
+              isNew: !!v._isNew,
+              isModified: !!v._isModified,
+            })),
+          deletedVacancyIds,
+          deletedMemberIds,
+          editedRoles,
+        })
+
+        if (isBasicInfoChanged) setHasBasicInfoDraft(true)
+        if (isDescriptionChanged) setHasDescriptionDraft(true)
+      } catch (error) {
+        console.error('Ошибка автосохранения черновика:', error)
+      }
+    }, 1000)
+
+    return () => {
+      if (draftTimeoutRef.current) clearTimeout(draftTimeoutRef.current)
+    }
+  }, [name, shortDesc, status, description, isPrivate, localVacancies, deletedVacancyIds, deletedMemberIds, editedRoles, initialState, projectId, vacanciesFromDb])
+
+  useEffect(() => {
+    const hasRealChanges = 
+      deletedMemberIds.length > 0 || 
+      Object.keys(editedRoles).some(memberId => {
+        const originalMember = initialTeamState.find(m => m.memberId === memberId)
+        return originalMember && originalMember.role !== editedRoles[memberId]
+      })
+    
+    setHasTeamDraft(hasRealChanges)
+  }, [deletedMemberIds, editedRoles, initialTeamState])
+
+  useEffect(() => {
+    const hasRealChanges = 
+      deletedVacancyIds.length > 0 || 
+      localVacancies.some(v => {
+        if (v._isNew) return true
+        
+        const originalVacancy = vacanciesFromDb.find(orig => orig.vacancyId === v.vacancyId)
+        
+        if (!originalVacancy && !v._isNew) return true
+        
+        if (originalVacancy) {
+          return (
+            v.title !== originalVacancy.title ||
+            v.description !== originalVacancy.description ||
+            JSON.stringify(v.requiredTags || []) !== JSON.stringify(originalVacancy.requiredTags || [])
+          )
+        }
+        
+        return false
+      })
+    
+    setHasVacanciesDraft(hasRealChanges)
+  }, [deletedVacancyIds, localVacancies, vacanciesFromDb])
+
+  useEffect(() => {
+    const isBasicInfoChanged = 
+      name !== initialState.name ||
+      shortDesc !== initialState.shortDesc ||
+      status !== initialState.status ||
+      isPrivate !== initialState.isPrivate
+
+    if (!isBasicInfoChanged && hasBasicInfoDraft) {
+      setHasBasicInfoDraft(false)
+    }
+  }, [name, shortDesc, status, isPrivate, initialState, hasBasicInfoDraft])
+
+  useEffect(() => {
+    if (description === initialState.description && hasDescriptionDraft) {
+      setHasDescriptionDraft(false)
+    }
+  }, [description, initialState.description, hasDescriptionDraft])
 
   const hasVacancyChanges = 
-    deletedVacancyIds.length > 0 || 
-    localVacancies.some(v => v._isNew || v._isModified);
+  deletedVacancyIds.length > 0 || 
+  localVacancies.some(v => {
+    if (v._isNew) return true
+    
+    const originalVacancy = vacanciesFromDb.find(orig => orig.vacancyId === v.vacancyId)
+    
+    if (!originalVacancy && !v._isNew) return true
+    
+    if (originalVacancy) {
+      return (
+        v.title !== originalVacancy.title ||
+        v.description !== originalVacancy.description ||
+        JSON.stringify(v.requiredTags || []) !== JSON.stringify(originalVacancy.requiredTags || [])
+      )
+    }
+    
+    return false
+  });
 
   const hasTeamChanges = 
     deletedMemberIds.length > 0 || 
-    Object.keys(editedRoles).length > 0;
+    Object.keys(editedRoles).some(memberId => {
+      const originalMember = initialTeamState.find(m => m.memberId === memberId)
+      return originalMember && originalMember.role !== editedRoles[memberId]
+    });
 
   const hasChanges = 
     name !== initialState.name ||
     shortDesc !== initialState.shortDesc ||
     status !== initialState.status ||
     description !== initialState.description ||
+    isPrivate !== initialState.isPrivate ||
     hasVacancyChanges ||
     hasTeamChanges;
 
@@ -606,8 +862,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
     }
     
     notificationApi.create(notificationData)
-      .then(() => {
-      })
+      .then(() => {})
       .catch(err => {
         console.error('Ошибка создания уведомления:', err)
         console.error('Данные:', notificationData)
@@ -633,11 +888,26 @@ export const Project = ({ onCancel }: ProjectProps) => {
     })
   }
 
-  const handleCancel = () => { 
+  const handleCancel = async () => { 
+    if (hasChanges && projectId) {
+      try {
+        await projectDraftApi.discardDraft(projectId)
+      } catch (error) {
+        console.error('Ошибка сброса черновика:', error)
+      }
+    }
+    
     setName(initialState.name)
     setShortDesc(initialState.shortDesc)
     setStatus(initialState.status)
     setDescription(initialState.description)
+    setIsPrivate(initialState.isPrivate)
+    
+    setHasBasicInfoDraft(false)
+    setHasDescriptionDraft(false)
+    setHasTeamDraft(false)
+    setHasVacanciesDraft(false)
+    
     setLocalTeamMembers(initialTeamState.map(m => ({ ...m })))
     setDeletedMemberIds([])
     setEditedRoles({})
@@ -645,7 +915,15 @@ export const Project = ({ onCancel }: ProjectProps) => {
     setDeletedVacancyIds([])
   }
   
-  const handleBack = () => { 
+  const handleBack = async () => { 
+    if (hasChanges && projectId) {
+      try {
+        await projectDraftApi.discardDraft(projectId)
+      } catch (error) {
+        console.error('Ошибка сброса черновика:', error)
+      }
+    }
+    
     if (onCancel) { onCancel(); return } 
     navigate(`${profilePath}/activity`, { replace: true }) 
   }
@@ -656,15 +934,13 @@ export const Project = ({ onCancel }: ProjectProps) => {
     setSaveError(null)
 
     try {
-      const changes: Record<string, any> = {}
-      if (name !== initialState.name) changes.title = name
-      if (shortDesc !== initialState.shortDesc) changes.shortDescription = shortDesc
-      if (status !== initialState.status) changes.status = status
-      if (description !== initialState.description) changes.fullDescription = description
-
-      if (Object.keys(changes).length > 0) {
-        await projectsApi.updateProject(projectId, changes)
-      }
+      await projectDraftApi.commitDraft(projectId, {
+        title: name,
+        shortDescription: shortDesc,
+        fullDescription: description,
+        status: reverseStatusMap[status] || status,
+        isPrivate: isPrivate
+      })
 
       if (deletedVacancyIds.length > 0) {
         deletedVacancyIds.forEach(vacancyId => {
@@ -806,19 +1082,23 @@ export const Project = ({ onCancel }: ProjectProps) => {
 
       teamInitializedRef.current = false
       vacanciesSyncedRef.current = false
+      setLoadedDraft(undefined)
 
-      setInitialState({ name, shortDesc, status, description })
+      setInitialState({ name, shortDesc, status, description, isPrivate })
+      
+      setHasBasicInfoDraft(false)
+      setHasDescriptionDraft(false)
+      setHasTeamDraft(false)
+      setHasVacanciesDraft(false)
       
       setSaveSuccess(true)
       setTimeout(() => setSaveSuccess(false), 3000)
 
-    }
-    catch (error) {
+    } catch (error) {
       const msg = error instanceof Error ? error.message : 'Не удалось сохранить проект'
       setSaveError(msg)
       setTimeout(() => setSaveError(null), 3000)
-    }
-    finally {
+    } finally {
       setIsSaving(false)
     }
   }
@@ -948,7 +1228,18 @@ export const Project = ({ onCancel }: ProjectProps) => {
     setLocalTeamMembers(prev => prev.map(m => 
       m.memberId === memberId ? { ...m, role: newRole } : m
     ))
-    setEditedRoles(prev => ({ ...prev, [memberId]: newRole }))
+
+    const originalRole = initialTeamState.find(m => m.memberId === memberId)?.role
+
+    setEditedRoles(prev => {
+      const newRoles = { ...prev }
+      if (originalRole !== undefined && newRole === originalRole) {
+        delete newRoles[memberId]
+      } else {
+        newRoles[memberId] = newRole
+      }
+      return newRoles
+    })
   }
 
   const openVacancyForm = (v?: LocalVacancy) => {
@@ -1111,18 +1402,224 @@ export const Project = ({ onCancel }: ProjectProps) => {
     }
   }
 
+  const createCommentMutation = useMutation({
+    mutationFn: (dto: any) => commentApi.create(dto),
+    onSuccess: () => {
+      refetchComments();
+      setNewComment('');
+      setReplyingTo(null);
+      setReplyContent('');
+    },
+  });
+
+  const updateCommentMutation = useMutation({
+    mutationFn: ({ commentId, content }: { commentId: string, content: string }) => commentApi.update(commentId, content),
+    onSuccess: () => {
+      refetchComments();
+      setEditingCommentId(null);
+      setEditContent('');
+    },
+  });
+
+  const deleteCommentMutation = useMutation({
+    mutationFn: (commentId: string) => commentApi.delete(commentId),
+    onSuccess: () => {
+      refetchComments();
+    },
+  });
+
+  const buildCommentTree = (commentsList: CommentData[]): CommentNode[] => {
+    const map = new Map<string, CommentNode>();
+    const roots: CommentNode[] = [];
+
+    commentsList.forEach(c => {
+      map.set(c.commentId, { ...c, replies: [] });
+    });
+
+    commentsList.forEach(c => {
+      const node = map.get(c.commentId)!;
+      if (c.parentCommentId && map.has(c.parentCommentId)) {
+        map.get(c.parentCommentId)!.replies.push(node);
+      } else {
+        roots.push(node);
+      }
+    });
+
+    return roots;
+  };
+
+  const renderCommentNode = (node: CommentNode, depth = 0) => {
+  const isAuthor = node.userId === currentUserId;
+  const canDelete = isAuthor || isOwner;
+  const canEdit = isAuthor;
+  const hasReplies = node.replies.length > 0;
+  const expanded = isExpanded(node.commentId);
+
+  return (
+    <div key={node.commentId} className={`comment-item ${depth > 0 ? 'comment-reply' : ''}`}>
+      <div className='comment-wrapper'>
+        <div className='comment-avatar'>
+          <img src={node.avatarUrl || '/default-avatar.png'} alt={node.nickname || 'User'} />
+        </div>
+        
+        <div className='comment-body'>
+          <div className='comment-header'>
+            <div className='comment-meta'>
+              <span className='comment-author'>@{node.nickname || 'deleted_user'}</span>
+              <span className='comment-date'>{new Date(node.createdAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })}, {new Date(node.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</span>
+              {node.isEdited && <span className='comment-edited'>• изменено</span>}
+            </div>
+            
+            {!node.isDeleted && (
+              <div className='comment-actions-right'>
+                {canEdit && (
+                  <button 
+                    className='comment-edit-badge' 
+                    onClick={() => {
+                      setReplyingTo(null)
+                      setReplyContent('')
+                      setEditingCommentId(node.commentId)
+                      setEditContent(node.content || '')
+                    }}
+                    title="Редактировать"
+                  >
+                    <Edit className='ico' />
+                  </button>
+                )}
+                {canDelete && (
+                  <button 
+                    className='comment-remove-badge' 
+                    onClick={() => {
+                      if (window.confirm('Удалить этот комментарий?')) {
+                        deleteCommentMutation.mutate(node.commentId)
+                      }
+                    }}
+                    title="Удалить"
+                  >
+                    <Delete className='ico' />
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+          
+          {node.isDeleted ? (
+            <div className='comment-content deleted'>Комментарий удален</div>
+          ) : (
+            <div className='comment-content'>{node.content}</div>
+          )}
+
+<div className='comment-actions-left'>
+  {!node.isDeleted && (
+    <button 
+      className='comment-action-text' 
+      onClick={() => {
+        setEditingCommentId(null)
+        setEditContent('')
+        setReplyingTo(replyingTo === node.commentId ? null : node.commentId)
+      }}
+    >
+      Ответить
+    </button>
+  )}
+  {hasReplies && (
+    <button 
+      className='comment-action-text expand-replies'
+      onClick={() => toggleReplies(node.commentId)}
+    >
+      {expanded ? 'Скрыть ответы' : `${node.replies.length} ${node.replies.length === 1 ? 'ответ' : node.replies.length < 5 ? 'ответа' : 'ответов'}`}
+      <span className={`expand-icon ${expanded ? 'expanded' : ''}`}>▾</span>
+    </button>
+  )}
+</div>
+
+          {replyingTo === node.commentId && (
+            <div className='comment-reply-input'>
+              <textarea
+                className='comment-textarea small'
+                placeholder={`Ответ для @${node.nickname}...`}
+                value={replyContent}
+                onChange={(e) => setReplyContent(e.target.value)}
+              />
+              <div className='comment-form-actions'>
+                <button 
+                  className='comment-btn confirm'
+                  onClick={() => createCommentMutation.mutate({
+                    referenceType: 'project',
+                    referenceId: projectId!,
+                    content: replyContent,
+                    parentCommentId: node.commentId
+                  })} 
+                  disabled={!replyContent.trim() || createCommentMutation.isPending}
+                >
+                  Ответить
+                </button>
+                <button 
+                  className='comment-btn cancel'
+                  onClick={() => {
+                    setReplyingTo(null)
+                    setReplyContent('')
+                  }}
+                >
+                  Отмена
+                </button>
+              </div>
+            </div>
+          )}
+
+          {editingCommentId === node.commentId && (
+            <div className='comment-edit-input'>
+              <textarea
+                className='comment-textarea small'
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+              />
+              <div className='comment-form-actions'>
+                <button 
+                  className='comment-btn confirm'
+                  onClick={() => updateCommentMutation.mutate({ commentId: node.commentId, content: editContent })} 
+                  disabled={!editContent.trim() || updateCommentMutation.isPending}
+                >
+                  Изменить
+                </button>
+                <button 
+                  className='comment-btn cancel'
+                  onClick={() => {
+                    setEditingCommentId(null)
+                    setEditContent('')
+                  }}
+                >
+                  Отмена
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {hasReplies && expanded && (
+        <div className='comment-replies'>
+          {node.replies.map(reply => renderCommentNode(reply, depth + 1))}
+        </div>
+      )}
+    </div>
+  );
+};
+
   return (
     <div className='project-page'>
-
       {isPreview ? (
-        <ProjectPreview name={name} shortDesc={shortDesc} status={status} description={description} team={localTeamMembers} vacancies={localVacancies} isOwner={true} ratingCount={projectRating} />
+        <ProjectPreview name={name} shortDesc={shortDesc} status={status} description={description} team={localTeamMembers} vacancies={localVacancies} isOwner={true} ratingCount={projectRating} isPrivate={isPrivate} comments={comments} />
       ) : (
         <>
           <section className='project-section'>
-            <h2 className='project-section-title'>Базовая информация о проекте</h2>
+            <div className='section-header-wrapper'>
+              <h2 className='project-section-title'>Базовая информация</h2>
+              {hasBasicInfoDraft && <span className='draft-indicator'>(черновик)</span>}
+            </div>
             <div className='project-form-grid'>
               <div className='project-field-row'>
-                <label className='project-field-label'>Название проекта:</label>
+                <label className='project-field-label'>Название проекта: <span className='required-mark'>*</span></label>
                 <input 
                   name="name"
                   className={`project-field-input ${projectTouched.name && projectDirty.name && checkProjectFormat('name', name) ? 'input-error' : ''}`} 
@@ -1136,16 +1633,19 @@ export const Project = ({ onCancel }: ProjectProps) => {
               </div>
               <div className='project-field-row'>
                 <label className='project-field-label'>Краткое описание:</label>
-                <input 
+                <textarea 
                   name="shortDesc"
-                  className={`project-field-input ${projectTouched.shortDesc && projectDirty.shortDesc && checkProjectFormat('shortDesc', shortDesc) ? 'input-error' : ''}`} 
+                  className={`project-short-desc-editor ${projectTouched.shortDesc && projectDirty.shortDesc && checkProjectFormat('shortDesc', shortDesc) ? 'input-error' : ''}`} 
                   value={shortDesc} 
                   onChange={e => {
+                    if (e.target.value.length > 150) return;
                     setShortDesc(e.target.value)
                     handleProjectChange(e)
                   }} 
                   onBlur={handleProjectBlur}
-                  maxLength={150} />
+                  maxLength={150}
+                  placeholder='Кратко опишите суть проекта в 1-2 предложениях'
+                />
               </div>
               <div className='project-field-row'>
                 <label className='project-field-label'>Статус:</label>
@@ -1156,16 +1656,42 @@ export const Project = ({ onCancel }: ProjectProps) => {
                   <Dropdown isOpen={isStatusOpen} items={statusOptions} onSelect={handleStatusSelect} />
                 </div>
               </div>
+              <div className='project-field-row'>
+                <label className='project-field-label'>Приватность:</label>
+                <div className='privacy-toggle-container'>
+                  <button 
+                    className='privacy-toggle-btn' 
+                    onClick={() => setIsPrivate(!isPrivate)}
+                    type="button"
+                  >
+                    {isPrivate ? <LockIcon className='lock-ico' /> : <UnlockIcon className='lock-ico unlocked' />}
+                    <span>{isPrivate ? 'Приватный' : 'Публичный'}</span>
+                  </button>
+                  <p className='privacy-hint'>
+                    {isPrivate 
+                      ? 'Только участники команды могут видеть проект' 
+                      : 'Проект виден всем пользователям'}
+                  </p>
+                </div>
+              </div>
             </div>
           </section>
 
           <section className='project-section'>
-            <div className='project-section-header'><h2 className='project-section-title'>Описание проекта</h2></div>
-            <textarea className='project-md-editor' value={description} onChange={e => setDescription(e.target.value)} placeholder={'### Заголовок\nОпишите ваш проект...'} />
+            <div className='section-header-wrapper'>
+              <h2 className='project-section-title'>Описание проекта</h2>
+              {hasDescriptionDraft && <span className='draft-indicator'>(черновик)</span>}
+            </div>
+            <textarea className='project-md-editor' value={description} onChange={e => setDescription(e.target.value)} placeholder={'### Заголовок проекта\n\nРасскажите о целях и задачах вашего проекта.\n\nИспользуйте **жирный текст** для акцентов и списки для структуры.\n\nПример:\n- Цель проекта\n- Задачи\n- Ожидаемые результаты'} />
           </section>
 
           <section className='project-section'>
-            <h2 className='project-section-title'>Команда: <span className='project-count'>{localTeamMembers.length}</span></h2>
+            <div className='section-header-wrapper'>
+              <h2 className='project-section-title'>
+                Команда: <span className='project-count'>{localTeamMembers.length}</span>
+              </h2>
+              {hasTeamDraft && <span className='draft-indicator'>(черновик)</span>}
+            </div>
             <div className='team-invite-row'>
               <input 
                 className='project-field-input' 
@@ -1209,7 +1735,12 @@ export const Project = ({ onCancel }: ProjectProps) => {
           </section>
 
           <section className='project-section'>
-            <h2 className='project-section-title'>Заявки: <span className='project-count'>{localVacancies.length}</span></h2>
+            <div className='section-header-wrapper'>
+              <h2 className='project-section-title'>
+                Заявки: <span className='project-count'>{localVacancies.length}</span>
+              </h2>
+              {hasVacanciesDraft && <span className='draft-indicator'>(черновик)</span>}
+            </div>
             {showVacancyForm ? (
               <div className='vacancy-form'>
                 <input 
@@ -1355,6 +1886,37 @@ export const Project = ({ onCancel }: ProjectProps) => {
               <button className='warning-button' onClick={handleDeleteClick}><Delete className='svg-ico' />Удалить проект</button>
             </div>
           </section>
+
+           <section className='project-section'>
+            <h2 className='project-section-title'>
+              Комментарии: <span className='project-count'>{comments.length}</span>
+            </h2>
+            
+            <div className='comment-input-wrapper'>
+              <textarea
+                className='comment-textarea'
+                placeholder='Место для твоего коммментария...'
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+              />
+              <button
+                className='comment-btn send'
+                onClick={() => createCommentMutation.mutate({ referenceType: 'project', referenceId: projectId!, content: newComment })}
+                disabled={!newComment.trim() || createCommentMutation.isPending}
+              >
+                Отправить
+              </button>
+            </div>
+
+            <div className='comments-list'>
+              {comments.length === 0 ? (
+                <p className='no-comments-text'>Пока нет комментариев. Будьте первым!</p>
+              ) : (
+                buildCommentTree(comments).map(node => renderCommentNode(node))
+              )}
+            </div>
+          </section>
+
         </>
       )}
 

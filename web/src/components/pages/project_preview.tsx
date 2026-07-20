@@ -1,14 +1,19 @@
 import './project_third_side.scss'
+import '../common/comment.scss'
 
 import StarIcon from '@icons/star.svg?react'
 import StatusEndIcon from '@icons/status_end.svg?react'
 import StatusPauseIcon from '@icons/status_pause.svg?react'
 import StatusWorkingIcon from '@icons/status_working.svg?react'
+import Edit from '@icons/edit.svg?react'
+import Delete from '@icons/delete.svg?react'
 
+import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { UserData } from '../services/users'
 import type { VacancyData } from '../services/vacancy'
+import type { CommentData } from '../services/comment'
 
 import { VacancyCard } from '../common/vacancyCard'
 import { UserCard } from '../common/userCard'
@@ -20,16 +25,23 @@ export interface TeamMemberWithUser {
 
 export interface TeamMember { id: number; email: string; role: string; isOwner?: boolean }
 
+interface CommentNode extends CommentData {
+  replies: CommentNode[];
+}
+
 interface ProjectPreviewProps {
   name: string; shortDesc: string; status: string; description: string;
   team: Array<TeamMember | TeamMemberWithUser>; vacancies: VacancyData[]; 
-  isOwner?: boolean; ratingCount?: number
+  isOwner?: boolean; ratingCount?: number; isPrivate?: boolean;
+  comments?: CommentData[]
 }
 
 export const ProjectPreview = ({ 
   name, status, description, team, vacancies, 
-  isOwner = true, ratingCount = 0
+  isOwner = true, ratingCount = 0, comments = []
 }: ProjectPreviewProps) => {
+  const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set())
+
   const getStatusConfig = (status: string) => {
     const configs: Record<string, { text: string; className: string; Icon: React.ComponentType<{ className?: string }> }> = {
       'В процессе': { text: 'В процессе', className: 'status-working', Icon: StatusWorkingIcon },
@@ -39,6 +51,100 @@ export const ProjectPreview = ({
     return configs[status] || configs['В процессе']
   }
   const statusConfig = getStatusConfig(status); const StatusIcon = statusConfig.Icon
+
+  const toggleReplies = (commentId: string) => {
+    setExpandedComments(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(commentId)) newSet.delete(commentId)
+      else newSet.add(commentId)
+      return newSet
+    })
+  }
+
+  const isExpanded = (commentId: string) => expandedComments.has(commentId)
+
+  const buildCommentTree = (commentsList: CommentData[]): CommentNode[] => {
+    const map = new Map<string, CommentNode>()
+    const roots: CommentNode[] = []
+    commentsList.forEach(c => map.set(c.commentId, { ...c, replies: [] }))
+    commentsList.forEach(c => {
+      const node = map.get(c.commentId)!
+      if (c.parentCommentId && map.has(c.parentCommentId)) {
+        map.get(c.parentCommentId)!.replies.push(node)
+      } else {
+        roots.push(node)
+      }
+    })
+    return roots
+  }
+
+  const renderReadOnlyCommentNode = (node: CommentNode, depth = 0) => {
+    const hasReplies = node.replies.length > 0
+    const expanded = isExpanded(node.commentId)
+
+    return (
+      <div key={node.commentId} className={`comment-item ${depth > 0 ? 'comment-reply' : ''}`}>
+        <div className='comment-wrapper'>
+          <div className='comment-avatar'>
+            <img src={node.avatarUrl || '/default-avatar.png'} alt={node.nickname || 'User'} />
+          </div>
+
+          <div className='comment-body'>
+            <div className='comment-header'>
+              <div className='comment-meta'>
+                <span className='comment-author'>@{node.nickname || 'deleted_user'}</span>
+                <span className='comment-date'>
+                  {new Date(node.createdAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })}, {' '}
+                  {new Date(node.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+                {node.isEdited && <span className='comment-edited'>• изменено</span>}
+              </div>
+
+              {!node.isDeleted && (
+                <div className='comment-actions-right'>
+                  <button className='comment-edit-badge' disabled title="Недоступно в предпросмотре">
+                    <Edit className='ico' />
+                  </button>
+                  <button className='comment-remove-badge' disabled title="Недоступно в предпросмотре">
+                    <Delete className='ico' />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {node.isDeleted ? (
+              <div className='comment-content deleted'>Комментарий удален</div>
+            ) : (
+              <div className='comment-content'>{node.content}</div>
+            )}
+
+            <div className='comment-actions-left'>
+              {!node.isDeleted && (
+                <button className='comment-action-text' disabled title="Недоступно в предпросмотре">
+                  Ответить
+                </button>
+              )}
+              {hasReplies && (
+                <button 
+                  className='comment-action-text expand-replies'
+                  onClick={() => toggleReplies(node.commentId)}
+                >
+                  {expanded ? 'Скрыть ответы' : `${node.replies.length} ${node.replies.length === 1 ? 'ответ' : node.replies.length < 5 ? 'ответа' : 'ответов'}`}
+                  <span className={`expand-icon ${expanded ? 'expanded' : ''}`}>▾</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {hasReplies && expanded && (
+          <div className='comment-replies'>
+            {node.replies.map(reply => renderReadOnlyCommentNode(reply, depth + 1))}
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
     <>
@@ -81,7 +187,7 @@ export const ProjectPreview = ({
               const userData = 'userData' in member ? member.userData : undefined
               const isOwnerMember = member.isOwner || false
               const role = member.role || ''
-              
+
               if (!userData) {
                 return (
                   <div key={key} className='user-card-container loading'>
@@ -120,6 +226,25 @@ export const ProjectPreview = ({
           </div>
         </section>
       )}
+
+      <section className='preview-section'>
+        <h3 className='preview-section-title'>
+          Комментарии: <span className='count'>{comments.length}</span>
+        </h3>
+
+        <div className='comment-input-wrapper'>
+          <textarea className='comment-textarea' placeholder='Предпросмотр: отправка комментариев недоступна' disabled />
+          <button className='comment-btn send' disabled>Отправить</button>
+        </div>
+
+        <div className='comments-list'>
+          {comments.length === 0 ? (
+            <p className='no-comments-text'>Пока нет комментариев.</p>
+          ) : (
+            buildCommentTree(comments).map(node => renderReadOnlyCommentNode(node))
+          )}
+        </div>
+      </section>
     </>
   )
 }

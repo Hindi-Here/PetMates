@@ -2,6 +2,7 @@
 using api.Support;
 using Microsoft.AspNetCore.Mvc;
 using Supabase;
+using System.Text.Json;
 
 namespace api.Controllers
 {
@@ -103,6 +104,9 @@ namespace api.Controllers
                 if (project == null)
                     return NotFound();
 
+                if (!await CanViewProject(project, userId))
+                    return NotFound();
+
                 return Ok(new
                 {
                     project.ProjectId,
@@ -112,6 +116,7 @@ namespace api.Controllers
                     Status = ToRuStatus(project.Status),
                     StatusChangedAt = project.StatusChangedAt?.ToString("o"),
                     project.RatingCount,
+                    project.IsPrivate,
                     CreatedAt = project.CreatedAt?.ToString("o"),
                     project.OwnerId
                 });
@@ -142,6 +147,9 @@ namespace api.Controllers
 
                 foreach (var p in projectsResponse.Models)
                 {
+                    if (!await CanViewProject(p, currentUserId))
+                        continue;
+
                     var membersResponse = await _client.From<ProjectMember>()
                         .Where(pm => pm.ProjectId == p.ProjectId)
                         .Get();
@@ -157,6 +165,7 @@ namespace api.Controllers
                         Status = ToRuStatus(p.Status),
                         StatusChangedAt = p.StatusChangedAt?.ToString("o"),
                         p.RatingCount,
+                        p.IsPrivate,
                         CreatedAt = p.CreatedAt?.ToString("o"),
                         p.OwnerId,
                         MembersCount = membersCount
@@ -196,6 +205,7 @@ namespace api.Controllers
                     Status = ToEnumStatus(dto.Status ?? "В процессе"),
                     StatusChangedAt = DateTime.UtcNow,
                     RatingCount = 0,
+                    IsPrivate = dto.IsPrivate,
                     CreatedAt = DateTime.UtcNow
                 };
 
@@ -230,76 +240,12 @@ namespace api.Controllers
                     created.RatingCount,
                     CreatedAt = created.CreatedAt?.ToString("o"),
                     created.OwnerId,
-                    MembersCount = 1 
+                    MembersCount = 1
                 });
             }
             catch (Exception ex)
             {
                 return StatusCode(500, ex.Message);
-            }
-        }
-
-        [HttpPut("{projectId}")]
-        public async Task<IActionResult> UpdateProject(string projectId, [FromBody] UpdateProjectDto dto)
-        {
-            try
-            {
-                var authHeader = Request.Headers.Authorization.ToString();
-                var userId = _SupMan.GetUserId(authHeader);
-                if (string.IsNullOrEmpty(userId))
-                    return Unauthorized();
-
-                var error = Validator.ValidateProject(dto.Title, dto.ShortDescription);
-                if (error != null)
-                    return BadRequest(new { message = error });
-
-                await _SupMan.UpdateLastOnlineAsync(userId);
-
-                var response = await _client.From<Project>()
-                    .Where(p => p.ProjectId == projectId && p.OwnerId == userId)
-                    .Get();
-
-                var project = response.Models.FirstOrDefault();
-                if (project == null)
-                    return NotFound();
-
-                if (!string.IsNullOrEmpty(dto.Title))
-                    project.Title = dto.Title;
-                if (dto.ShortDescription != null)
-                    project.ShortDescription = dto.ShortDescription;
-                if (dto.FullDescription != null)
-                    project.FullDescription = dto.FullDescription;
-                if (!string.IsNullOrEmpty(dto.Status))
-                {
-                    project.Status = ToEnumStatus(dto.Status); 
-                    project.StatusChangedAt = DateTime.UtcNow;
-                }
-
-                await _client.From<Project>()
-                    .Where(p => p.ProjectId == projectId)
-                    .Set(p => p.Title, project.Title)
-                    .Set(p => p.ShortDescription!, project.ShortDescription)
-                    .Set(p => p.FullDescription!, project.FullDescription)
-                    .Set(p => p.Status, project.Status)
-                    .Set(p => p.StatusChangedAt!, project.StatusChangedAt)
-                    .Update();
-
-                return Ok(new
-                {
-                    project.ProjectId,
-                    project.Title,
-                    project.ShortDescription,
-                    project.FullDescription,
-                    Status = ToRuStatus(project.Status), 
-                    StatusChangedAt = project.StatusChangedAt?.ToString("o"),
-                    project.RatingCount,
-                    CreatedAt = project.CreatedAt?.ToString("o"),
-                    project.OwnerId
-                });
-            }
-            catch (Exception)
-            {
-                return StatusCode(500);
             }
         }
 
@@ -485,6 +431,9 @@ namespace api.Controllers
                     {
                         var p = project.Models.First();
 
+                        if (!await CanViewProject(p, currentUserId))
+                            continue;
+
                         var membersResponse = await _client.From<ProjectMember>()
                             .Where(pm => pm.ProjectId == p.ProjectId)
                             .Get();
@@ -502,6 +451,7 @@ namespace api.Controllers
                             p.RatingCount,
                             CreatedAt = p.CreatedAt?.ToString("o"),
                             p.OwnerId,
+                            p.IsPrivate,
                             MembersCount = membersCount,
                             RatedAt = rating.CreatedAt?.ToString("o")
                         });
@@ -545,6 +495,9 @@ namespace api.Controllers
                     {
                         var p = projectResponse.Models.First();
 
+                        if (!await CanViewProject(p, currentUserId))
+                            continue;
+
                         var membersResponse = await _client.From<ProjectMember>()
                             .Where(pm => pm.ProjectId == p.ProjectId)
                             .Get();
@@ -562,6 +515,7 @@ namespace api.Controllers
                             p.RatingCount,
                             CreatedAt = p.CreatedAt?.ToString("o"),
                             p.OwnerId,
+                            p.IsPrivate,
                             MembersCount = membersCount,
                             MemberRole = member.Role
                         });
@@ -575,6 +529,193 @@ namespace api.Controllers
                 return StatusCode(500, ex.Message);
             }
         }
+
+        // Черновики
+
+        [HttpGet("{projectId}/draft")]
+        public async Task<IActionResult> GetDraft(string projectId)
+        {
+            try
+            {
+                var authHeader = Request.Headers.Authorization.ToString();
+                var userId = _SupMan.GetUserId(authHeader);
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+
+                var ownerCheck = await _client.From<Project>()
+                    .Where(p => p.ProjectId == projectId && p.OwnerId == userId)
+                    .Get();
+                if (ownerCheck.Models.Count == 0)
+                    return NotFound();
+
+                var draftResponse = await _client.From<ProjectDraft>()
+                    .Where(d => d.ProjectId == projectId)
+                    .Get();
+                var draft = draftResponse.Models.FirstOrDefault();
+
+                if (draft == null)
+                    return Ok(null);
+
+                return Ok(new
+                {
+                    draft.Title,
+                    draft.ShortDescription,
+                    draft.FullDescription,
+                    draft.Status,
+                    draft.IsPrivate,
+                    Vacancies = string.IsNullOrEmpty(draft.VacanciesDraft)
+                        ? null
+                        : JsonSerializer.Deserialize<List<VacancyDraftItem>>(draft.VacanciesDraft),
+                    DeletedVacancyIds = string.IsNullOrEmpty(draft.DeletedVacancyIds)
+                        ? null
+                        : JsonSerializer.Deserialize<List<string>>(draft.DeletedVacancyIds),
+                    DeletedMemberIds = string.IsNullOrEmpty(draft.DeletedMemberIds)
+                        ? null
+                        : JsonSerializer.Deserialize<List<string>>(draft.DeletedMemberIds),
+                    EditedRoles = string.IsNullOrEmpty(draft.EditedRoles)
+                        ? null
+                        : JsonSerializer.Deserialize<Dictionary<string, string>>(draft.EditedRoles)
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        [HttpPut("{projectId}/draft")]
+        public async Task<IActionResult> SaveDraft(string projectId, [FromBody] SaveDraftDto dto)
+        {
+            try
+            {
+                var authHeader = Request.Headers.Authorization.ToString();
+                var userId = _SupMan.GetUserId(authHeader);
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+
+                var ownerCheck = await _client.From<Project>()
+                    .Where(p => p.ProjectId == projectId && p.OwnerId == userId)
+                    .Get();
+                if (ownerCheck.Models.Count == 0)
+                    return NotFound();
+
+                var draft = new ProjectDraft
+                {
+                    ProjectId = projectId,
+                    Title = dto.Title,
+                    ShortDescription = dto.ShortDescription,
+                    FullDescription = dto.FullDescription,
+                    Status = !string.IsNullOrEmpty(dto.Status) ? ToEnumStatus(dto.Status) : null,
+                    IsPrivate = dto.IsPrivate,
+                    VacanciesDraft = dto.Vacancies != null ? JsonSerializer.Serialize(dto.Vacancies) : null,
+                    DeletedVacancyIds = dto.DeletedVacancyIds != null ? JsonSerializer.Serialize(dto.DeletedVacancyIds) : null,
+                    DeletedMemberIds = dto.DeletedMemberIds != null ? JsonSerializer.Serialize(dto.DeletedMemberIds) : null,
+                    EditedRoles = dto.EditedRoles != null ? JsonSerializer.Serialize(dto.EditedRoles) : null,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                await _client.From<ProjectDraft>().Upsert(draft);
+
+                return Ok(new { message = "Черновик сохранён" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        [HttpDelete("{projectId}/draft")]
+        public async Task<IActionResult> DiscardDraft(string projectId)
+        {
+            try
+            {
+                var authHeader = Request.Headers.Authorization.ToString();
+                var userId = _SupMan.GetUserId(authHeader);
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+
+                var ownerCheck = await _client.From<Project>()
+                    .Where(p => p.ProjectId == projectId && p.OwnerId == userId)
+                    .Get();
+                if (ownerCheck.Models.Count == 0)
+                    return NotFound();
+
+                await _client.From<ProjectDraft>()
+                    .Where(d => d.ProjectId == projectId)
+                    .Delete();
+
+                return Ok(new { message = "Черновик отменён" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        [HttpPost("{projectId}/commit")]
+        public async Task<IActionResult> CommitDraft(string projectId, [FromBody] CommitProjectDto dto)
+        {
+            try
+            {
+                var authHeader = Request.Headers.Authorization.ToString();
+                var userId = _SupMan.GetUserId(authHeader);
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+
+                var response = await _client.From<Project>()
+                    .Where(p => p.ProjectId == projectId && p.OwnerId == userId)
+                    .Get();
+
+                var project = response.Models.FirstOrDefault();
+                if (project == null)
+                    return NotFound();
+
+                var newTitle = dto.Title ?? project.Title;
+                var newShort = dto.ShortDescription ?? project.ShortDescription;
+                var newFull = dto.FullDescription ?? project.FullDescription;
+                var newStatus = !string.IsNullOrEmpty(dto.Status) ? ToEnumStatus(dto.Status) : project.Status;
+                var newIsPrivate = dto.IsPrivate ?? project.IsPrivate;
+                var statusChanged = newStatus != project.Status;
+
+                await _client.From<Project>()
+                    .Where(p => p.ProjectId == projectId)
+                    .Set(p => p.Title, newTitle)
+                    .Set(p => p.ShortDescription!, newShort)
+                    .Set(p => p.FullDescription!, newFull)
+                    .Set(p => p.Status, newStatus)
+                    .Set(p => p.StatusChangedAt!, statusChanged ? DateTime.UtcNow : project.StatusChangedAt)
+                    .Set(p => p.IsPrivate, newIsPrivate)
+                    .Update();
+
+                await _client.From<ProjectDraft>()
+                    .Where(d => d.ProjectId == projectId)
+                    .Delete();
+
+                return Ok(new { message = "Проект сохранён" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        private async Task<bool> CanViewProject(Project project, string? currentUserId)
+        {
+            if (!project.IsPrivate)
+                return true;
+
+            if (string.IsNullOrEmpty(currentUserId))
+                return false;
+
+            if (project.OwnerId == currentUserId)
+                return true;
+
+            var membership = await _client.From<ProjectMember>()
+                .Where(pm => pm.ProjectId == project.ProjectId && pm.UserId == currentUserId)
+                .Get();
+
+            return membership.Models.Count > 0;
+        }
     }
 
     public class CreateProjectDto
@@ -583,13 +724,39 @@ namespace api.Controllers
         public string? ShortDescription { get; set; }
         public string? FullDescription { get; set; }
         public string? Status { get; set; }
+        public bool IsPrivate { get; set; } = false;
     }
 
-    public class UpdateProjectDto
+    public class SaveDraftDto
     {
         public string? Title { get; set; }
         public string? ShortDescription { get; set; }
         public string? FullDescription { get; set; }
         public string? Status { get; set; }
+        public bool? IsPrivate { get; set; }
+
+        public List<VacancyDraftItem>? Vacancies { get; set; }
+        public List<string>? DeletedVacancyIds { get; set; }
+        public List<string>? DeletedMemberIds { get; set; }
+        public Dictionary<string, string>? EditedRoles { get; set; }
+    }
+
+    public class CommitProjectDto
+    {
+        public string? Title { get; set; }
+        public string? ShortDescription { get; set; }
+        public string? FullDescription { get; set; }
+        public string? Status { get; set; }
+        public bool? IsPrivate { get; set; }
+    }
+
+    public class VacancyDraftItem
+    {
+        public string VacancyId { get; set; } = string.Empty;
+        public string Title { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public List<string> RequiredTags { get; set; } = [];
+        public bool IsNew { get; set; }
+        public bool IsModified { get; set; }
     }
 }

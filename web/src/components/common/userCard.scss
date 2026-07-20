@@ -9,7 +9,6 @@
   box-shadow: inset 0 0 0 0 var(--primary-accent), 0 4px 4px rgba(0, 0, 0, 0.15);
   border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 75%);
   transition: border-color 0.25s ease, box-shadow 0.25s ease;
-  cursor: pointer;
 
   &:hover {
     box-shadow: inset 2px 0 0 0 var(--primary-accent), 0 4px 4px rgba(0, 0, 0, 0.25);
@@ -216,7 +215,6 @@
     border: none;
     transition: 0.25s;
     flex-shrink: 0; 
-    cursor: pointer;
 
     &:hover:not(:disabled) {
       filter: brightness(0.95);
@@ -229,7 +227,6 @@
 
     &:disabled {
       opacity: 0.5;
-      cursor: not-allowed;
       background-color: var(--primary-accent);
       color: var(--neutral-0);
     }
