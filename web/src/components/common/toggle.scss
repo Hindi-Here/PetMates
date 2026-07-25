@@ -4,7 +4,7 @@
   height: rem(24);
   background-color: color-mix(in srgb, var(--neutral-100), transparent 75%);
   border-radius: rem(24);
-  transition: background-color 0.25s ease;
+  transition: background-color 0.25s;
 
   &:hover{
     filter: brightness(0.975);
@@ -35,7 +35,7 @@
     background-color: var(--neutral-0);
     border-radius: 50%;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+    transition: transform 0.25s cubic-bezier(0.4, 0.0, 0.2, 1);
   }
 
   &.checked .toggle-slider {

@@ -208,7 +208,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: 0.2s;
+        transition: 0.25s;
 
         &:hover {
             opacity: 0.7;
@@ -222,7 +222,7 @@
             width: rem(18);
             height: rem(18);
             fill: color-mix(in srgb, var(--neutral-100), transparent 40%);
-            transition: 0.2s;
+            transition: 0.25s;
         }
 
         &:hover .password-toggle-icon {

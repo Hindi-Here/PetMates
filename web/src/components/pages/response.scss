@@ -51,7 +51,7 @@
   background: var(--neutral-0);
   border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 88%);
   border-radius: var(--border-radius-base);
-  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  transition: border-color 0.25s, box-shadow 0.25s;
   box-shadow: inset 0 0 0 0 var(--primary-accent), 0 4px 4px rgba(0, 0, 0, 0.15);
 
   &:hover {

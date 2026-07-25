@@ -61,7 +61,7 @@ const ProjectCard = ({ project }: { project: ProjectData }) => {
         <h3 className="project-card-title">
           {project.title}
           {project.isPrivate && (
-            <LockIcon className="private-icon" title="Приватный проект" />
+            <LockIcon className="private-icon" />
           )}
         </h3>
         <span className={`project-card-status ${statusConfig.className}`}>

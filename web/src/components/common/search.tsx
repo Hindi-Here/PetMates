@@ -90,7 +90,7 @@ export default function Search ({ activeId }: { activeId: string }) {
         <div className="search-line-container">
             <div className="search-input-container">
                 <SearchIcon className='search-ico'/>
-                <input className="search-input" placeholder="Искать" tabIndex={-1}/>
+                <input className="search-input" placeholder="Поиск" tabIndex={-1}/>
             </div>
             <div className="search-button-container">
                 <button className="search-button">Поиск</button>

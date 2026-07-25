@@ -43,4 +43,9 @@ export const queryKeys = {
     all: ['notifications'],
     byCategory: (category: string) => ['notifications', category],
   },
+
+  conversations: {
+    all: ['conversations'] as const,
+    messages: (conversationId: string) => ['conversations', 'messages', conversationId] as const,
+  },
 }

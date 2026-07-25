@@ -21,6 +21,8 @@ import { Project } from '../pages/project'
 import { Activity } from '../pages/activity'
 import { Setting } from '../pages/setting'
 import { Responses } from '../pages/response'
+import { Messages } from '../pages/message'
+import { Chat } from '../pages/chat'
 
 interface MenuItem {
   id: string;
@@ -132,6 +134,8 @@ const Content = () => {
           <Route path="info" element={null} />
           <Route path="activity" element={<Activity />} />
           <Route path="activity/project/:projectId" element={<Project />} />
+          <Route path="messages" element={<Messages />} />
+          <Route path="messages/:conversationId" element={<Chat />} />
           <Route path="responces" element={<Responses />} />
           <Route path="notifications" element={null} />
           <Route path="settings" element={<Setting />} />

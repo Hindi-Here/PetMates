@@ -8,7 +8,7 @@ import StatusWorkingIcon from '@icons/status_working.svg?react'
 import Edit from '@icons/edit.svg?react'
 import Delete from '@icons/delete.svg?react'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { UserData } from '../services/users'
@@ -61,6 +61,20 @@ export const ProjectPreview = ({
     })
   }
 
+  useEffect(() => {
+    const handleEscKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        window.history.back()
+      }
+    }
+
+    window.addEventListener('keydown', handleEscKey)
+  
+    return () => {
+      window.removeEventListener('keydown', handleEscKey)
+    }
+  }, [])
+
   const isExpanded = (commentId: string) => expandedComments.has(commentId)
 
   const buildCommentTree = (commentsList: CommentData[]): CommentNode[] => {
@@ -102,10 +116,10 @@ export const ProjectPreview = ({
 
               {!node.isDeleted && (
                 <div className='comment-actions-right'>
-                  <button className='comment-edit-badge' disabled title="Недоступно в предпросмотре">
+                  <button className='comment-edit-badge' disabled>
                     <Edit className='ico' />
                   </button>
-                  <button className='comment-remove-badge' disabled title="Недоступно в предпросмотре">
+                  <button className='comment-remove-badge' disabled>
                     <Delete className='ico' />
                   </button>
                 </div>
@@ -120,7 +134,7 @@ export const ProjectPreview = ({
 
             <div className='comment-actions-left'>
               {!node.isDeleted && (
-                <button className='comment-action-text' disabled title="Недоступно в предпросмотре">
+                <button className='comment-action-text' disabled>
                   Ответить
                 </button>
               )}

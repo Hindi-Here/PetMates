@@ -6,114 +6,157 @@
 }
 
 .profile-header-container {
-    display: flex;
-    align-items: center;
-    gap: rem(16);
+  display: flex;
+  align-items: center;
+  gap: rem(16);
+  height: rem(100);
+  position: relative;
+
+  .profile-avatar {
+    width: rem(100);
     height: rem(100);
-
-    .profile-avatar {
-      width: rem(100);
-      height: rem(100);
-      border-radius: 50%;
-      border: rem(2) solid color-mix(in srgb, var(--neutral-100), transparent 75%);
-      object-fit: cover;
-    }
-
-    .profile-username-container {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      gap: rem(4);
-
-      .username-main {
-        display: flex;
-        align-items: center;
-        gap: rem(12);
-        flex-wrap: wrap;
-
-        .username {
-          font-size: rem(24);
-          font-weight: bold;
-          color: var(--neutral-100);
-          margin: 0;
-        }
-
-        .real-name {
-          font-size: rem(14);
-          color: color-mix(in srgb, var(--neutral-100), transparent 50%);
-        }
-      }
-
-      .profile-role {
-        font-size: rem(20);
-        font-weight: bold;
-        color: var(--primary-accent);
-        margin: 0;
-      }
-
-      .online-container {
-        display: flex;
-        align-items: center;
-        gap: rem(4);
-        background: color-mix(in srgb, var(--success-color), transparent 75%);
-        border-radius: var(--border-radius-base);
-        padding: rem(2) rem(12);
-        width: fit-content;
-        margin-top: rem(4);
-
-        .circle-online {
-          width: rem(4);
-          height: rem(4);
-          background: var(--success-color);
-          border-radius: 50%;
-        }
-
-        .online-text {
-          font-size: rem(12);
-          color: var(--success-color);
-        }
-      }
-
-      .online-text.offline {
-        font-size: rem(12);
-        color: color-mix(in srgb, var(--neutral-100), transparent 50%);
-        margin: 0;
-      }
-    }
+    border-radius: 50%;
+    border: rem(2) solid color-mix(in srgb, var(--neutral-100), transparent 75%);
+    object-fit: cover;
   }
 
-.profile-meta-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: rem(12);
-
-    .meta-item {
-      display: inline-flex;
-      align-items: center;
-      gap: rem(8);
-      padding: rem(8) rem(16);
-      background-color: var(--base4-color);
-      border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 85%);
-      border-radius: var(--border-radius-base);
-      
-      .meta-label {
-        font-size: rem(14);
-        color: color-mix(in srgb, var(--neutral-100), transparent 50%);
-      }
-
-      .meta-value {
-        font-size: rem(14);
-        color: var(--neutral-100);
-      }
-    }
-  }
-
-.profile-area-container {
+  .profile-username-container {
+    flex: 1;
     display: flex;
     flex-direction: column;
-    gap: rem(16);
-    margin-bottom: rem(12);
+    justify-content: center;
+    gap: rem(4);
+
+    .username-main {
+      display: flex;
+      align-items: center;
+      gap: rem(12);
+      flex-wrap: wrap;
+
+      .username {
+        font-size: rem(24);
+        font-weight: bold;
+        color: var(--neutral-100);
+        margin: 0;
+      }
+
+      .real-name {
+        font-size: rem(14);
+        color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+      }
+    }
+
+    .profile-role {
+      font-size: rem(20);
+      font-weight: bold;
+      color: var(--primary-accent);
+      margin: 0;
+    }
+
+    .online-container {
+      display: flex;
+      align-items: center;
+      gap: rem(4);
+      background: color-mix(in srgb, var(--success-color), transparent 75%);
+      border-radius: var(--border-radius-base);
+      padding: rem(2) rem(12);
+      width: fit-content;
+      margin-top: rem(4);
+
+      .circle-online {
+        width: rem(4);
+        height: rem(4);
+        background: var(--success-color);
+        border-radius: 50%;
+      }
+
+      .online-text {
+        font-size: rem(12);
+        color: var(--success-color);
+      }
+    }
+
+    .online-text.offline {
+      font-size: rem(12);
+      color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+      margin: 0;
+    }
+  }
+
+  .profile-actions {
+    display: flex;
+    gap: rem(8);
+    align-items:end;
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+
+  .profile-action-btn {
+    width: rem(40);
+    height: rem(40);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--primary-accent);
+    border: none;
+    border-radius: var(--border-radius-base);
+    transition: 0.25s;
+    flex-shrink: 0;
+
+    .action-ico {
+      width: rem(20);
+      height: rem(20);
+      fill: var(--neutral-0);
+      color: var(--neutral-0);
+    }
+
+    &:hover {
+      filter: brightness(0.95);
+      transform: scale(1.05);
+    }
+
+    &:active {
+      transform: scale(0.95);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+  }
+}
+
+.profile-meta-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: rem(12);
+
+  .meta-item {
+    display: inline-flex;
+    align-items: center;
+    gap: rem(8);
+    padding: rem(8) rem(16);
+    background-color: var(--base4-color);
+    border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 85%);
+    border-radius: var(--border-radius-base);
+    
+    .meta-label {
+      font-size: rem(14);
+      color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+    }
+
+    .meta-value {
+      font-size: rem(14);
+      color: var(--neutral-100);
+    }
+  }
+}
+
+.profile-area-container {
+  display: flex;
+  flex-direction: column;
+  gap: rem(16);
+  margin-bottom: rem(12);
 
   .description-text {
     font-size: rem(16);
@@ -124,100 +167,64 @@
     margin: 0;
   }
 
-    .profile-area-text-container {
-      display: flex;
-      align-items: center;
-      gap: rem(8);
+  .profile-area-text-container {
+    display: flex;
+    align-items: center;
+    gap: rem(8);
 
-      .profile-area-ico {
-        width: rem(18);
-        height: rem(18);
-        color: color-mix(in srgb, var(--neutral-100), transparent 25%);
-      }
-
-      .profile-area-text {
-        font-size: rem(18);
-        font-weight: bold;
-        color: var(--neutral-100);
-        margin: 0;
-        white-space: pre-wrap; 
-      }
+    .profile-area-ico {
+      width: rem(18);
+      height: rem(18);
+      color: color-mix(in srgb, var(--neutral-100), transparent 25%);
     }
+
+    .profile-area-text {
+      font-size: rem(18);
+      font-weight: bold;
+      color: var(--neutral-100);
+      margin: 0;
+      white-space: pre-wrap; 
+    }
+  }
 }
 
 .tag-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: rem(10);
+  display: flex;
+  flex-wrap: wrap;
+  gap: rem(10);
 
-    .tag-item {
-        padding: rem(8) rem(16);
-        background-color: color-mix(in srgb, var(--primary-accent), transparent 85%);
-        border-radius: var(--border-radius-base);
+  .tag-item {
+    padding: rem(8) rem(16);
+    background-color: color-mix(in srgb, var(--primary-accent), transparent 85%);
+    border-radius: var(--border-radius-base);
 
-        .tag-text {
-          font-size: rem(14);
-          color: var(--primary-tag-text-color);
-          margin: 0;
-        }
-
-        &.empty {
-          background-color: color-mix(in srgb, var(--neutral-100), transparent 95%);
-          
-          .tag-text.empty {
-                color: color-mix(in srgb, var(--neutral-100), transparent 50%);
-                font-size: rem(14);
-            } 
-        }
+    .tag-text {
+      font-size: rem(14);
+      color: var(--primary-tag-text-color);
+      margin: 0;
     }
-}
 
-.invite-place-container.third-side {
-    display: flex;
-    gap: rem(16);
-    align-items: center;
-    padding: 0;
-    margin: 0;
-    border-top: none;
-
-    .invite-button.third-side{
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        width: rem(175);
-        height: rem(40);
-        background-color: var(--primary-accent);
-        color: var(--neutral-0);
-        font-weight: bold;
-        border-radius: var(--border-radius-base);
-        border: none;
-        transition: 0.25s;
-
-        &:hover{
-            filter: brightness(0.975);
-        }
-        &:active{
-            filter: brightness(0.95);
-            transform: scale(0.98);
-        }
-        &:disabled {
-            opacity: 0.5;
-            filter: grayscale(1);
-            pointer-events: none;
-        }
+    &.empty {
+      background-color: color-mix(in srgb, var(--neutral-100), transparent 95%);
+      
+      .tag-text.empty {
+        color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+        font-size: rem(14);
+      } 
     }
+  }
 }
 
 .contact-item.empty {
-    width: fit-content; 
-    padding: rem(8) rem(16);
-    border-radius: var(--border-radius-base);
-    background-color: color-mix(in srgb, var(--neutral-100), transparent 95%);
-          
-    .contact-text.empty {
-        color: color-mix(in srgb, var(--neutral-100), transparent 50%);
-        font-size: rem(14);
-    }
+  width: fit-content; 
+  padding: rem(8) rem(16);
+  border-radius: var(--border-radius-base);
+  background-color: color-mix(in srgb, var(--neutral-100), transparent 95%);
+        
+  .contact-text.empty {
+    color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+    font-size: rem(14);
+  }
 }
 
 .contacts-list {

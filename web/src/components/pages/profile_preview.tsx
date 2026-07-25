@@ -2,6 +2,8 @@ import HardSkills from '@icons/hard_skills.svg?react'
 import SoftSkills from '@icons/soft_skills.svg?react'
 import Contacts from '@icons/contacts.svg?react'
 import UserDescription from '@icons/user_description.svg?react'
+import InviteIcon from '@icons/invite_in_project.svg?react'
+import ChatIcon from '@icons/chat.svg?react'
 
 import type { ThirdProfileData } from '../hooks/useThirdProfile'
 
@@ -48,6 +50,21 @@ export const ProfilePreview = ({ user }: ProfilePreviewProps) => {
             <div className='circle-online'></div> 
             <p className='online-text'>Онлайн</p>   
           </div>
+        </div>
+        
+        <div className='profile-actions'>
+          <button 
+            className='profile-action-btn' 
+            disabled
+          >
+            <ChatIcon className='action-ico' />
+          </button>
+          <button 
+            className='profile-action-btn' 
+            disabled
+          >
+            <InviteIcon className='action-ico' />
+          </button>
         </div>
       </div>
 

@@ -28,8 +28,9 @@ import { Toggle } from '../common/toggle'
 
 import { ProfilePreview } from './profile_preview'
 import type { ThirdProfileData } from '../hooks/useThirdProfile'
-
 import { Responses } from './response'
+import { Messages } from './message'
+import { Chat } from './chat'
 
 import { useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '../scripts/query/queryKeys'
@@ -58,6 +59,7 @@ const AuthorizedProfile = () => {
     'Информация': 'info',
     'Активность': 'activity',
     'Отклики': 'responces',
+    'Сообщения': 'messages',
     'Уведомления': 'notifications',
     'Настройки': 'settings',
   }
@@ -71,8 +73,12 @@ const AuthorizedProfile = () => {
   const isResponsesRoute = currentPath === `${prefix}/responces` || currentPath.startsWith(`${prefix}/responces/`)
   const isNotificationsRoute = currentPath.startsWith(`${prefix}/notifications`)
   const isSettingsRoute = currentPath.startsWith(`${prefix}/settings`)
+  const isChatRoute = currentPath !== `${prefix}/messages` && currentPath.startsWith(`${prefix}/messages/`)
+  const isMessagesRoute = currentPath === `${prefix}/messages` || currentPath.startsWith(`${prefix}/messages/`)
   const activeTab = isResponsesRoute
-    ? 'Отклики'
+  ? 'Отклики'
+  : isMessagesRoute
+    ? 'Сообщения'
     : isNotificationsRoute
       ? 'Уведомления'
       : isSettingsRoute
@@ -315,7 +321,7 @@ const AuthorizedProfile = () => {
       <div className='tab-container'>
         {(isThirdParty
           ? ['Информация', 'Активность']
-          : ['Информация', 'Активность', 'Отклики', 'Уведомления', 'Настройки']
+          : ['Информация', 'Активность', 'Отклики', 'Сообщения', 'Уведомления', 'Настройки']
         ).map(tab => (
           <button
             key={tab}
@@ -541,6 +547,7 @@ const AuthorizedProfile = () => {
       {!isThirdParty && (
         <>
           {activeTab === 'Отклики' && <Responses />}
+          {activeTab === 'Сообщения' && (isChatRoute ? <Chat /> : <Messages />)}
           {activeTab === 'Уведомления' && <Notifications />}
           {activeTab === 'Настройки' && <Setting />}
         </>

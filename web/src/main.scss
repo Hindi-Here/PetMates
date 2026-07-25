@@ -1,4 +1,4 @@
-// theme and color set
+// Цветовая схема и переменные
 :root {
   --neutral-0:  #FFFFFF;
   --neutral-100: #000000; 
@@ -31,22 +31,23 @@
   --font-family-logo: "Rokkitt";
 }
 
+// Параметры темной темы
 @mixin dark-theme-values {
 }
 
-// system theme
+// Системная тема
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     @include dark-theme-values;
   }
 }
 
-// uset select theme
+// Выбранная пользователем тема
 :root[data-theme='dark'] {
   @include dark-theme-values;
 }
 
-// global styles
+// Глобальные стили
 #root {
     display: flex;
     flex-direction: column;
@@ -69,7 +70,7 @@ p{
     margin: 0;
 }
 
-// adaptive global font size
+// Адаптивность шрифта
 @media (max-width: 1290px) {
     html{
         font-size: 14px;

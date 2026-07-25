@@ -4,9 +4,11 @@ import HardSkills from '@icons/hard_skills.svg?react'
 import SoftSkills from '@icons/soft_skills.svg?react'
 import Contacts from '@icons/contacts.svg?react'
 import UserDescription from '@icons/user_description.svg?react'
+import InviteIcon from '@icons/invite_in_project.svg?react'
+import ChatIcon from '@icons/chat.svg?react'
 
 import { useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 
 import { useAuth } from '../hooks/useAuth' 
 import type { ThirdProfileData } from '../hooks/useThirdProfile'
@@ -18,9 +20,10 @@ import { usersApi } from '../services/users'
 
 export default function ThirdProfile () {
   const [showInviteForm, setShowInviteForm] = useState(false) 
+  const navigate = useNavigate()
 
   const { profileId } = useParams<{ profileId: string }>()
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, userId } = useAuth()
 
   const { data: user } = useQuery<ThirdProfileData>({
     queryKey: queryKeys.profile.byId(profileId!),
@@ -55,6 +58,8 @@ export default function ThirdProfile () {
     return <p className='online-text offline'>Был(а) {user.lastSeen}</p>
   }
 
+  const shouldShowActions = isAuthenticated && userId !== profileId
+
   return (
     <div className='third-profile-content'>
       {user && (
@@ -67,8 +72,25 @@ export default function ThirdProfile () {
                 {user?.realName && <span className='real-name'>({user?.realName})</span>}
               </div>
               <p className='profile-role'>{user?.profileRole || 'Не указана роль'}</p>
-                {renderOnlineStatus()}
+              {renderOnlineStatus()}
             </div>
+
+            {shouldShowActions && (
+              <div className='profile-actions'>
+                <button 
+                  className='profile-action-btn'
+                  onClick={() => navigate(`/profile/${userId}/messages?to=${profileId}`)}
+                >
+                  <ChatIcon className='action-ico' />
+                </button>
+                <button 
+                  className='profile-action-btn'
+                  onClick={() => setShowInviteForm(true)}
+                >
+                  <InviteIcon className='action-ico' />
+                </button>
+              </div>
+            )}
           </div>
 
           <div className='profile-meta-container'>
@@ -158,16 +180,6 @@ export default function ThirdProfile () {
               </div>
             )}
           </div>
-
-          {isAuthenticated && (
-            <div className='invite-place-container third-side'>
-              <button 
-                className='invite-button third-side' 
-                onClick={() => setShowInviteForm(true)}>
-                Пригласить
-              </button>
-            </div>
-          )}
         </>
       )}
 
@@ -177,7 +189,6 @@ export default function ThirdProfile () {
           invitedUser={user as ThirdProfileData} 
         />
       )}
-
     </div>
   )
 }

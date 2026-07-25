@@ -19,7 +19,7 @@
   resize: none;
   overflow-y: scroll;
   outline: none;
-  transition: 0.2s;
+  transition: 0.25s;
 
   &:focus {
     border-color: var(--primary-accent);
@@ -155,7 +155,7 @@
   border-radius: var(--border-radius-base);
   background: transparent;
   color: color-mix(in srgb, var(--neutral-100), transparent 50%);
-  transition: 0.2s;
+  transition: 0.25s;
   padding: 0;
 
   &:hover {
@@ -199,7 +199,7 @@
   font-weight: 500;
   color: color-mix(in srgb, var(--neutral-100), transparent 40%);
   padding: 0;
-  transition: color 0.2s;
+  transition: color 0.25s;
 
   &:hover {
     color: var(--primary-accent);
@@ -355,7 +355,7 @@
   
   .expand-icon {
     font-size: rem(10);
-    transition: transform 0.2s ease;
+    transition: transform 0.25s;
     
     &.expanded {
       transform: rotate(180deg);

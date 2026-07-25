@@ -64,7 +64,7 @@
   background: var(--neutral-0);
   border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 85%);
   border-radius: var(--border-radius-base);
-  transition: all 0.25s ease;
+  transition: all 0.25s;
   
   &:hover {
     border-color: color-mix(in srgb, var(--primary-accent), transparent 70%);
@@ -176,7 +176,7 @@
   background: var(--neutral-0);
   border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 85%);
   border-radius: var(--border-radius-base);
-  transition: all 0.25s ease;
+  transition: all 0.25s;
   
   &:hover:not(.disabled) {
     border-color: color-mix(in srgb, var(--primary-accent), transparent 70%);

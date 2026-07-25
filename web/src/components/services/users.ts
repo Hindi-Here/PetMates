@@ -16,6 +16,12 @@ export interface UserData {
   lastSeen: string;
 }
 
+export interface UserSearchResult {
+  userId: string;
+  nickname: string;
+  avatarUrl: string | null;
+}
+
 export const usersApi = {
   // Получить всех пользователей
   getAll: async (): Promise<UserData[]> => {
@@ -63,6 +69,16 @@ export const usersApi = {
     if (response.status === 404) return null;
     if (!response.ok) throw new Error('Ошибка поиска пользователя');
     
+    return await response.json();
+  },
+
+  // Поиск пользователя
+  searchUsers: async (query: string): Promise<UserSearchResult[]> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const response = await fetch(`${API_BASE}/api/users/search?query=${encodeURIComponent(query)}`, {
+      headers: { 'Authorization': `Bearer ${session?.access_token}`, 'Content-Type': 'application/json' },
+    });
+    if (!response.ok) throw new Error('Ошибка поиска пользователей');
     return await response.json();
   },
 };

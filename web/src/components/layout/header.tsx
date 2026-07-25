@@ -1,6 +1,7 @@
 import LogoIcon from '@icons/icon.svg?react'
 import DropdownIcon from '@icons/dropdown.svg?react'
 import NotificationIcon from '@icons/notification.svg?react'
+import MessageIcon from '@icons/message.svg?react'
 import MenuIcon from '@icons/menu.svg?react'
 import CloseIcon from '@icons/reject.svg?react'
 
@@ -19,6 +20,7 @@ import type { ProfileData } from '../hooks/useProfile'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '../scripts/query/queryKeys'
 import { notificationApi, type NotificationData } from '../services/notification'
+import { conversationApi } from '../services/conversation' // <-- ДОБАВЛЕНО
 import { useNavigate } from 'react-router-dom'
 
 import { getNotificationIcon, getNotificationText } from '../common/notificationText'
@@ -224,6 +226,8 @@ export default function Header() {
 const Profile = ({ user }: { user: ProfileData | null }) => {
   const { isOpen, setIsOpen, menuRef } = useIsOpen();
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
+  const navigate = useNavigate();
+  const { userId } = useAuth();
   const openMenu = () => { setIsOpen(X => !X); };
 
   const { data: notifications = [] } = useQuery({
@@ -235,6 +239,16 @@ const Profile = ({ user }: { user: ProfileData | null }) => {
   })
 
   const unreadCount = notifications.filter(n => !n.isRead).length
+
+  const { data: conversations = [] } = useQuery({
+    queryKey: queryKeys.conversations?.all ?? ['conversations', 'all'],
+    queryFn: () => conversationApi.getConversations(),
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
+    enabled: !!userId,
+  })
+
+  const hasUnreadMessages = conversations.some((conv: any) => conv.hasUnread)
 
   return (
     <div className='profile-container'>
@@ -251,6 +265,15 @@ const Profile = ({ user }: { user: ProfileData | null }) => {
             isOpen={isNotificationPanelOpen}
             onClose={() => setIsNotificationPanelOpen(false)}/>
         )}
+      </div>
+
+      <div className='message-panel-wrapper'>
+        <div 
+          className='message-panel-container'
+          onClick={() => navigate(`/profile/${userId}/messages`)}>
+          <MessageIcon className='message-ico' fill='white' />
+          {hasUnreadMessages && <div className='new-message' />}
+        </div>
       </div>
 
       <div ref={menuRef} className={`profile-panel-container ${isOpen ? 'open' : ''}`} onClick={openMenu}>

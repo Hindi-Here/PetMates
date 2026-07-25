@@ -338,8 +338,7 @@ export const Notifications = () => {
                       e.stopPropagation()
                       handleDeleteOne(notification.notificationId)
                     }}
-                    disabled={deleteNotificationMutation.isPending}
-                    title="Удалить уведомление">
+                    disabled={deleteNotificationMutation.isPending}>
                     <RejectIcon className='delete-icon' />
                   </button>
                 </div>

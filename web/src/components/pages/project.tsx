@@ -8,8 +8,8 @@ import Accept from '@icons/accept.svg?react'
 import Reject from '@icons/reject.svg?react'
 import ImportantIcon from '@icons/important_warning.svg?react'
 import AdminProjectIcon from '@icons/admin_project.svg?react'
-import LockIcon from '@icons/lock.svg?react'
-import UnlockIcon from '@icons/unlock.svg?react'
+import PrivacyIcon from '@icons/private.svg?react'
+import PublicIcon from '@icons/public.svg?react'
 
 import { useEffect, useState, useRef, Fragment } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -106,10 +106,10 @@ const VacancyCard = ({
           <p className='vacancy-project-name'>{vacancy.projectTitle || 'PetMates'}</p>
         </div>
         <div className='vacancy-actions'>
-          <button className='member-edit-badge' onClick={() => onEdit(vacancy)} title="Редактировать">
+          <button className='member-edit-badge' onClick={() => onEdit(vacancy)}>
             <Edit className='ico' />
           </button>
-          <button className='member-remove-badge' onClick={() => onDelete(vacancy.vacancyId)} title="Удалить">
+          <button className='member-remove-badge' onClick={() => onDelete(vacancy.vacancyId)}>
             <Delete className='ico' />
           </button>
         </div>
@@ -276,17 +276,17 @@ const TeamMemberProjectCard = ({
             )}
             <div className='member-badges'>
               {onUpdateRole && !isEditingRole && (
-                <button className='member-edit-badge' onClick={handleEditRoleClick} title="Редактировать роль"><Edit className='ico' /></button>
+                <button className='member-edit-badge' onClick={handleEditRoleClick}><Edit className='ico' /></button>
               )}
               {onUpdateRole && isEditingRole && (
-                <button className='member-accept-badge' onClick={handleAcceptRoleClick} disabled={!editedRole.trim() || editedRole === member.role} title="Сохранить роль"><Accept className='ico' /></button>
+                <button className='member-accept-badge' onClick={handleAcceptRoleClick} disabled={!editedRole.trim() || editedRole === member.role}><Accept className='ico' /></button>
               )}
               {onUpdateRole && isEditingRole && (
-                <button className='member-reject-badge' onClick={(e) => { e.stopPropagation(); setIsEditingRole(false); setEditedRole(member.role); setRoleError(null) }} title="Отменить"><Reject className='ico' /></button>
+                <button className='member-reject-badge' onClick={(e) => { e.stopPropagation(); setIsEditingRole(false); setEditedRole(member.role); setRoleError(null) }}><Reject className='ico' /></button>
               )}
               {isOwner && (<span className='owner-badge'><AdminProjectIcon className='owner-icon' />Владелец</span>)}
               {!isOwner && onRemove && !isEditingRole && (
-                <button className='member-remove-badge' onClick={(e) => { e.stopPropagation(); onRemove() }} title="Удалить"><Delete className='ico' /></button>
+                <button className='member-remove-badge' onClick={(e) => { e.stopPropagation(); onRemove() }}><Delete className='ico' /></button>
               )}
             </div>
           </div>
@@ -928,6 +928,20 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
     navigate(`${profilePath}/activity`, { replace: true }) 
   }
 
+  useEffect(() => {
+    const handleEscKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleBack()
+      }
+    }
+
+    window.addEventListener('keydown', handleEscKey)
+  
+    return () => {
+      window.removeEventListener('keydown', handleEscKey)
+    }
+  }, [handleBack])
+
   const handleSave = async () => {
     if (!projectId || !hasChanges || !isProjectFormValid) return
     setIsSaving(true)
@@ -1481,7 +1495,6 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
                       setEditingCommentId(node.commentId)
                       setEditContent(node.content || '')
                     }}
-                    title="Редактировать"
                   >
                     <Edit className='ico' />
                   </button>
@@ -1494,7 +1507,6 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
                         deleteCommentMutation.mutate(node.commentId)
                       }
                     }}
-                    title="Удалить"
                   >
                     <Delete className='ico' />
                   </button>
@@ -1664,7 +1676,7 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
                     onClick={() => setIsPrivate(!isPrivate)}
                     type="button"
                   >
-                    {isPrivate ? <LockIcon className='lock-ico' /> : <UnlockIcon className='lock-ico unlocked' />}
+                    {isPrivate ? <PrivacyIcon className='lock-ico' /> : <PublicIcon className='lock-ico unlocked' />}
                     <span>{isPrivate ? 'Приватный' : 'Публичный'}</span>
                   </button>
                   <p className='privacy-hint'>

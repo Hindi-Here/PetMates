@@ -112,6 +112,20 @@ export default function ProjectThirdSide() {
   })
 
   useEffect(() => {
+    const handleEscKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleBack()
+      }
+    }
+
+    window.addEventListener('keydown', handleEscKey)
+    
+    return () => {
+      window.removeEventListener('keydown', handleEscKey)
+    }
+  }, [])
+
+  useEffect(() => {
     if (!projectId || !userId || userId === project?.ownerId) return
     
     const fetchRatingStatus = async () => {
@@ -237,14 +251,14 @@ export default function ProjectThirdSide() {
                   {canEdit && (
                     <button className='comment-edit-badge' onClick={() => {
                       setReplyingTo(null); setReplyContent(''); setEditingCommentId(node.commentId); setEditContent(node.content || '')
-                    }} title="Редактировать">
+                    }}>
                       <Edit className='ico' />
                     </button>
                   )}
                   {canDelete && (
                     <button className='comment-remove-badge' onClick={() => {
                       if (window.confirm('Удалить этот комментарий?')) deleteCommentMutation.mutate(node.commentId)
-                    }} title="Удалить">
+                    }}>
                       <Delete className='ico' />
                     </button>
                   )}
@@ -397,10 +411,6 @@ export default function ProjectThirdSide() {
           )}
         </div>
       </section>
-
-      <div className='manage-container'>
-        <button className='return-button' onClick={handleBack}>Вернуться</button>
-      </div>
 
       {showInviteForm && (
         <InviteUserForm onClose={() => setShowInviteForm(null)} invitedUser={showInviteForm} />
