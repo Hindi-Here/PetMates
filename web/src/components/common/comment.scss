@@ -39,7 +39,7 @@
   align-self: flex-start;
   padding: rem(10) rem(24);
   font-size: rem(14);
-  font-weight: 500;
+  font-weight: bold;
   color: var(--neutral-0);
   background-color: var(--primary-accent);
   border: none;
@@ -51,7 +51,7 @@
   }
 
   &:active:not(:disabled) {
-    transform: scale(0.97);
+    transform: scale(0.98);
   }
 
   &:disabled {
@@ -124,7 +124,7 @@
 
 .comment-author {
   font-size: rem(14);
-  font-weight: 600;
+  font-weight: bold;
   color: var(--neutral-100);
 }
 
@@ -196,7 +196,6 @@
   background: none;
   border: none;
   font-size: rem(12);
-  font-weight: 500;
   color: color-mix(in srgb, var(--neutral-100), transparent 40%);
   padding: 0;
   transition: color 0.25s;
@@ -226,7 +225,7 @@
   }
 
   &:active {
-    transform: scale(0.95);
+    transform: scale(0.98);
   }
 
   .ico {
@@ -253,10 +252,6 @@
     background-color: color-mix(in srgb, var(--important-color), transparent 80%);
   }
 
-  &:active {
-    transform: scale(0.95);
-  }
-
   .ico {
     width: rem(10);
     height: rem(10);
@@ -279,14 +274,14 @@
 
 .comment-btn {
   padding: rem(6) rem(16);
-  font-size: rem(13);
-  font-weight: 500;
+  font-size: rem(14);
+  font-weight: bold;
   border: none;
   border-radius: var(--border-radius-base);
   transition: 0.25s;
 
   &:active:not(:disabled) {
-    transform: scale(0.97);
+    transform: scale(0.98);
   }
 
   &:disabled {
@@ -351,7 +346,7 @@
   display: flex;
   align-items: center;
   gap: rem(4);
-  font-weight: 600;
+  font-weight: bold;
   
   .expand-icon {
     font-size: rem(10);

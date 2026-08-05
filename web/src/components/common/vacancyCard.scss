@@ -3,7 +3,6 @@
   flex-direction: column;
   width: 100%;
   margin-bottom: rem(24);
-  user-select: none;
   background-color: var(--neutral-0);
   border-radius: var(--border-radius-base);
   box-shadow: inset 0 0 0 0 var(--primary-accent), 0 4px 4px rgba(0, 0, 0, 0.15);
@@ -115,6 +114,7 @@
         border-radius: var(--border-radius-base);
         border: none;
         transition: 0.25s;
+        font-size: rem(14);
 
         &:hover:not(:disabled) { filter: brightness(0.975); }
         &:active:not(:disabled) { filter: brightness(0.95); transform: scale(0.98); }
@@ -141,6 +141,71 @@
       margin-left: auto;
 
       .calendar-ico { width: rem(14); height: rem(14); }
+    }
+  }
+}
+
+@media (max-width: 600px) {
+  .vacancy-card-container {
+    .vacancy-header {
+      .vacancy-title {
+        font-size: rem(18);
+      }
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .vacancy-card-container {
+    .vacancy-info-container {
+      padding: rem(12);
+      padding-bottom: rem(6);
+    }
+
+    .vacancy-header .vacancy-title {
+      font-size: rem(16);
+    }
+
+    .vacancy-description {
+      font-size: rem(14);
+    }
+
+    .tag-place-container {
+      padding: rem(6) rem(12);
+    }
+
+    .vacancy-footer-container {
+      padding: rem(12);
+
+      .vacancy-left-group {
+        gap: rem(10);
+        flex-wrap: wrap;
+        row-gap: rem(8);
+
+        .vacancy-apply-button {
+          width: rem(140);
+          height: rem(36);
+          font-size: rem(12);
+        }
+
+        .vacancy-rating {
+          white-space: nowrap;
+        }
+      }
+
+      .vacancy-date {
+        font-size: rem(11);
+      }
+    }
+  }
+}
+
+@media (max-width: 400px) {
+  .vacancy-card-container {
+    .vacancy-footer-container {
+      .vacancy-date > span {
+        display: none;
+      }
     }
   }
 }

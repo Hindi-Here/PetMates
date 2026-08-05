@@ -35,6 +35,7 @@ import { Chat } from './chat'
 import { useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '../scripts/query/queryKeys'
 
+// Рендер компонента для неавторизованных пользователей
 const UnauthorizedProfile = () => {
   return (
     <div className='profile-info-container' style={{ backgroundColor: 'white', minHeight: '400px' }}>
@@ -46,6 +47,7 @@ const UnauthorizedProfile = () => {
   )
 }
 
+// Рендер компонента для авторизованных пользователей
 const AuthorizedProfile = () => {
   const [isPreview, setIsPreview] = useState(false)
   const { isAuthenticated, userId } = useAuth()
@@ -118,11 +120,13 @@ const AuthorizedProfile = () => {
 
   const [formData, setFormData] = useState<Record<string, any>>({})
 
+  // Нормализация значения поля по правилам валидации
   const normalizeValue = (name: string, value: string) => {
     const rule = validationRules[name as keyof typeof validationRules]
     return rule ? rule(value) : value
   }
 
+  // Синхронизация formData с данными пользователя
   useEffect(() => {
     if (user) {
       setFormData({
@@ -158,6 +162,7 @@ const AuthorizedProfile = () => {
     }
   }, [user])
 
+  // Проверка: есть ли изменения в форме
   const hasChanges = useMemo(() => {
     if (!user) return false
     
@@ -169,6 +174,7 @@ const AuthorizedProfile = () => {
     )
   }, [formData, user])
 
+  // Обработка изменения поля формы
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     const normalizedValue = normalizeValue(name, value)
@@ -180,6 +186,7 @@ const AuthorizedProfile = () => {
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess] = useState(false)
 
+  // Сохранение изменений профиля
   const handleSave = async () => {
     if (!hasChanges || !user) return
     setIsLoading(true)
@@ -226,6 +233,7 @@ const AuthorizedProfile = () => {
     }
   }
 
+  // Отмена изменений и сброс формы
   const handleCancel = () => {
     if (user) {
       setPendingAvatarFile(null)
@@ -269,18 +277,22 @@ const AuthorizedProfile = () => {
 
   const [contacts, setContacts] = useState<ContactItem[]>([])
 
+  // Добавление нового контакта
   const addContact = () => {
     setContacts(prev => [...prev, { id: Date.now(), label: '', url: '', isNew: true }])
   }
 
+  // Удаление контакта по id
   const removeContact = (id: number) => {
     setContacts(prev => prev.filter(c => c.id !== id))
   }
 
+  // Обновление поля контакта
   const updateContact = (id: number, field: 'label' | 'url', value: string) => {
     setContacts(prev => prev.map(c => c.id === id ? { ...c, [field]: value } : c))
   }
 
+  // Сериализация контактов в JSON при изменении
   useEffect(() => {
     try {
       const serialized = JSON.stringify(contacts.map(c => ({ name: c.label, link: c.url })))
@@ -288,6 +300,7 @@ const AuthorizedProfile = () => {
     } catch {}
   }, [contacts])
 
+  // Проверка валидности формы
   const isFormValid = useMemo(() => {
     const fields = ['nickname', 'realName', 'age', 'country', 'city',
       'workplace', 'profileRole', 'description', 'hardSkills', 'softSkills']
@@ -302,8 +315,10 @@ const AuthorizedProfile = () => {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null)
 
+  // Клик по аватару для выбора файла
   const handleAvatarClick = () => fileInputRef.current?.click()
 
+  // Обработка выбора файла аватара
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -318,6 +333,7 @@ const AuthorizedProfile = () => {
 
   return (
     <div className='profile-content-container'>
+      <div className='tab-wrapper'>
       <div className='tab-container'>
         {(isThirdParty
           ? ['Информация', 'Активность']
@@ -330,6 +346,7 @@ const AuthorizedProfile = () => {
             {tab}
           </button>
         ))}
+      </div>
       </div>
 
       {activeTab === 'Информация' && !isProjectRoute && (
@@ -468,7 +485,8 @@ const AuthorizedProfile = () => {
                   name='description' 
                   value={formData.description ?? ''}
                   onChange={handleChange} 
-                  onBlur={handleBlur}/>
+                  onBlur={handleBlur}
+                  placeholder={'### Обо мне\n\nРасскажите о себе, своих интересах и опыте.\n\n**Навыки:**\n- Язык программирования / технология\n- Инструменты и фреймворки\n- Soft skills\n\n**Цели:**\n- Чему хотите научиться\n- Какие проекты интересны\n\n**Контакты:**\n- Telegram / Email / GitHub'}/>
               </div>
 
               <div className='profile-area-container'>
@@ -582,6 +600,7 @@ const AuthorizedProfile = () => {
   )
 }
 
+// Рендер компонента для выбора Project или ProjectThirdSide на основе владельца
 const ProjectOrThirdSide = () => {
   const { projectId } = useParams<{ projectId: string }>()
   const { userId } = useAuth()
@@ -606,6 +625,7 @@ const ProjectOrThirdSide = () => {
   return ownerId === userId ? <Project /> : <ProjectThirdSide />
 }
 
+// Главный компонент с логикой маршрутизации профиля
 export default function Profile() {
   const { profileId } = useParams<{ profileId: string }>()
   const { isAuthenticated, userId } = useAuth()
@@ -620,6 +640,7 @@ export default function Profile() {
   return isAuthenticated ? <AuthorizedProfile /> : <UnauthorizedProfile />
 }
 
+// Валидация поля профиля и возврат сообщения об ошибке
 const checkFormat = (fieldName: string, value: string): string | null => {
   const rules: Record<string, Array<[boolean, string]>> = {
     nickname: [

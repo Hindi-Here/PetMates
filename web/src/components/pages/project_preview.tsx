@@ -19,39 +19,85 @@ import { VacancyCard } from '../common/vacancyCard'
 import { UserCard } from '../common/userCard'
 
 export interface TeamMemberWithUser {
-  memberId: string; projectId: string; userId: string; role: string;
-  joinedAt?: string; userData?: UserData; isOwner?: boolean
+  memberId: string
+  projectId: string
+  userId: string
+  role: string
+  joinedAt?: string
+  userData?: UserData
+  isOwner?: boolean
 }
 
-export interface TeamMember { id: number; email: string; role: string; isOwner?: boolean }
+export interface TeamMember {
+  id: number
+  email: string
+  role: string
+  isOwner?: boolean
+}
 
 interface CommentNode extends CommentData {
-  replies: CommentNode[];
+  replies: CommentNode[]
 }
 
 interface ProjectPreviewProps {
-  name: string; shortDesc: string; status: string; description: string;
-  team: Array<TeamMember | TeamMemberWithUser>; vacancies: VacancyData[]; 
-  isOwner?: boolean; ratingCount?: number; isPrivate?: boolean;
+  name: string
+  shortDesc: string
+  status: string
+  description: string
+  team: Array<TeamMember | TeamMemberWithUser>
+  vacancies: VacancyData[]
+  isOwner?: boolean
+  ratingCount?: number
+  isPrivate?: boolean
   comments?: CommentData[]
 }
 
-export const ProjectPreview = ({ 
-  name, status, description, team, vacancies, 
-  isOwner = true, ratingCount = 0, comments = []
+// Получение конфигурации статуса проекта
+const getStatusConfig = (status: string) => {
+  const configs: Record<string, {
+    text: string
+    className: string
+    Icon: React.ComponentType<{ className?: string }>
+  }> = {
+    'В процессе': { text: 'В процессе', className: 'status-working', Icon: StatusWorkingIcon },
+    'Завершён': { text: 'Завершён', className: 'status-end', Icon: StatusEndIcon },
+    'Приостановлен': { text: 'Приостановлен', className: 'status-pause', Icon: StatusPauseIcon }
+  }
+  return configs[status] || configs['В процессе']
+}
+
+// Построение дерева комментариев
+const buildCommentTree = (commentsList: CommentData[]): CommentNode[] => {
+  const map = new Map<string, CommentNode>()
+  const roots: CommentNode[] = []
+  commentsList.forEach(c => map.set(c.commentId, { ...c, replies: [] }))
+  commentsList.forEach(c => {
+    const node = map.get(c.commentId)!
+    if (c.parentCommentId && map.has(c.parentCommentId)) {
+      map.get(c.parentCommentId)!.replies.push(node)
+    } else {
+      roots.push(node)
+    }
+  })
+  return roots
+}
+
+export const ProjectPreview = ({
+  name,
+  status,
+  description,
+  team,
+  vacancies,
+  isOwner = true,
+  ratingCount = 0,
+  comments = []
 }: ProjectPreviewProps) => {
   const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set())
 
-  const getStatusConfig = (status: string) => {
-    const configs: Record<string, { text: string; className: string; Icon: React.ComponentType<{ className?: string }> }> = {
-      'В процессе': { text: 'В процессе', className: 'status-working', Icon: StatusWorkingIcon },
-      'Завершён': { text: 'Завершён', className: 'status-end', Icon: StatusEndIcon },
-      'Приостановлен': { text: 'Приостановлен', className: 'status-pause', Icon: StatusPauseIcon }
-    }
-    return configs[status] || configs['В процессе']
-  }
-  const statusConfig = getStatusConfig(status); const StatusIcon = statusConfig.Icon
+  const statusConfig = getStatusConfig(status)
+  const StatusIcon = statusConfig.Icon
 
+  // Переключение раскрытия ответов комментария
   const toggleReplies = (commentId: string) => {
     setExpandedComments(prev => {
       const newSet = new Set(prev)
@@ -61,6 +107,10 @@ export const ProjectPreview = ({
     })
   }
 
+  // Проверка: раскрыт ли комментарий
+  const isExpanded = (commentId: string) => expandedComments.has(commentId)
+
+  // Обработка клавиши Escape
   useEffect(() => {
     const handleEscKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -69,29 +119,13 @@ export const ProjectPreview = ({
     }
 
     window.addEventListener('keydown', handleEscKey)
-  
+
     return () => {
       window.removeEventListener('keydown', handleEscKey)
     }
   }, [])
 
-  const isExpanded = (commentId: string) => expandedComments.has(commentId)
-
-  const buildCommentTree = (commentsList: CommentData[]): CommentNode[] => {
-    const map = new Map<string, CommentNode>()
-    const roots: CommentNode[] = []
-    commentsList.forEach(c => map.set(c.commentId, { ...c, replies: [] }))
-    commentsList.forEach(c => {
-      const node = map.get(c.commentId)!
-      if (c.parentCommentId && map.has(c.parentCommentId)) {
-        map.get(c.parentCommentId)!.replies.push(node)
-      } else {
-        roots.push(node)
-      }
-    })
-    return roots
-  }
-
+  // Рендер узла комментария (только чтение)
   const renderReadOnlyCommentNode = (node: CommentNode, depth = 0) => {
     const hasReplies = node.replies.length > 0
     const expanded = isExpanded(node.commentId)
@@ -139,7 +173,7 @@ export const ProjectPreview = ({
                 </button>
               )}
               {hasReplies && (
-                <button 
+                <button
                   className='comment-action-text expand-replies'
                   onClick={() => toggleReplies(node.commentId)}
                 >

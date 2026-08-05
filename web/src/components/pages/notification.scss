@@ -12,16 +12,15 @@
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: rem(16);
-
+  gap: rem(24);
+}
   .notifications-title {
     font-size: rem(20);
-    font-weight: 600;
+    font-weight: bold;
     color: var(--neutral-100);
     margin: 0;
 
     .notifications-count {
-      font-weight: normal;
       color: color-mix(in srgb, var(--neutral-100), transparent 50%);
     }
   }
@@ -46,7 +45,6 @@
       border-radius: var(--border-radius-base);
       padding-left: rem(24);
       padding-right: rem(24);
-      user-select: none;
       height: inherit;
       transition: 0.25s;
       background-color: var(--neutral-0);
@@ -67,6 +65,7 @@
         color: var(--neutral-100);
         font-size: rem(14);
         margin: 0;
+        user-select: none;
       }
 
       &:hover {
@@ -115,7 +114,6 @@
       border-radius: var(--border-radius-base);
       color: var(--primary-accent);
       font-size: rem(14);
-      font-weight: 400;
       transition: 0.25s;
       height: 100%;
 
@@ -137,13 +135,13 @@
       display: flex;
       align-items: center;
       gap: rem(8);
+      font-size: rem(14);
       padding: rem(8) rem(16);
       background: transparent;
       border: none;
       border-radius: var(--border-radius-base);
       color: var(--neutral-100);
       font-size: rem(14);
-      font-weight: 400;
       transition: 0.25s;
       height: 100%;
 
@@ -181,7 +179,6 @@
       }
     }
   }
-}
 
 .notifications-selection-header {
   display: flex;
@@ -195,7 +192,6 @@
     gap: rem(12);
     font-size: rem(14);
     color: var(--neutral-100);
-    user-select: none;
 
     input[type='checkbox'] {
       width: rem(18);
@@ -208,7 +204,7 @@
 .notifications-list {
   display: flex;
   flex-direction: column;
-  gap: rem(16);
+  gap: rem(24);
 }
 
 .notification-card {
@@ -314,12 +310,12 @@
         transition: color 0.25s;
 
         strong {
-          font-weight: 600;
+          font-weight: bold;
           color: var(--neutral-100);
         }
 
         .nickname {
-          font-weight: 600;
+          font-weight: bold;
           color: var(--neutral-100);
           
           &:hover {
@@ -329,7 +325,7 @@
 
         .project-link, .role, .status {
           color: var(--primary-accent);
-          font-weight: 600;
+          font-weight: bold;
           
           &:hover {
             text-decoration: underline;
@@ -392,6 +388,86 @@
         .delete-icon {
           width: rem(18);
           height: rem(18);
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 600px) {
+  .notifications-header {
+    align-items: flex-start;
+
+    .notifications-controls {
+      width: 100%;
+      height: auto;
+      flex-wrap: wrap;
+      gap: rem(12);
+
+      .sort-group-container,
+        .sort-type-container {
+          height: rem(35); 
+        }
+
+      .notifications-actions {
+        flex-wrap: wrap;
+        gap: rem(8);
+      }
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .notifications-header {
+    .notifications-controls {
+      .sort-group-container {
+        width: 100%;
+      }
+
+      .sort-type-container {
+        width: 100%;
+        justify-content: space-between;
+      }
+
+      .notifications-actions {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+
+        .mark-all-read-button,
+        .delete-action-button {
+          justify-content: center;
+          width: 100%;
+        }
+      }
+    }
+  }
+
+  .notification-card {
+    padding: rem(14);
+
+    .notification-card-header {
+      gap: rem(10);
+
+      .notification-icon-wrapper {
+        width: rem(38);
+        height: rem(38);
+
+        .notification-icon {
+          width: rem(20);
+          height: rem(20);
+        }
+      }
+
+      .notification-actions-right {
+        .unread-indicator {
+          top: rem(-14);
+          right: rem(-6);
+        }
+
+        .delete-notification-button {
+          width: rem(28);
+          height: rem(28);
         }
       }
     }

@@ -28,8 +28,14 @@ builder.Services.AddScoped<Supabase.Client>(sp =>
 
     if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer "))
     {
-        var token = authHeader["Bearer ".Length..];
-        client.Postgrest.Options.Headers["Authorization"] = $"Bearer {token}";
+        var token = authHeader["Bearer ".Length..].Trim();
+
+        if (!string.IsNullOrEmpty(token) &&
+            token != "undefined" && token != "null" &&
+            token.Count(c => c == '.') == 2)
+        {
+            client.Postgrest.Options.Headers["Authorization"] = $"Bearer {token}";
+        }
     }
 
     return client;

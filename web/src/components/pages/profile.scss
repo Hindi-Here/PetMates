@@ -1,4 +1,4 @@
-.profile-info-container{
+.profile-info-container {
   height: 80vh;
   display: flex;
   flex-direction: column;
@@ -6,7 +6,7 @@
   align-items: center;
 }
 
-.info-container{
+.info-container {
   width: 80%;
   margin-left: 10%;
   margin-right: 10%;
@@ -20,20 +20,20 @@
   align-items: center;
   justify-content: center;
 
-    .info-ico{
-      opacity: 0.5;
-      width: rem(125);
-      height: rem(125);
-      fill: color-mix(in srgb, var(--neutral-100), transparent 50%);
-      align-self: center; 
-    }
+  .info-ico {
+    opacity: 0.5;
+    width: rem(125);
+    height: rem(125);
+    fill: color-mix(in srgb, var(--neutral-100), transparent 50%);
+    align-self: center; 
+  }
 
-    .info-comment{
-      color: color-mix(in srgb, var(--neutral-100), transparent 75%);
-      font-size: rem(32);
-      margin-top: rem(12);
-      text-align: center;
-    }
+  .info-comment {
+    color: color-mix(in srgb, var(--neutral-100), transparent 75%);
+    font-size: rem(24);
+    margin-top: rem(12);
+    text-align: center;
+  }
 }
 
 .profile-content-container {
@@ -47,7 +47,8 @@
 
   .tab-container {
     display: flex;
-    gap: rem(36);
+    flex-wrap: wrap;
+    gap: rem(12) rem(36);
     padding-bottom: rem(8);
 
     .tab {
@@ -59,6 +60,7 @@
       transition: color 0.25s;
       border-bottom: 2px solid transparent;
       outline: none;
+      white-space: nowrap;
 
       &:hover {
         color: var(--neutral-100);
@@ -93,13 +95,13 @@
     flex-grow: 1;
 
     .username-label {
-      font-size: rem(16);
+      font-size: rem(14);
     }
 
     .username-input {
       width: 100%;
       padding: rem(8) rem(16);
-      font-size: rem(20);
+      font-size: rem(20); 
       font-weight: bold;
       color: var(--neutral-100);
       background-color: var(--base4-color);
@@ -112,18 +114,9 @@
         border-color: var(--primary-accent);
       }
 
-
       &.input-error {
         border-color: var(--important-color);
         box-shadow: 0 0 0 1px var(--important-color);
-
-        &::selection{
-          background-color: color-mix(in srgb, var(--important-color), transparent 75%);
-        }
-      }
-
-      &::selection{
-        background-color: color-mix(in srgb, var(--primary-accent), transparent 85%);
       }
     }
   }
@@ -151,50 +144,40 @@
       background-color: var(--neutral-0);
     }
 
-  .profile-field-text {
-    font-size: rem(16);
-    color: var(--neutral-100);
-    font-weight: 400;
-    margin: 0;
+    .profile-field-text {
+      font-size: rem(14);
+      color: var(--neutral-100);
+      margin: 0;
 
-    &.role{
-      font-weight: bold;
-    }
-  }
-
-  .profile-field-input {
-    width: 100%;
-    padding: rem(8) rem(16);
-    font-size: rem(16);
-    color: var(--neutral-100);
-    background-color: var(--base4-color);
-    border: 1px solid transparent;
-    border-radius: rem(12);
-    outline: none;
-    transition: 0.25s;
-
-    &.role{
-      font-weight: bold;
+      &.role {
+        font-weight: bold;
+      }
     }
 
-    &:focus:not(.input-error) {
+    .profile-field-input {
+      width: 100%;
+      padding: rem(8) rem(16);
+      font-size: rem(14); 
+      color: var(--neutral-100);
+      background-color: var(--base4-color);
+      border: 1px solid transparent;
+      border-radius: rem(12);
+      outline: none;
+      transition: 0.25s;
+
+      &.role {
+        font-weight: bold;
+      }
+
+      &:focus:not(.input-error) {
         border-color: var(--primary-accent);
       }
 
-
-    &.input-error {
+      &.input-error {
         border-color: var(--important-color);
         box-shadow: 0 0 0 1px var(--important-color);
-
-        &::selection{
-          background-color: color-mix(in srgb, var(--important-color), transparent 75%);
-        }
       }
-
-    &::selection{
-      background-color: color-mix(in srgb, var(--primary-accent), transparent 85%);
     }
-  }
 
     .profile-radio-container {
       display: flex;
@@ -202,11 +185,42 @@
 
       .radio-text {
         display: flex;
-        align-items: center;
-        gap: rem(8);
-        font-size: rem(16);
+        align-items: center; 
+        gap: rem(8);     
+        font-size: rem(14);
         color: var(--neutral-100);
-        accent-color: var(--primary-accent);
+        user-select: none;
+      
+        input[type='radio'] {
+          appearance: none;
+          -webkit-appearance: none;
+          width: rem(16);
+          height: rem(16);
+          border-radius: 50%;
+          border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 50%);
+          background-color: var(--neutral-0);
+          position: relative;
+          transition: 0.25s;
+          flex-shrink: 0;
+          margin: 0;  
+
+          &:checked {
+            border-color: var(--primary-accent);
+            background-color: color-mix(in srgb, var(--primary-accent), transparent 75%);
+
+            &::after {
+              content: '';
+              position: absolute;
+              top: 50%;
+              left: 50%;
+              width: rem(8);
+              height: rem(8);
+              border-radius: 50%;
+              background: var(--primary-accent);
+              transform: translate(-50%, -50%);
+            }
+          }
+        }
       }
     }
   }
@@ -229,13 +243,13 @@
       gap: rem(8);
 
       .profile-area-ico {
-        width: rem(15);
-        height: rem(15);
+        width: rem(18);
+        height: rem(18);
         color: color-mix(in srgb, var(--neutral-100), transparent 25%);
       }
 
       .profile-area-text {
-        font-size: rem(16);
+        font-size: rem(18);
         color: var(--neutral-100);
       }
     }
@@ -245,13 +259,14 @@
       min-height: rem(100);
       padding: rem(16);
       font-family: inherit; 
-      font-size: inherit;
+      font-size: rem(14); 
       line-height: 1.5;
       border: 1px solid var(--neutral-100);
       border-radius: rem(12);
       outline: none;
       transition: 0.25s;
       resize: none; 
+      scrollbar-width: none;
 
       &:focus:not(.input-error) {
         border-color: var(--primary-accent);
@@ -260,13 +275,6 @@
       &.input-error {
         border-color: var(--important-color);
         box-shadow: 0 0 0 1px var(--important-color);
-        &::selection{
-          background-color: color-mix(in srgb, var(--important-color), transparent 75%);
-        }
-      }
-
-      &::selection{
-        background-color: color-mix(in srgb, var(--primary-accent), transparent 85%);
       }
 
       &.description {
@@ -280,6 +288,7 @@
       align-items: center;
       justify-content: center;
       gap: rem(8);
+      font-size: rem(14);
       padding: rem(12);
       background: none;
       border: 1px dashed color-mix(in srgb, var(--neutral-100), transparent 80%);
@@ -295,7 +304,7 @@
         transform: scale(0.98);
       }
 
-      .add-contact-ico{
+      .add-contact-ico {
         width: rem(15);
         height: rem(15);
         color: color-mix(in srgb, var(--neutral-100), transparent 25%);
@@ -319,6 +328,7 @@
     line-height: 1;
     background-color: var(--primary-accent);
     color: var(--neutral-0);
+    font-size: rem(14);
     font-weight: bold;
     border-radius: rem(12);
     border: none;
@@ -357,6 +367,7 @@
     min-height: rem(40);
     padding-top: rem(12);
   }
+  
   .preview-label {
     line-height: 1;
     font-size: rem(14);
@@ -375,7 +386,6 @@
   .char-counter {
     font-size: rem(10);
     color: var(--neutral-80);
-    user-select: none;
     opacity: 0.5;
     transition: 0.25s;
 
@@ -404,10 +414,6 @@
     border-radius: var(--border-radius-base);
     outline: none;
     transition: 0.25s;
-
-    &::selection{
-      background-color: color-mix(in srgb, var(--primary-accent), transparent 85%);
-    }
 
     &:focus {
       border-color: var(--primary-accent);
@@ -442,8 +448,8 @@
 
     &.accept {
       color: var(--primary-accent);
-      
       background-color: color-mix(in srgb, var(--primary-accent), transparent 85%);
+      
       &:not(:disabled):hover { 
         background-color: color-mix(in srgb, var(--primary-accent), transparent 80%); 
       }
@@ -492,4 +498,120 @@
   color: var(--primary-accent);
   background-color: color-mix(in srgb, var(--primary-accent), transparent 90%);
   border: 1px solid color-mix(in srgb, var(--primary-accent), transparent 70%);
+}
+
+@media (max-width: 900px) {
+  .profile-content-container {
+    width: 92%;
+    margin-left: 4%;
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-content-container {
+    width: 100%;
+    margin-left: 0;
+    padding-left: rem(12);
+    padding-right: rem(12);
+  }
+}
+
+@media (max-width: 600px) {
+  .profile-header-container {
+    flex-wrap: wrap;
+
+    .profile-username-container {
+      flex-basis: 100%;
+    }
+  }
+
+  .profile-field-container {
+    grid-template-columns: 1fr;
+    gap: rem(6);
+    padding-left: 0;
+  }
+
+  .profile-radio-container {
+    flex-wrap: wrap;
+    gap: rem(12);
+  }
+
+  .manage-container {
+    flex-wrap: wrap;
+    gap: rem(8);
+
+    .manage-button {
+      flex: 1 1 calc(50% - #{rem(4)});
+    }
+
+    .preview-group {
+      margin-left: 0;
+      flex: 1 1 100%;
+      justify-content: flex-end;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-avatar {
+    width: rem(70);
+    height: rem(70);
+  }
+
+  .tab-container {
+    gap: rem(8) rem(20);
+  }
+
+  .contact-item {
+    flex-wrap: wrap;
+    gap: rem(8);
+
+    .contact-input.label {
+      width: 100%;
+    }
+
+    .contact-input.url {
+      flex: 1 1 calc(100% - #{rem(44)});
+    }
+
+    .contact-action {
+      flex-shrink: 0;
+    }
+  }
+
+  .profile-area-text-wrapper {
+    flex-wrap: wrap;
+    gap: rem(4);
+  }
+}
+
+@media (max-width: 525px) {
+  .profile-field-container {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important; 
+    gap: rem(6) !important;
+    padding-left: 0 !important;
+  }
+
+  .profile-field-text {
+    text-align: left !important;
+    margin-bottom: rem(4);
+  }
+
+  .profile-field-input {
+    width: 100% !important;
+  }
+
+  .profile-radio-container {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: rem(8) !important;
+    width: 100%;
+  }
+
+  .radio-text {
+    justify-content: flex-start !important;
+    width: 100%;
+  }
 }

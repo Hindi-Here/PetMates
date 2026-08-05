@@ -55,19 +55,10 @@
         &.input-error {
           border-color: var(--important-color);
           box-shadow: 0 0 0 1px var(--important-color);
-    
-          &::selection{
-            background-color: color-mix(in srgb, var(--important-color), transparent 75%);
-          }
-        }
-
-        &::selection{
-          background-color: color-mix(in srgb, var(--primary-accent), transparent 85%);
         }
       }
       .field-input.readonly {
         opacity: 0.5;
-        user-select: none;
         pointer-events: none;
       }
     }
@@ -98,6 +89,10 @@
       font-weight: bold;
       color: var(--important-color);
       margin: 0;
+
+      &::selection{
+        background-color: color-mix(in srgb, var(--important-color), transparent 75%);
+      }
     }
   }
 
@@ -106,6 +101,10 @@
     color: color-mix(in srgb, var(--neutral-100), transparent 50%);
     margin-bottom: rem(20);
     line-height: 1.5;
+
+    &::selection{
+      background-color: color-mix(in srgb, var(--important-color), transparent 75%);
+    }
   }
 
   .warning-button {
@@ -132,10 +131,6 @@
       background-color: color-mix(in srgb, var(--important-color), transparent 80%);
       border-color: color-mix(in srgb, var(--important-color), transparent 50%);
     }
-
-    &:active {
-      transform: scale(0.98);
-    }
   }
 }
 
@@ -150,6 +145,7 @@
     align-items: center;
     width: rem(175);
     height: rem(40);
+    font-size: rem(14);
     margin-top: rem(12);
     background-color: var(--primary-accent);
     color: var(--neutral-0);
@@ -212,4 +208,65 @@
   color: var(--primary-accent);
   background-color: color-mix(in srgb, var(--primary-accent), transparent 90%);
   border: 1px solid color-mix(in srgb, var(--primary-accent), transparent 70%);
+}
+
+@media (max-width: 600px) {
+  .section-container {
+    .setting-container {
+      padding: rem(16);
+
+      .setting-field-container:has(.field-input) {
+        flex-direction: column;
+        align-items: stretch;
+        gap: rem(6);
+        padding-right: 0;
+
+        .field-name {
+          min-width: 0;
+          margin-left: 0;
+        }
+
+        .field-input {
+          flex: none;
+          width: 100%;
+          height: rem(30);
+        }
+      }
+    }
+  }
+
+  .manage-container {
+    .manage-button {
+      width: 100%;
+
+      &.cancellation {
+        width: 100%;
+      }
+    }
+  }
+
+  .warning-container {
+    padding: rem(16);
+
+    .warning-button {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+}
+
+@media (max-width: 350px) {
+  .section-container .setting-container {
+    padding: rem(12);
+  }
+
+  .setting-field-container:not(:has(.field-input)) {
+    padding-right: 0;
+    gap: rem(8);
+    flex-wrap: wrap;
+
+    .field-name {
+      margin-left: 0;
+    }
+  }
 }

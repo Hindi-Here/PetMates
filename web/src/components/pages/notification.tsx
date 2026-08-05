@@ -2,7 +2,7 @@ import './notification.scss'
 
 import UsersIcon from '@icons/users.svg?react'
 import RejectIcon from '@icons/reject.svg?react'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { Dropdown } from '../common/dropdown'
@@ -16,6 +16,24 @@ import { getNotificationIcon, getNotificationText } from '../common/notification
 
 type CategoryFilter = 'all' | 'project' | 'response' | 'invite' | 'system'
 
+// Маппинг категорий для отображения в UI
+const categoryLabels: Record<CategoryFilter, string> = {
+  all: 'Все',
+  project: 'Проекты',
+  response: 'Отклики',
+  invite: 'Приглашения',
+  system: 'Системные'
+}
+
+// Опции для выпадающего списка категорий
+const categoryOptions = [
+  { id: 'all', label: 'Все' },
+  { id: 'project', label: 'Проекты' },
+  { id: 'response', label: 'Отклики' },
+  { id: 'invite', label: 'Приглашения' },
+  { id: 'system', label: 'Системные' }
+]
+
 export const Notifications = () => {
   const { userId } = useAuth()
   const navigate = useNavigate()
@@ -26,22 +44,7 @@ export const Notifications = () => {
   
   const { isOpen: isDropdownOpen, setIsOpen: setDropdownOpen, menuRef: dropdownMenuRef } = useIsOpen()
 
-  const categoryLabels: Record<CategoryFilter, string> = {
-    all: 'Все',
-    project: 'Проекты',
-    response: 'Отклики',
-    invite: 'Приглашения',
-    system: 'Системные'
-  }
-
-  const categoryOptions = [
-    { id: 'all', label: 'Все' },
-    { id: 'project', label: 'Проекты' },
-    { id: 'response', label: 'Отклики' },
-    { id: 'invite', label: 'Приглашения' },
-    { id: 'system', label: 'Системные' }
-  ]
-
+  // Загрузка уведомлений с фильтрацией по категории
   const { data: notifications = [] } = useQuery({
     queryKey: selectedCategory === 'all' 
       ? queryKeys.notifications.all 
@@ -57,6 +60,7 @@ export const Notifications = () => {
     refetchOnWindowFocus: true,
   })
 
+  // Мутация отметки одного уведомления как прочитанного
   const markAsReadMutation = useMutation({
     mutationFn: (notificationId: string) => notificationApi.markAsRead(notificationId),
     onSuccess: () => {
@@ -73,6 +77,7 @@ export const Notifications = () => {
     },
   })
 
+  // Мутация отметки всех уведомлений как прочитанных
   const markAllAsReadMutation = useMutation({
     mutationFn: () => notificationApi.markAllAsRead(),
     onSuccess: () => {
@@ -89,6 +94,7 @@ export const Notifications = () => {
     },
   })
 
+  // Мутация удаления одного уведомления
   const deleteNotificationMutation = useMutation({
     mutationFn: (notificationId: string) => notificationApi.delete(notificationId),
     onSuccess: (_data, notificationId) => {
@@ -110,6 +116,7 @@ export const Notifications = () => {
     },
   })
 
+  // Мутация массового удаления выбранных уведомлений
   const deleteSelectedNotificationsMutation = useMutation({
     mutationFn: async (notificationIds: string[]) => {
       await Promise.all(notificationIds.map(id => notificationApi.delete(id)))
@@ -130,6 +137,7 @@ export const Notifications = () => {
     },
   })
 
+  // Отметка уведомления как прочитанного с обработкой ошибок
   const handleMarkAsRead = async (notificationId: string) => {
     try {
       await markAsReadMutation.mutateAsync(notificationId)
@@ -139,6 +147,7 @@ export const Notifications = () => {
     }
   }
 
+  // Отметка всех уведомлений как прочитанных с обработкой ошибок
   const handleMarkAllAsRead = async () => {
     try {
       await markAllAsReadMutation.mutateAsync()
@@ -148,6 +157,7 @@ export const Notifications = () => {
     }
   }
 
+  // Обработка выбора категории из выпадающего списка
   const handleCategorySelect = (item: { id: string; label: string }) => {
     setSelectedCategory(item.id as CategoryFilter)
     setDropdownOpen(false)
@@ -155,6 +165,7 @@ export const Notifications = () => {
     setIsSelectionMode(false)
   }
 
+  // Переключение выбора отдельного уведомления
   const handleSelectNotification = (notificationId: string) => {
     setSelectedNotifications(prev => {
       const newSet = new Set(prev)
@@ -168,6 +179,7 @@ export const Notifications = () => {
     })
   }
 
+  // Выбор/снятие всех уведомлений сразу
   const handleSelectAll = () => {
     if (selectedNotifications.size === notifications.length) {
       setSelectedNotifications(new Set())
@@ -177,6 +189,7 @@ export const Notifications = () => {
     }
   }
 
+  // Удаление всех выбранных уведомлений с обработкой ошибок
   const handleDeleteSelected = async () => {
     try {
       await deleteSelectedNotificationsMutation.mutateAsync(Array.from(selectedNotifications))
@@ -186,6 +199,7 @@ export const Notifications = () => {
     }
   }
 
+  // Удаление одного уведомления с обработкой ошибок
   const handleDeleteOne = async (notificationId: string) => {
     try {
       await deleteNotificationMutation.mutateAsync(notificationId)
@@ -195,6 +209,7 @@ export const Notifications = () => {
     }
   }
 
+  // Обработка клика по уведомлению: чтение + навигация
   const handleNotificationClick = async (notification: NotificationData) => {
     if (!notification.isRead) {
       await handleMarkAsRead(notification.notificationId)
@@ -208,7 +223,76 @@ export const Notifications = () => {
     }
   }
 
-  const allSelected = notifications.length > 0 && selectedNotifications.size === notifications.length
+  // Рендер карточки одного уведомления
+  const renderNotificationCard = (notification: NotificationData) => {
+    const { icon: Icon, color, borderColor } = getNotificationIcon(notification.referenceType, notification.contextData)
+    const text = getNotificationText(notification)
+    const isSelected = selectedNotifications.has(notification.notificationId)
+
+    return (
+      <div 
+        key={notification.notificationId} 
+        className={`notification-card 
+          ${!notification.isRead ? 'unread' : ''} 
+          ${!notification.isRead ? `unread-${color}` : ''}
+          ${isSelected ? 'selected' : ''}`}
+        style={{ '--border-color': borderColor } as React.CSSProperties}
+        onClick={() => handleNotificationClick(notification)}>
+        <div className='notification-card-header'>
+          {isSelectionMode && (
+            <div 
+              className='notification-checkbox-wrapper'
+              onClick={(e) => e.stopPropagation()}
+            >
+              <input 
+                type='checkbox' 
+                checked={isSelected}
+                onChange={() => handleSelectNotification(notification.notificationId)}
+              />
+            </div>
+          )}
+
+          <div className={`notification-icon-wrapper ${color}`}>
+            <Icon className='notification-icon' />
+          </div>
+
+          <div className='notification-text'>
+            <p>{text}</p>
+            <p className='notification-date'>
+              {new Date(notification.createdAt).toLocaleDateString('ru-RU')}
+              {', '}
+              {new Date(notification.createdAt).toLocaleTimeString('ru-RU', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+              })}
+            </p>
+          </div>
+
+          <div className='notification-actions-right'>
+            {!notification.isRead && (
+              <div className={`unread-indicator ${color}`}  />
+            )}
+
+            <button 
+              className='delete-notification-button'
+              onClick={(e) => {
+                e.stopPropagation()
+                handleDeleteOne(notification.notificationId)
+              }}
+              disabled={deleteNotificationMutation.isPending}>
+              <RejectIcon className='delete-icon' />
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Проверка: все ли уведомления выбраны
+  const allSelected = useMemo(() => 
+    notifications.length > 0 && selectedNotifications.size === notifications.length,
+    [notifications.length, selectedNotifications.size]
+  )
 
   return (
     <div className='notifications-page'>
@@ -283,69 +367,7 @@ export const Notifications = () => {
       )}
 
       <div className='notifications-list'>
-        {notifications.map(notification => {
-          const { icon: Icon, color, borderColor } = getNotificationIcon(notification.referenceType, notification.contextData)
-          const text = getNotificationText(notification)
-          const isSelected = selectedNotifications.has(notification.notificationId)
-
-          return (
-            <div 
-              key={notification.notificationId} 
-              className={`notification-card 
-                ${!notification.isRead ? 'unread' : ''} 
-                ${!notification.isRead ? `unread-${color}` : ''}
-                ${isSelected ? 'selected' : ''}`}
-              style={{ '--border-color': borderColor } as React.CSSProperties}
-              onClick={() => handleNotificationClick(notification)}>
-              <div className='notification-card-header'>
-                {isSelectionMode && (
-                  <div 
-                    className='notification-checkbox-wrapper'
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <input 
-                      type='checkbox' 
-                      checked={isSelected}
-                      onChange={() => handleSelectNotification(notification.notificationId)}
-                    />
-                  </div>
-                )}
-
-                <div className={`notification-icon-wrapper ${color}`}>
-                  <Icon className='notification-icon' />
-                </div>
-
-                <div className='notification-text'>
-                  <p>{text}</p>
-                  <p className='notification-date'>
-                    {new Date(notification.createdAt).toLocaleDateString('ru-RU')}
-                    {', '}
-                    {new Date(notification.createdAt).toLocaleTimeString('ru-RU', { 
-                      hour: '2-digit', 
-                      minute: '2-digit' 
-                    })}
-                  </p>
-                </div>
-
-                <div className='notification-actions-right'>
-                  {!notification.isRead && (
-                    <div className={`unread-indicator ${color}`}  />
-                  )}
-
-                  <button 
-                    className='delete-notification-button'
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleDeleteOne(notification.notificationId)
-                    }}
-                    disabled={deleteNotificationMutation.isPending}>
-                    <RejectIcon className='delete-icon' />
-                  </button>
-                </div>
-              </div>
-            </div>
-          )
-        })}
+        {notifications.map(renderNotificationCard)}
       </div>
 
       {notifications.length === 0 && (

@@ -5,6 +5,8 @@ import UserDescription from '@icons/user_description.svg?react'
 import InviteIcon from '@icons/invite_in_project.svg?react'
 import ChatIcon from '@icons/chat.svg?react'
 
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import type { ThirdProfileData } from '../hooks/useThirdProfile'
 
 interface ProfilePreviewProps {
@@ -20,6 +22,7 @@ export const ProfilePreview = ({ user }: ProfilePreviewProps) => {
     }
   })()
 
+  // Валидация ввода тега
   const StringToTag = (value: string | string[] | undefined): string[] => {
     if (Array.isArray(value)) return value;
     if (typeof value === 'string' && value.trim()) {
@@ -91,7 +94,9 @@ export const ProfilePreview = ({ user }: ProfilePreviewProps) => {
             <UserDescription className='profile-area-ico' />
             <p className='profile-area-text'>Описание:</p>
           </div>
-          <p className='description-text'>{user.description}</p>
+          <div className='description-text markdown-content'>
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{user.description}</ReactMarkdown>
+          </div>
         </div>
       )}
 

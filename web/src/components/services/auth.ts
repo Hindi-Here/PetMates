@@ -58,7 +58,7 @@ export const authApi = {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'github',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${window.location.origin}/vacancy`,
       }
     });
 
@@ -79,7 +79,7 @@ export const authApi = {
           prompt: 'select_account',
         },
         scopes: 'email profile', 
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${window.location.origin}/vacancy`,
       }
     });
     if (error) throw error;
@@ -90,7 +90,7 @@ export const authApi = {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'twitch',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${window.location.origin}/vacancy`,
         queryParams: {
           scope: 'user:read:email',
         },

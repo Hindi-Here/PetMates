@@ -24,6 +24,7 @@ interface Project {
   memberCount: number
 }
 
+// Отправка уведомления пользователю
 const sendNotification = (
   userId: string,
   referenceType: string,
@@ -42,6 +43,7 @@ const sendNotification = (
   }).catch(err => console.error('Ошибка создания уведомления:', err))
 }
 
+// Рендер формы приглашения пользователя в проект
 const Form = ({ onClose, invitedUser }: any) => {
   const { userId } = useAuth()
   const queryClient = useQueryClient()
@@ -55,6 +57,7 @@ const Form = ({ onClose, invitedUser }: any) => {
   const [error, setError] = useState<string>('')
   const [currentUserNickname, setCurrentUserNickname] = useState<string | null>(null)
 
+  // Получение никнейма текущего пользователя
   useEffect(() => {
     const fetchNickname = async () => {
       if (!userId) return
@@ -68,6 +71,7 @@ const Form = ({ onClose, invitedUser }: any) => {
     fetchNickname()
   }, [userId])
 
+  // Загрузка проектов пользователя
   useEffect(() => {
     const fetchProjects = async () => {
       if (!userId) return
@@ -98,6 +102,7 @@ const Form = ({ onClose, invitedUser }: any) => {
     fetchProjects()
   }, [userId])
 
+  // Загрузка вакансий выбранного проекта
   useEffect(() => {
     const fetchVacancies = async () => {
       if (!selectedProject) {
@@ -137,12 +142,14 @@ const Form = ({ onClose, invitedUser }: any) => {
     fetchVacancies()
   }, [selectedProject])
 
+  // Проверка: можно ли отправить приглашение
   const canInvite = selectedProject !== '' && 
                     selectedVacancy !== '' && 
                     invitedUser && 
                     !existingMembers.has(invitedUser.userId) &&
                     !existingInvites.has(invitedUser.userId)
 
+  // Отправка приглашения пользователю
   const handleInvite = async () => {
     if (!canInvite || !invitedUser || !userId) return
     
@@ -307,6 +314,7 @@ const Form = ({ onClose, invitedUser }: any) => {
   )
 }
 
+// Рендер модального окна приглашения с блокировкой скролла
 export default function InviteUserForm({ onClose, invitedUser }: any) {
   useBlockScroll(true)
   return (

@@ -6,10 +6,22 @@ export const useAuth = () => {
   const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setIsAuthenticated(!!session);
-      setUserId(session?.user?.id ?? null);
-    });
+    const hasAuthParams =
+      window.location.search.includes('code=') ||
+      window.location.hash.includes('access_token');
+
+    const resolveSession = () => {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        setIsAuthenticated(!!session);
+        setUserId(session?.user?.id ?? null);
+
+        if (hasAuthParams) {
+          window.history.replaceState({}, '', window.location.pathname);
+        }
+      });
+    };
+
+    resolveSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setIsAuthenticated(!!session);

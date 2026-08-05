@@ -42,7 +42,6 @@
 
     .form-header-text{
         color: var(--neutral-0);
-        user-select: none;
         font-size: rem(20);
         font-weight: bold;
     }
@@ -64,13 +63,6 @@
             width: rem(15);
             height: rem(15);
             fill: var(--neutral-0);
-        }
-
-        &:hover{
-            filter: brightness(0.975);
-        }
-        &:active{
-            filter: brightness(0.95);
         }
     }
 }
@@ -115,19 +107,12 @@
             border-color: var(--primary-accent);
             box-shadow: 0 0 0 1px var(--primary-accent);
         }
-        &::selection{
-            background-color: color-mix(in srgb, var(--primary-accent), transparent 85%);
-        }
 
         &.input-error {
             border-color: var(--important-color);
 
             &:focus {
                 box-shadow: 0 0 0 1px color-mix(in srgb, var(--important-color), transparent 50%);
-            }
-
-            &::selection {
-                background-color: color-mix(in srgb, var(--important-color), transparent 85%);
             }
         }
     }
@@ -174,13 +159,6 @@
         border: none;
         transition: 0.25s;
 
-        &:hover{
-            filter: brightness(0.975);
-        }
-        &:active{
-            filter: brightness(0.95);
-            transform: scale(0.98);
-        }
         &:disabled {
             opacity: 0.4;
             pointer-events: none; 
@@ -213,9 +191,6 @@
     &:focus-within {
         border-color: var(--important-color);
         box-shadow: 0 0 0 1px var(--important-color);
-    }
-    &::selection{
-        background-color: color-mix(in srgb, var(--important-color), transparent 75%);
     }
 }
 
@@ -257,7 +232,6 @@
     .char-counter {
         font-size: rem(10);
         color: var(--neutral-80);
-        user-select: none;
         opacity: 0.5;
         transition: 0.25s;
 
@@ -266,4 +240,16 @@
             font-weight: bold;
         }
     }
+}
+
+@media (max-width: 480px) {
+  .form-manage {
+    flex-wrap: wrap;
+    height: auto;
+
+    .form-manage-button {
+      width: 100%;
+      height: rem(40);
+    }
+  }
 }

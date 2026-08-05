@@ -93,7 +93,6 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  user-select: none;
   background-color: var(--neutral-0);
   border-radius: var(--border-radius-base);
   box-shadow: inset 0 0 0 0 var(--primary-accent), 0 4px 4px rgba(0, 0, 0, 0.15);
@@ -131,7 +130,6 @@
       padding: rem(2) rem(12);
       border-radius: var(--border-radius-small);
       font-size: rem(12);
-      font-weight: 500;
       white-space: nowrap;
 
       &.status-in-progress {
@@ -270,4 +268,44 @@
   margin-left: 0.5rem;
   color: var(--important-color);
   vertical-align: middle;
+}
+
+@media (max-width: 480px) {
+  .project-card {
+    .project-card-header {
+      padding: rem(12);
+      padding-bottom: rem(8);
+      flex-wrap: wrap;
+      gap: rem(8);
+
+      .project-card-title {
+        font-size: rem(16);
+      }
+    }
+
+    .project-card-description {
+      padding-left: rem(12);
+      padding-right: rem(12);
+      padding-bottom: rem(8);
+      font-size: rem(14);
+    }
+
+    .project-card-footer {
+      flex-wrap: wrap;
+      gap: rem(8);
+      padding: rem(10) rem(12);
+
+      .project-card-meta {
+        gap: rem(12);
+      }
+    }
+  }
+
+  .add-project-card {
+    padding: rem(16);
+  }
+
+  .activity-header .section-title {
+    font-size: rem(18);
+  }
 }

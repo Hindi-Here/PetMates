@@ -10,45 +10,35 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import type { ProjectData } from '../services/project'
 import './activity.scss'
-import {useMemo} from 'react'
-
+import { useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '../scripts/query/queryKeys'
 import { projectsApi } from '../services/project'
 
+// Получение конфигурации статуса проекта (текст, класс, иконка)
+const getStatusConfig = (status: string) => {
+  const configs: Record<string, {
+    text: string;
+    className: string;
+    Icon: React.ComponentType<{ className?: string }>
+  }> = {
+    'В процессе': { text: 'В процессе', className: 'status-in-progress', Icon: StatusWorkingIcon },
+    'Завершён': { text: 'Завершён', className: 'status-completed', Icon: StatusEndIcon },
+    'Приостановлен': { text: 'Приостановлен', className: 'status-paused', Icon: StatusPauseIcon }
+  }
+  return configs[status] || configs['В процессе']
+}
+
+// Карточка проекта для отображения в списке
 const ProjectCard = ({ project }: { project: ProjectData }) => {
   const navigate = useNavigate()
   const { userId: authUserId } = useAuth()
   const { profileId } = useParams<{ profileId: string }>()
-  
-  const getStatusConfig = (status: string) => {
-    const configs: Record<string, { 
-      text: string; 
-      className: string;
-      Icon: React.ComponentType<{ className?: string }>
-    }> = {
-      'В процессе': { 
-        text: 'В процессе', 
-        className: 'status-in-progress',
-        Icon: StatusWorkingIcon
-      },
-      'Завершён': { 
-        text: 'Завершён', 
-        className: 'status-completed',
-        Icon: StatusEndIcon
-      },
-      'Приостановлен': { 
-        text: 'Приостановлен', 
-        className: 'status-paused',
-        Icon: StatusPauseIcon
-      }
-    }
-    return configs[status] || configs['В процессе']
-  }
 
   const statusConfig = getStatusConfig(project.status)
   const StatusIcon = statusConfig.Icon
 
+  // Навигация к странице проекта
   const handleClick = () => {
     const ownerId = profileId || authUserId
     const path = `/profile/${ownerId}/activity/project/${project.projectId}`
@@ -60,20 +50,18 @@ const ProjectCard = ({ project }: { project: ProjectData }) => {
       <div className="project-card-header">
         <h3 className="project-card-title">
           {project.title}
-          {project.isPrivate && (
-            <LockIcon className="private-icon" />
-          )}
+          {project.isPrivate && <LockIcon className="private-icon" />}
         </h3>
         <span className={`project-card-status ${statusConfig.className}`}>
           <StatusIcon className="status-icon" />
           {statusConfig.text}
         </span>
       </div>
-      
+
       {project.shortDescription && (
         <p className="project-card-description">{project.shortDescription}</p>
       )}
-      
+
       <div className="project-card-footer">
         <div className="project-card-meta">
           <span className="meta-item">
@@ -85,7 +73,7 @@ const ProjectCard = ({ project }: { project: ProjectData }) => {
             {project.ratingCount} оценок
           </span>
         </div>
-        
+
         {project.statusChangedAt && (
           <span className="project-card-date">
             <CalendarIcon className="meta-icon" />
@@ -100,13 +88,13 @@ const ProjectCard = ({ project }: { project: ProjectData }) => {
 export const Activity = () => {
   const { userId: authUserId } = useAuth()
   const { profileId } = useParams<{ profileId: string }>()
-  
+
   const ownerId = profileId || authUserId
   const isOwner = !profileId || profileId === authUserId
-  
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
+  // Загрузка проектов, созданных пользователем
   const { data: projects = [] } = useQuery({
     queryKey: queryKeys.projects.byUser(ownerId!),
     queryFn: () => projectsApi.getProjectsByUser(ownerId!),
@@ -116,6 +104,7 @@ export const Activity = () => {
     refetchOnWindowFocus: true,
   })
 
+  // Загрузка проектов, в которых пользователь участник
   const { data: memberProjects = [] } = useQuery({
     queryKey: queryKeys.projects.memberProjects(ownerId!),
     queryFn: () => projectsApi.getUserMemberProjects(ownerId!),
@@ -125,6 +114,7 @@ export const Activity = () => {
     refetchOnWindowFocus: true,
   })
 
+  // Загрузка избранных проектов пользователя
   const { data: favorites = [] } = useQuery({
     queryKey: queryKeys.projects.favorites(ownerId!),
     queryFn: () => projectsApi.getUserFavorites(ownerId!),
@@ -134,6 +124,7 @@ export const Activity = () => {
     refetchOnWindowFocus: true,
   })
 
+  // Мутация создания нового проекта
   const createProjectMutation = useMutation({
     mutationFn: (data: any) => projectsApi.createProject(data),
     onSuccess: (newProject) => {
@@ -147,9 +138,9 @@ export const Activity = () => {
     },
   })
 
+  // Создание проекта с дефолтными данными
   const handleCreateProject = async () => {
     if (!authUserId) return
-    
     createProjectMutation.mutate({
       title: 'Unnamed',
       shortDescription: '',
@@ -160,11 +151,13 @@ export const Activity = () => {
     })
   }
 
+  // Фильтрация избранных: исключить проекты, где пользователь участник
   const filteredFavorites = useMemo(() => {
     const memberProjectIds = new Set(memberProjects.map(p => p.projectId))
     return favorites.filter(fav => !memberProjectIds.has(fav.projectId))
   }, [favorites, memberProjects])
 
+  // Проверка: есть ли у пользователя какие-либо проекты
   const hasAnyProjects = projects.length > 0 || memberProjects.length > 0 || filteredFavorites.length > 0
 
   return (
@@ -172,9 +165,7 @@ export const Activity = () => {
       {!hasAnyProjects && !isOwner && (
         <div className="empty-activity">
           <UsersIcon className="empty-activity-ico" />
-          <p className="empty-activity-text">
-            У пользователя пока нет проектов
-          </p>
+          <p className="empty-activity-text">У пользователя пока нет проектов</p>
         </div>
       )}
 
@@ -188,8 +179,8 @@ export const Activity = () => {
           </div>
 
           {isOwner && (
-            <button 
-              className="add-project-card" 
+            <button
+              className="add-project-card"
               onClick={handleCreateProject}
               disabled={createProjectMutation.isPending}
             >

@@ -60,63 +60,85 @@ export const UserCard = ({
     const row = rowRef.current
     if (!row) return
 
-    requestAnimationFrame(() => {
-      if (!row) return
-      const rowWidth = row.clientWidth
-      const nickEl = row.querySelector('.nickname-text') as HTMLElement
-      if (!nickEl) return
+    const calculateVisible = () => {
+      requestAnimationFrame(() => {
+        if (!row) return
+        const rowWidth = row.clientWidth
+        const nickEl = row.querySelector('.nickname-text') as HTMLElement
+        if (!nickEl) return
 
-      let usedWidth = nickEl.offsetWidth + 12
-      let count = 0
+        let usedWidth = nickEl.offsetWidth + 12
+        let count = 0
 
-      const items = row.querySelectorAll('.meta-item') as NodeListOf<HTMLElement>
-      const separators = row.querySelectorAll('.meta-separator') as NodeListOf<HTMLElement>
+        const items = row.querySelectorAll('.meta-item') as NodeListOf<HTMLElement>
+        const separators = row.querySelectorAll('.meta-separator') as NodeListOf<HTMLElement>
 
-      items.forEach((item, i) => {
-        const sepWidth = i > 0 ? (separators[i - 1]?.offsetWidth ?? 0) + 8 : 0
-        usedWidth += item.offsetWidth + 8 + sepWidth
-        if (usedWidth <= rowWidth) count++
+        items.forEach((item, i) => {
+          const sepWidth = i > 0 ? (separators[i - 1]?.offsetWidth ?? 0) + 8 : 0
+          usedWidth += item.offsetWidth + 8 + sepWidth
+          if (usedWidth <= rowWidth) count++
+        })
+
+        setVisibleCount(count)
       })
+    }
 
-      setVisibleCount(count)
-    })
+    calculateVisible()
+
+    const resizeObserver = new ResizeObserver(calculateVisible)
+    resizeObserver.observe(row)
+
+    return () => {
+      resizeObserver.disconnect()
+    }
   }, [metaInfo])
 
   const tagRowRef = useRef<HTMLDivElement>(null)
   const [visibleTagCount, setVisibleTagCount] = useState(skills.length)
 
-  useEffect(() => {
+   useEffect(() => {
     const row = tagRowRef.current
     if (!row) return
 
-    requestAnimationFrame(() => {
-      if (!row) return
-      const rowWidth = row.clientWidth - 32
-      let usedWidth = 0
-      let count = 0
+    const calculateVisibleTags = () => {
+      requestAnimationFrame(() => {
+        if (!row) return
+        const rowWidth = row.clientWidth - 32
+        let usedWidth = 0
+        let count = 0
 
-      const items = row.querySelectorAll('.tag-item:not(.more-tag)') as NodeListOf<HTMLElement>
+        const items = row.querySelectorAll('.tag-item:not(.more-tag)') as NodeListOf<HTMLElement>
 
-      items.forEach((item) => {
-        usedWidth += item.offsetWidth + 8
-        if (usedWidth <= rowWidth) count++
-      })
-
-      if (count < skills.length) {
-        const moreTag = row.querySelector('.more-tag') as HTMLElement
-        const moreWidth = moreTag ? moreTag.offsetWidth + 8 : 50
-
-        let recalc = 0
-        usedWidth = 0
         items.forEach((item) => {
           usedWidth += item.offsetWidth + 8
-          if (usedWidth + moreWidth <= rowWidth) recalc++
+          if (usedWidth <= rowWidth) count++
         })
-        count = recalc
-      }
 
-      setVisibleTagCount(count)
-    })
+        if (count < skills.length) {
+          const moreTag = row.querySelector('.more-tag') as HTMLElement
+          const moreWidth = moreTag ? moreTag.offsetWidth + 8 : 50
+
+          let recalc = 0
+          usedWidth = 0
+          items.forEach((item) => {
+            usedWidth += item.offsetWidth + 8
+            if (usedWidth + moreWidth <= rowWidth) recalc++
+          })
+          count = recalc
+        }
+
+        setVisibleTagCount(Math.max(count, 0))
+      })
+    }
+
+    calculateVisibleTags()
+
+    const resizeObserver = new ResizeObserver(calculateVisibleTags)
+    resizeObserver.observe(row)
+
+    return () => {
+      resizeObserver.disconnect()
+    }
   }, [skills])
 
   const { activityCount, loading: activityLoading } = useUserActivity(user.userId)
@@ -128,25 +150,33 @@ export const UserCard = ({
           <img className='avatar-ico' src={user.avatarUrl || '/default-avatar.png'} alt={user.nickname} />
         </div>
         <div className='info-container'>
-          <div className='nickname-row' ref={rowRef}>
-            <p className='nickname-text'>{user.nickname}</p>
-            {visibleCount > 0 && (
-              <div className='meta-info'>
-                {metaInfo.slice(0, visibleCount).map((item, index) => (
-                  <Fragment key={index}>
-                    {index > 0 && <div className='meta-separator' />}
-                    <p className='meta-item'>{item}</p>
-                  </Fragment>
-                ))}
-              </div>
-            )}
-            {isOwner && (
-              <span className='owner-badge'>
-                <AdminProjectIcon className='owner-icon' />
-                Владелец
-              </span>
-            )}
-          </div>
+         <div className='nickname-row' ref={rowRef}>
+  <p className='nickname-text'>{user.nickname}</p>
+  <div className='meta-info'>
+    {metaInfo.map((item, index) => (
+      <Fragment key={index}>
+        {index > 0 && (
+          <div
+            className='meta-separator'
+            style={index >= visibleCount ? { position: 'absolute', visibility: 'hidden', pointerEvents: 'none' } : {}}
+          />
+        )}
+        <p
+          className='meta-item'
+          style={index >= visibleCount ? { position: 'absolute', visibility: 'hidden', pointerEvents: 'none' } : {}}
+        >
+          {item}
+        </p>
+      </Fragment>
+    ))}
+  </div>
+  {isOwner && (
+    <span className='owner-badge'>
+      <AdminProjectIcon className='owner-icon' />
+      Владелец
+    </span>
+  )}
+</div>
           <p className='role-text'>{role || user.profileRole || 'Нет указанной роли'}</p>
           {user.isOnline ? (
             <div className='online-container'>

@@ -12,7 +12,6 @@
     .content-item-count-text{
         font-size: rem(20);
         font-weight: bold;
-        user-select: none;
     }
     #count{
         font-weight: normal;
@@ -40,4 +39,22 @@
         margin-top: rem(12);
         text-align: center;
     }
+}
+
+.found-content-container,
+.search-content-container {
+  width: 80%;
+  margin-left: 10%;
+
+  @media (max-width: 900px) {
+    width: 92%;
+    margin-left: 4%;
+  }
+
+  @media (max-width: 480px) {
+    width: 100%;
+    margin-left: 0;
+    padding-left: rem(12);
+    padding-right: rem(12);
+  }
 }

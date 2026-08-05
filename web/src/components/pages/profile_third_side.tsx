@@ -1,30 +1,28 @@
 import './profile_third_side.scss'
-
 import HardSkills from '@icons/hard_skills.svg?react'
 import SoftSkills from '@icons/soft_skills.svg?react'
 import Contacts from '@icons/contacts.svg?react'
 import UserDescription from '@icons/user_description.svg?react'
 import InviteIcon from '@icons/invite_in_project.svg?react'
 import ChatIcon from '@icons/chat.svg?react'
-
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { useParams, useNavigate } from 'react-router-dom'
-
-import { useAuth } from '../hooks/useAuth' 
+import { useAuth } from '../hooks/useAuth'
 import type { ThirdProfileData } from '../hooks/useThirdProfile'
-import InviteForm from '../forms/invite_user' 
-
+import InviteForm from '../forms/invite_user'
 import { useQuery } from '@tanstack/react-query'
 import { queryKeys } from '../scripts/query/queryKeys'
 import { usersApi } from '../services/users'
 
-export default function ThirdProfile () {
-  const [showInviteForm, setShowInviteForm] = useState(false) 
+export default function ThirdProfile() {
+  const [showInviteForm, setShowInviteForm] = useState(false)
   const navigate = useNavigate()
-
   const { profileId } = useParams<{ profileId: string }>()
   const { isAuthenticated, userId } = useAuth()
 
+  // Загрузка данных профиля третьего лица
   const { data: user } = useQuery<ThirdProfileData>({
     queryKey: queryKeys.profile.byId(profileId!),
     queryFn: () => usersApi.getUserById(profileId!),
@@ -35,29 +33,30 @@ export default function ThirdProfile () {
     refetchOnWindowFocus: true,
   })
 
-  const contactsList: Array<{name: string, link: string}> = (() => {
+  // Парсинг контактов из JSON-строки
+  const contactsList = useMemo(() => {
     try {
       return user?.contacts ? JSON.parse(user.contacts) : []
     } catch {
       return []
     }
-  })()
+  }, [user?.contacts])
 
+  // Рендер индикатора онлайн-статуса
   const renderOnlineStatus = () => {
     if (!user) return null
-  
     if (user.isOnline) {
       return (
         <div className='online-container'>
-          <div className='circle-online'></div> 
-          <p className='online-text'>Онлайн</p>   
+          <div className='circle-online'></div>
+          <p className='online-text'>Онлайн</p>
         </div>
       )
     }
-  
     return <p className='online-text offline'>Был(а) {user.lastSeen}</p>
   }
 
+  // Проверка: показывать ли кнопки действий (чат, приглашение)
   const shouldShowActions = isAuthenticated && userId !== profileId
 
   return (
@@ -77,13 +76,13 @@ export default function ThirdProfile () {
 
             {shouldShowActions && (
               <div className='profile-actions'>
-                <button 
+                <button
                   className='profile-action-btn'
                   onClick={() => navigate(`/profile/${userId}/messages?to=${profileId}`)}
                 >
                   <ChatIcon className='action-ico' />
                 </button>
-                <button 
+                <button
                   className='profile-action-btn'
                   onClick={() => setShowInviteForm(true)}
                 >
@@ -114,9 +113,11 @@ export default function ThirdProfile () {
             <div className='profile-area-container'>
               <div className='profile-area-text-container'>
                 <UserDescription className='profile-area-ico' />
-                <p className='profile-area-text'> Описание:</p>
+                <p className='profile-area-text'>Описание:</p>
               </div>
-              <p className='description-text'>{user.description}</p>
+              <div className='description-text markdown-content'>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{user.description}</ReactMarkdown>
+              </div>
             </div>
           )}
 
@@ -167,7 +168,7 @@ export default function ThirdProfile () {
             </div>
             {contactsList.length > 0 ? (
               <div className='contacts-list'>
-                {contactsList.map((contact, index) => (
+                {contactsList.map((contact: {name: string; link: string }, index: number) => (
                   <div key={index} className='contact-item'>
                     <p className='contact-name'>{contact.name}:</p>
                     <p className='contact-link'>{contact.link}</p>
@@ -186,7 +187,7 @@ export default function ThirdProfile () {
       {showInviteForm && user && (
         <InviteForm
           onClose={() => setShowInviteForm(false)}
-          invitedUser={user as ThirdProfileData} 
+          invitedUser={user as ThirdProfileData}
         />
       )}
     </div>

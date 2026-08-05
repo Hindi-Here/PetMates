@@ -31,6 +31,7 @@ interface MenuItem {
   Icon: React.ComponentType<{ className?: string }>;
 }
 
+// Рендер навигационного меню
 const Navigation = () => {
   const location = useLocation();
   const { userId } = useAuth();
@@ -43,6 +44,7 @@ const Navigation = () => {
     { id: 'bug', label: 'Бета-тестирование', path: '/bug', Icon: BugIcon },
   ];
 
+  // Проверка: активен ли пункт меню
   const isMenuItemActive = (itemId: string, itemPath: string) => {
     const pathname = location.pathname;
     
@@ -57,6 +59,7 @@ const Navigation = () => {
     return pathname.startsWith(itemPath);
   };
 
+  // Проверка: находится ли пользователь на своём профиле
   const isOnOwnProfile = () => {
     const pathname = location.pathname;
     if (!userId) return false;
@@ -69,6 +72,7 @@ const Navigation = () => {
     return urlProfileId === userId;
   };
 
+  // Обработка клика по пункту навигации
   const handleNavigationClick = (e: React.MouseEvent, itemId: string) => {
     if (itemId === 'profile') {
       if (isOnOwnProfile()) {
@@ -115,11 +119,13 @@ const Navigation = () => {
   )
 }
 
+// Перенаправление на вкладку информации профиля пользователя
 const RedirectUsersProfile = () => {
   const { userId } = useParams<{ userId: string }>();
   return <Navigate to={`/profile/${userId}/info`} replace />;
 };
 
+// Рендер контента с маршрутизацией
 const Content = () => {
   const location = useLocation();
   const { userId } = useAuth();
@@ -151,6 +157,7 @@ const Content = () => {
   )
 }
 
+// Главный компонент макета страницы
 export default function Main () {
   const isShortVer = useIsShort(965);
 

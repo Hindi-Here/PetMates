@@ -1,5 +1,5 @@
 import './project.scss'
-import '../common/comment.scss' 
+import '../common/comment.scss'
 
 import Add from '@icons/plus.svg?react'
 import Delete from '@icons/delete.svg?react'
@@ -10,16 +10,16 @@ import ImportantIcon from '@icons/important_warning.svg?react'
 import AdminProjectIcon from '@icons/admin_project.svg?react'
 import PrivacyIcon from '@icons/private.svg?react'
 import PublicIcon from '@icons/public.svg?react'
+import InfoCircleIcon from '@icons/info_circle.svg?react'
+import InfoIcon from '@icons/info.svg?react'
+import DropdownIcon from '@icons/dropdown.svg?react'
 
-import { useEffect, useState, useRef, Fragment } from 'react'
+import { useEffect, useState, useRef, Fragment, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Toggle } from '../common/toggle'
-import { validatorFormat, validatorRegex, useChangeInput } from '../scripts/function'
+import { Dropdown } from '../common/dropdown'
+import { validatorFormat, validatorRegex, useChangeInput, useIsOpen } from '../scripts/function'
 import { useAuth } from '../hooks/useAuth'
-
-import { Dropdown } from '../common/dropdown' 
-import { useIsOpen } from '../scripts/function'  
-import DropdownIcon from '@icons/dropdown.svg?react'
 
 import { ProjectPreview } from './project_preview'
 import { projectsApi, projectDraftApi, type ProjectDraftData } from '../services/project'
@@ -27,14 +27,11 @@ import { projectMembersApi } from '../services/project_members'
 import { usersApi, type UserData } from '../services/users'
 import { vacanciesApi, type VacancyData } from '../services/vacancy'
 import { commentApi, type CommentData } from '../services/comment'
+import { responseApi, type ResponseData } from '../services/response'
+import { inviteApi, type InviteData } from '../services/invite'
+import { notificationApi } from '../services/notification'
 
 import DeleteProjectForm from '../forms/delete_project'
-import InfoCircleIcon from '@icons/info_circle.svg?react' 
-
-import { responseApi, type ResponseData } from '../services/response'
-import { inviteApi, type InviteData } from '../services/invite' 
-import { notificationApi } from '../services/notification'
-import InfoIcon from '@icons/info.svg?react'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '../scripts/query/queryKeys'
@@ -56,17 +53,18 @@ interface LocalVacancy extends VacancyData {
 }
 
 interface CommentNode extends CommentData {
-  replies: CommentNode[];
+  replies: CommentNode[]
 }
 
 const STATUS_OPTIONS = ['В процессе', 'Завершён', 'Приостановлен']
 
+// Подсчёт визуальных строк текста в элементе
 const getVisualLineCount = (text: string, element: HTMLElement) => {
-  const computed = window.getComputedStyle(element);
-  const lineHeight = parseFloat(computed.lineHeight);
-  if (isNaN(lineHeight)) return text.split('\n').length;
+  const computed = window.getComputedStyle(element)
+  const lineHeight = parseFloat(computed.lineHeight)
+  if (isNaN(lineHeight)) return text.split('\n').length
 
-  const mirror = document.createElement('div');
+  const mirror = document.createElement('div')
   mirror.style.cssText = `
     position: absolute;
     visibility: hidden;
@@ -80,20 +78,21 @@ const getVisualLineCount = (text: string, element: HTMLElement) => {
     word-wrap: break-word;
     padding: 0;
     box-sizing: border-box;
-  `;
-  mirror.textContent = text || '.';
-  document.body.appendChild(mirror);
-  const height = mirror.offsetHeight;
-  document.body.removeChild(mirror);
-  
-  return Math.ceil(height / lineHeight);
+  `
+  mirror.textContent = text || '.'
+  document.body.appendChild(mirror)
+  const height = mirror.offsetHeight
+  document.body.removeChild(mirror)
+
+  return Math.ceil(height / lineHeight)
 }
 
-const VacancyCard = ({ 
-  vacancy, 
-  onEdit, 
-  onDelete 
-}: { 
+// Рендер карточки вакансии
+const VacancyCard = ({
+  vacancy,
+  onEdit,
+  onDelete
+}: {
   vacancy: LocalVacancy
   onEdit: (v: LocalVacancy) => void
   onDelete: (id: string) => void
@@ -128,12 +127,13 @@ const VacancyCard = ({
   </div>
 )
 
-const TeamMemberProjectCard = ({ 
-  member, 
+// Рендер карточки участника команды
+const TeamMemberProjectCard = ({
+  member,
   onRemove,
   onUpdateRole,
-  isOwner 
-}: { 
+  isOwner
+}: {
   member: TeamMemberWithUser
   onRemove?: () => void
   onUpdateRole?: (memberId: string, newRole: string) => void
@@ -150,6 +150,7 @@ const TeamMemberProjectCard = ({
   const roleInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => { setEditedRole(member.role) }, [member.role])
+
   useEffect(() => {
     if (isEditingRole && roleInputRef.current) {
       roleInputRef.current.focus()
@@ -157,13 +158,13 @@ const TeamMemberProjectCard = ({
     }
   }, [isEditingRole])
 
+  // Валидация роли участника
   const checkRoleFormat = (value: string): string | null => {
     const rules: Array<[boolean, string]> = [
       [!validatorFormat.required(value), 'Введите роль'],
       [!validatorFormat.maxLength(value, 50), 'Максимум 50 символов'],
       [value.length > 0 && value.length < 2, 'Минимум 2 символа'],
     ]
-
     const error = rules.find(([isInvalid]) => isInvalid)
     return error?.[1] ?? null
   }
@@ -177,9 +178,11 @@ const TeamMemberProjectCard = ({
     const row = rowRef.current; if (!row) return
     requestAnimationFrame(() => {
       if (!row) return
-      const rowWidth = row.clientWidth; const nickEl = row.querySelector('.nickname-text') as HTMLElement
+      const rowWidth = row.clientWidth
+      const nickEl = row.querySelector('.nickname-text') as HTMLElement
       if (!nickEl) return
-      let usedWidth = nickEl.offsetWidth + 12; let count = 0
+      let usedWidth = nickEl.offsetWidth + 12
+      let count = 0
       const items = row.querySelectorAll('.meta-item') as NodeListOf<HTMLElement>
       const separators = row.querySelectorAll('.meta-separator') as NodeListOf<HTMLElement>
       items.forEach((item, i) => {
@@ -195,14 +198,23 @@ const TeamMemberProjectCard = ({
     const row = tagRowRef.current; if (!row) return
     requestAnimationFrame(() => {
       if (!row) return
-      const rowWidth = row.clientWidth - 32; let usedWidth = 0; let count = 0
+      const rowWidth = row.clientWidth - 32
+      let usedWidth = 0
+      let count = 0
       const items = row.querySelectorAll('.tag-item:not(.more-tag)') as NodeListOf<HTMLElement>
-      items.forEach((item) => { usedWidth += item.offsetWidth + 8; if (usedWidth <= rowWidth) count++ })
+      items.forEach((item) => {
+        usedWidth += item.offsetWidth + 8
+        if (usedWidth <= rowWidth) count++
+      })
       if (count < skills.length) {
         const moreTag = row.querySelector('.more-tag') as HTMLElement
         const moreWidth = moreTag ? moreTag.offsetWidth + 8 : 50
-        let recalc = 0; usedWidth = 0
-        items.forEach((item) => { usedWidth += item.offsetWidth + 8; if (usedWidth + moreWidth <= rowWidth) recalc++ })
+        let recalc = 0
+        usedWidth = 0
+        items.forEach((item) => {
+          usedWidth += item.offsetWidth + 8
+          if (usedWidth + moreWidth <= rowWidth) recalc++
+        })
         count = recalc
       }
       setVisibleTagCount(Math.max(count, 0))
@@ -211,27 +223,28 @@ const TeamMemberProjectCard = ({
 
   const hiddenSkillsCount = Math.max(0, skills.length - visibleTagCount)
 
+  // Навигация к профилю участника
   const handleCardClick = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('.member-remove, .member-edit, .member-accept, .member-reject, .role-input')) return
     if (user?.userId) navigate(`/profile/${user.userId}/info`)
   }
 
-  const handleEditRoleClick = (e: React.MouseEvent) => { 
+  // Начало редактирования роли
+  const handleEditRoleClick = (e: React.MouseEvent) => {
     e.stopPropagation()
     setIsEditingRole(true)
     setEditedRole(member.role)
     setRoleError(null)
   }
 
+  // Подтверждение изменения роли
   const handleAcceptRoleClick = (e: React.MouseEvent) => {
     e.stopPropagation()
     const error = checkRoleFormat(editedRole)
-    
     if (error) {
       setRoleError(error)
       return
     }
-    
     if (editedRole.trim() && editedRole !== member.role && onUpdateRole) {
       onUpdateRole(member.memberId, editedRole.trim())
     }
@@ -239,15 +252,17 @@ const TeamMemberProjectCard = ({
     setRoleError(null)
   }
 
+  // Обработка клавиш при редактировании роли
   const handleRoleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') handleAcceptRoleClick(e as any)
-    else if (e.key === 'Escape') { 
+    else if (e.key === 'Escape') {
       setIsEditingRole(false)
       setEditedRole(member.role)
       setRoleError(null)
     }
   }
 
+  // Изменение текста роли
   const handleRoleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEditedRole(e.target.value)
     if (roleError) setRoleError(null)
@@ -292,12 +307,12 @@ const TeamMemberProjectCard = ({
           </div>
           {isEditingRole ? (
             <>
-              <input 
-                ref={roleInputRef} 
-                className={`role-input ${roleError ? 'input-error' : ''}`} 
-                value={editedRole} 
-                onChange={handleRoleChange} 
-                onKeyDown={handleRoleKeyDown} 
+              <input
+                ref={roleInputRef}
+                className={`role-input ${roleError ? 'input-error' : ''}`}
+                value={editedRole}
+                onChange={handleRoleChange}
+                onKeyDown={handleRoleKeyDown}
                 placeholder="Роль"
                 maxLength={50}
               />
@@ -325,27 +340,98 @@ const TeamMemberProjectCard = ({
   )
 }
 
+// Отправка уведомления пользователю
+const sendNotification = (
+  userId: string,
+  referenceType: string,
+  referenceId: string,
+  eventType: string,
+  contextData: Record<string, any>,
+  projectName: string
+) => {
+  const notificationData = {
+    userId,
+    referenceType,
+    referenceId,
+    contextData: {
+      ...contextData,
+      eventType,
+      projectName,
+    }
+  }
+
+  notificationApi.create(notificationData)
+    .then(() => { })
+    .catch(err => {
+      console.error('Ошибка создания уведомления:', err)
+      console.error('Данные:', notificationData)
+    })
+}
+
+// Уведомление всех участников кроме владельца
+const notifyAllMembersExceptOwner = (
+  members: TeamMemberWithUser[],
+  ownerId: string | undefined,
+  referenceType: string,
+  referenceId: string,
+  eventType: string,
+  contextData: Record<string, any>,
+  projectName: string,
+  excludeUserIds: string[] = []
+) => {
+  const membersToNotify = members.filter(m =>
+    !m.isOwner &&
+    m.userId !== ownerId &&
+    !excludeUserIds.includes(m.userId)
+  )
+
+  membersToNotify.forEach(member => {
+    sendNotification(member.userId, referenceType, referenceId, eventType, contextData, projectName)
+  })
+}
+
+// Построение дерева комментариев
+const buildCommentTree = (commentsList: CommentData[]): CommentNode[] => {
+  const map = new Map<string, CommentNode>()
+  const roots: CommentNode[] = []
+
+  commentsList.forEach(c => {
+    map.set(c.commentId, { ...c, replies: [] })
+  })
+
+  commentsList.forEach(c => {
+    const node = map.get(c.commentId)!
+    if (c.parentCommentId && map.has(c.parentCommentId)) {
+      map.get(c.parentCommentId)!.replies.push(node)
+    } else {
+      roots.push(node)
+    }
+  })
+
+  return roots
+}
+
 interface ProjectProps { onCancel?: () => void }
 
 export const Project = ({ onCancel }: ProjectProps) => {
   const navigate = useNavigate()
   const { projectId, profileId } = useParams<{ projectId: string; profileId: string }>()
   const profilePath = profileId ? `/profile/${profileId}` : '/profile'
-  const [isPreview, setIsPreview] = useState(false)
-  
   const { userId: currentUserId } = useAuth()
+  const queryClient = useQueryClient()
 
+  const [isPreview, setIsPreview] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [projectRating, setProjectRating] = useState(0)
   const [isPrivate, setIsPrivate] = useState(false)
-  
+
   const [hasBasicInfoDraft, setHasBasicInfoDraft] = useState(false)
   const [hasDescriptionDraft, setHasDescriptionDraft] = useState(false)
   const [hasTeamDraft, setHasTeamDraft] = useState(false)
   const [hasVacanciesDraft, setHasVacanciesDraft] = useState(false)
-  
+
   const [loadedDraft, setLoadedDraft] = useState<ProjectDraftData | null | undefined>(undefined)
   const draftTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -360,7 +446,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
   const [status, setStatus] = useState(STATUS_OPTIONS[0])
   const { isOpen: isStatusOpen, setIsOpen: setStatusOpen, menuRef: statusMenuRef } = useIsOpen()
   const statusOptions = STATUS_OPTIONS.map(s => ({ id: s, label: s }))
-  const handleStatusSelect = (item: { id: string; label: string }) => { setStatus(item.label); setStatusOpen(false) }
   const [description, setDescription] = useState('')
 
   const [inviteEmail, setInviteEmail] = useState('')
@@ -392,34 +477,18 @@ export const Project = ({ onCancel }: ProjectProps) => {
   const teamInitializedRef = useRef(false)
 
   const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set())
-
-  const toggleReplies = (commentId: string) => {
-  setExpandedComments(prev => {
-    const newSet = new Set(prev)
-    if (newSet.has(commentId)) {
-      newSet.delete(commentId)
-    } else {
-      newSet.add(commentId)
-    }
-    return newSet
-  })
-}
-
-const isExpanded = (commentId: string) => expandedComments.has(commentId)
+  const [currentUserNickname, setCurrentUserNickname] = useState<string | null>(null)
+  const [showDeleteForm, setShowDeleteForm] = useState(false)
 
   const [initialState, setInitialState] = useState(() => ({
     name: 'Unnamed', shortDesc: '', status: STATUS_OPTIONS[0], description: '', isPrivate: false,
   }))
 
-  const queryClient = useQueryClient()
-
-  const [currentUserNickname, setCurrentUserNickname] = useState<string | null>(null)
-
-  const { 
-    touched: projectTouched, 
+  const {
+    touched: projectTouched,
     dirty: projectDirty,
     handleChange: handleProjectChange,
-    handleBlur: handleProjectBlur 
+    handleBlur: handleProjectBlur
   } = useChangeInput(
     {
       name: '',
@@ -435,17 +504,57 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
     }
   )
 
+  // Валидация поля проекта
+  const checkProjectFormat = (fieldName: string, value: string): string | null => {
+    const rules: Record<string, Array<[boolean, string]>> = {
+      name: [
+        [!validatorFormat.required(value), 'Введите название проекта'],
+        [!validatorFormat.maxLength(value, 50), 'Максимум 50 символов']
+      ],
+      shortDesc: [
+        [!validatorFormat.maxLength(value, 150), 'Максимум 150 символов']
+      ],
+    }
+    const fieldRules = rules[fieldName as keyof typeof rules]
+    if (!fieldRules) return null
+    const error = fieldRules.find(([isInvalid]) => isInvalid)
+    return error?.[1] ?? null
+  }
+
+  // Валидация роли участника
   const checkRoleFormat = (value: string): string | null => {
     const rules: Array<[boolean, string]> = [
       [!validatorFormat.required(value), 'Введите роль'],
       [!validatorFormat.maxLength(value, 50), 'Максимум 50 символов'],
       [value.length > 0 && value.length < 2, 'Минимум 2 символа'],
     ]
-
     const error = rules.find(([isInvalid]) => isInvalid)
     return error?.[1] ?? null
   }
 
+  // Валидация поля вакансии
+  const checkVacancyFormat = (fieldName: string, value: string): string | null => {
+    const rules: Record<string, Array<[boolean, string]>> = {
+      vacTitle: [
+        [!validatorFormat.required(value), 'Введите название роли'],
+        [!validatorFormat.maxLength(value, 50), 'Максимум 50 символов']
+      ],
+      vacDesc: [
+        [!validatorFormat.required(value), 'Введите описание'],
+        [!validatorFormat.maxLength(value, 500), 'Максимум 500 символов']
+      ],
+      vacTags: [
+        [!validatorFormat.required(value), 'Введите теги'],
+        [value.length > 0 && !validatorFormat.hasTag(value), 'Теги должны начинаться с # и содержать только буквы, цифры и _']
+      ],
+    }
+    const fieldRules = rules[fieldName as keyof typeof rules]
+    if (!fieldRules) return null
+    const error = fieldRules.find(([isInvalid]) => isInvalid)
+    return error?.[1] ?? null
+  }
+
+  // Загрузка проекта
   const { data: project } = useQuery({
     queryKey: queryKeys.projects.byId(projectId!),
     queryFn: () => projectsApi.getProject(projectId!),
@@ -455,6 +564,7 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
 
   const isOwner = project?.ownerId === currentUserId
 
+  // Загрузка участников команды
   const { data: teamMembers = [] } = useQuery({
     queryKey: queryKeys.projects.memberProjects(projectId!),
     queryFn: async () => {
@@ -483,6 +593,7 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
     staleTime: 0,
   })
 
+  // Загрузка вакансий проекта
   const { data: vacanciesFromDb = [] } = useQuery({
     queryKey: queryKeys.vacancies.byProject(projectId!),
     queryFn: () => vacanciesApi.getByProject(projectId!),
@@ -490,6 +601,7 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
     staleTime: 0,
   })
 
+  // Загрузка откликов на проект
   const { data: responses = [] } = useQuery({
     queryKey: queryKeys.responses.byProject(projectId!),
     queryFn: () => responseApi.getByProject(projectId!),
@@ -497,6 +609,7 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
     staleTime: 0,
   })
 
+  // Загрузка исходящих приглашений
   const { data: allInvites = [] } = useQuery({
     queryKey: queryKeys.invites.outgoing(profileId || ''),
     queryFn: () => inviteApi.getOutgoing(),
@@ -504,26 +617,24 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
     staleTime: 0,
   })
 
+  // Загрузка комментариев проекта
   const { data: comments = [], refetch: refetchComments } = useQuery({
     queryKey: ['comments', 'project', projectId],
     queryFn: () => commentApi.getComments('project', projectId!),
     enabled: !!projectId,
   })
 
-  const projectInvites = allInvites.filter(invite => invite.projectId === projectId)
+  const projectInvites = useMemo(() =>
+    allInvites.filter(invite => invite.projectId === projectId),
+    [allInvites, projectId]
+  )
 
-  useEffect(() => {
-    setLoadedDraft(undefined)
-    teamInitializedRef.current = false
-    vacanciesSyncedRef.current = false
-  }, [projectId])
-
+  // Получение никнейма текущего пользователя
   useEffect(() => {
     const fetchNickname = async () => {
-      const { userId } = await import('../hooks/useAuth').then(m => m.useAuth())
-      if (!userId) return
+      if (!currentUserId) return
       try {
-        const user = await usersApi.getUserById(userId)
+        const user = await usersApi.getUserById(currentUserId)
         setCurrentUserNickname(user?.nickname || null)
       }
       catch (error) {
@@ -531,8 +642,16 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
       }
     }
     fetchNickname()
-  }, [])
+  }, [currentUserId])
 
+  // Сброс состояния при смене проекта
+  useEffect(() => {
+    setLoadedDraft(undefined)
+    teamInitializedRef.current = false
+    vacanciesSyncedRef.current = false
+  }, [projectId])
+
+  // Синхронизация вакансий с черновиком
   useEffect(() => {
     if (vacanciesFromDb.length > 0 && !vacanciesSyncedRef.current && loadedDraft !== undefined) {
       let vacancies: LocalVacancy[] = vacanciesFromDb.map(v => ({ ...v } as LocalVacancy))
@@ -556,6 +675,7 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
     }
   }, [vacanciesFromDb, loadedDraft, projectId, name])
 
+  // Синхронизация команды с черновиком
   useEffect(() => {
     if (teamMembers.length > 0 && !teamInitializedRef.current && loadedDraft !== undefined) {
       const membersCopy = teamMembers.map(m => ({ ...m }))
@@ -574,6 +694,7 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
     }
   }, [teamMembers, loadedDraft])
 
+  // Загрузка данных проекта и черновика
   useEffect(() => {
     if (project && projectId) {
       const cleanState = {
@@ -583,16 +704,16 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
         description: project.fullDescription || '',
         isPrivate: project.isPrivate || false,
       }
-      
+
       setInitialState(cleanState)
       setProjectRating(project.ratingCount || 0)
-      
+
       handleProjectChange({ target: { name: 'name', value: project.title } } as any)
       handleProjectChange({ target: { name: 'shortDesc', value: project.shortDescription || '' } } as any)
       handleProjectChange({ target: { name: 'status', value: project.status } } as any)
       handleProjectChange({ target: { name: 'description', value: project.fullDescription || '' } } as any)
 
-      const statusMap: Record<string, string> = {'in_progress': 'В процессе', 'completed': 'Завершён', 'paused': 'Приостановлен'}
+      const statusMap: Record<string, string> = { 'in_progress': 'В процессе', 'completed': 'Завершён', 'paused': 'Приостановлен' }
 
       const loadDraft = async () => {
         try {
@@ -601,13 +722,13 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
 
           if (draft) {
             const draftStatus = draft.status ? (statusMap[draft.status] || draft.status) : cleanState.status
-            
+
             setName(draft.title ?? cleanState.name)
             setShortDesc(draft.shortDescription ?? cleanState.shortDesc)
             setStatus(draftStatus)
             setDescription(draft.fullDescription ?? cleanState.description)
             setIsPrivate(draft.isPrivate ?? cleanState.isPrivate)
-            
+
             setHasBasicInfoDraft(
               (draft.title && draft.title !== cleanState.name) ||
               (draft.shortDescription !== undefined && draft.shortDescription !== cleanState.shortDesc) ||
@@ -617,13 +738,13 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
             setHasDescriptionDraft(!!(draft.fullDescription && draft.fullDescription !== cleanState.description))
           } else {
             const projectStatus = project.status ? (statusMap[project.status] || project.status) : STATUS_OPTIONS[0]
-            
+
             setName(cleanState.name)
             setShortDesc(cleanState.shortDesc)
             setStatus(projectStatus)
             setDescription(cleanState.description)
             setIsPrivate(cleanState.isPrivate)
-            
+
             setHasBasicInfoDraft(false)
             setHasDescriptionDraft(false)
           }
@@ -643,12 +764,11 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
     }
   }, [project, projectId])
 
-  const reverseStatusMap: Record<string, string> = {'В процессе': 'in_progress','Завершён': 'completed','Приостановлен': 'paused'}
-
+  // Автосохранение черновика
   useEffect(() => {
     if (!projectId) return
 
-    const isBasicInfoChanged = 
+    const isBasicInfoChanged =
       name !== initialState.name ||
       shortDesc !== initialState.shortDesc ||
       status !== initialState.status ||
@@ -697,27 +817,29 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
     }
   }, [name, shortDesc, status, description, isPrivate, localVacancies, deletedVacancyIds, deletedMemberIds, editedRoles, initialState, projectId, vacanciesFromDb])
 
+  // Обновление флага черновика команды
   useEffect(() => {
-    const hasRealChanges = 
-      deletedMemberIds.length > 0 || 
+    const hasRealChanges =
+      deletedMemberIds.length > 0 ||
       Object.keys(editedRoles).some(memberId => {
         const originalMember = initialTeamState.find(m => m.memberId === memberId)
         return originalMember && originalMember.role !== editedRoles[memberId]
       })
-    
+
     setHasTeamDraft(hasRealChanges)
   }, [deletedMemberIds, editedRoles, initialTeamState])
 
+  // Обновление флага черновика вакансий
   useEffect(() => {
-    const hasRealChanges = 
-      deletedVacancyIds.length > 0 || 
+    const hasRealChanges =
+      deletedVacancyIds.length > 0 ||
       localVacancies.some(v => {
         if (v._isNew) return true
-        
+
         const originalVacancy = vacanciesFromDb.find(orig => orig.vacancyId === v.vacancyId)
-        
+
         if (!originalVacancy && !v._isNew) return true
-        
+
         if (originalVacancy) {
           return (
             v.title !== originalVacancy.title ||
@@ -725,15 +847,16 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
             JSON.stringify(v.requiredTags || []) !== JSON.stringify(originalVacancy.requiredTags || [])
           )
         }
-        
+
         return false
       })
-    
+
     setHasVacanciesDraft(hasRealChanges)
   }, [deletedVacancyIds, localVacancies, vacanciesFromDb])
 
+  // Сброс флага черновика базовой информации
   useEffect(() => {
-    const isBasicInfoChanged = 
+    const isBasicInfoChanged =
       name !== initialState.name ||
       shortDesc !== initialState.shortDesc ||
       status !== initialState.status ||
@@ -744,151 +867,77 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
     }
   }, [name, shortDesc, status, isPrivate, initialState, hasBasicInfoDraft])
 
+  // Сброс флага черновика описания
   useEffect(() => {
     if (description === initialState.description && hasDescriptionDraft) {
       setHasDescriptionDraft(false)
     }
   }, [description, initialState.description, hasDescriptionDraft])
 
-  const hasVacancyChanges = 
-  deletedVacancyIds.length > 0 || 
-  localVacancies.some(v => {
-    if (v._isNew) return true
-    
-    const originalVacancy = vacanciesFromDb.find(orig => orig.vacancyId === v.vacancyId)
-    
-    if (!originalVacancy && !v._isNew) return true
-    
-    if (originalVacancy) {
-      return (
-        v.title !== originalVacancy.title ||
-        v.description !== originalVacancy.description ||
-        JSON.stringify(v.requiredTags || []) !== JSON.stringify(originalVacancy.requiredTags || [])
-      )
-    }
-    
-    return false
-  });
+  // Проверка изменений вакансий
+  const hasVacancyChanges = useMemo(() =>
+    deletedVacancyIds.length > 0 ||
+    localVacancies.some(v => {
+      if (v._isNew) return true
 
-  const hasTeamChanges = 
-    deletedMemberIds.length > 0 || 
+      const originalVacancy = vacanciesFromDb.find(orig => orig.vacancyId === v.vacancyId)
+
+      if (!originalVacancy && !v._isNew) return true
+
+      if (originalVacancy) {
+        return (
+          v.title !== originalVacancy.title ||
+          v.description !== originalVacancy.description ||
+          JSON.stringify(v.requiredTags || []) !== JSON.stringify(originalVacancy.requiredTags || [])
+        )
+      }
+
+      return false
+    }),
+    [deletedVacancyIds, localVacancies, vacanciesFromDb]
+  )
+
+  // Проверка изменений команды
+  const hasTeamChanges = useMemo(() =>
+    deletedMemberIds.length > 0 ||
     Object.keys(editedRoles).some(memberId => {
       const originalMember = initialTeamState.find(m => m.memberId === memberId)
       return originalMember && originalMember.role !== editedRoles[memberId]
-    });
+    }),
+    [deletedMemberIds, editedRoles, initialTeamState]
+  )
 
-  const hasChanges = 
+  // Проверка общих изменений
+  const hasChanges = useMemo(() =>
     name !== initialState.name ||
     shortDesc !== initialState.shortDesc ||
     status !== initialState.status ||
     description !== initialState.description ||
     isPrivate !== initialState.isPrivate ||
     hasVacancyChanges ||
-    hasTeamChanges;
+    hasTeamChanges,
+    [name, shortDesc, status, description, isPrivate, initialState, hasVacancyChanges, hasTeamChanges]
+  )
 
-  const checkProjectFormat = (fieldName: string, value: string): string | null => {
-    const rules: Record<string, Array<[boolean, string]>> = {
-      name: [
-        [!validatorFormat.required(value), 'Введите название проекта'],
-        [!validatorFormat.maxLength(value, 50), 'Максимум 50 символов']
-      ],
-      shortDesc: [
-        [!validatorFormat.maxLength(value, 150), 'Максимум 150 символов']
-      ],
-    }
-
-    const fieldRules = rules[fieldName as keyof typeof rules]
-    if (!fieldRules) return null
-
-    const error = fieldRules.find(([isInvalid]) => isInvalid)
-    return error?.[1] ?? null
-  }
-
-  const checkVacancyFormat = (fieldName: string, value: string): string | null => {
-    const rules: Record<string, Array<[boolean, string]>> = {
-      vacTitle: [
-        [!validatorFormat.required(value), 'Введите название роли'],
-        [!validatorFormat.maxLength(value, 50), 'Максимум 50 символов']
-      ],
-      vacDesc: [
-        [!validatorFormat.required(value), 'Введите описание'],
-        [!validatorFormat.maxLength(value, 500), 'Максимум 500 символов']
-      ],
-      vacTags: [
-        [!validatorFormat.required(value), 'Введите теги'],
-        [value.length > 0 && !validatorFormat.hasTag(value), 'Теги должны начинаться с # и содержать только буквы, цифры и _']
-      ],
-    }
-
-    const fieldRules = rules[fieldName as keyof typeof rules]
-    if (!fieldRules) return null
-
-    const error = fieldRules.find(([isInvalid]) => isInvalid)
-    return error?.[1] ?? null
-  }
-
-  const isProjectFormValid = (() => {
+  // Проверка валидности формы проекта
+  const isProjectFormValid = useMemo(() => {
     const nameValid = !checkProjectFormat('name', name)
     const shortDescValid = !checkProjectFormat('shortDesc', shortDesc)
 
     const vacanciesValid = localVacancies
       .filter(v => !deletedVacancyIds.includes(v.vacancyId))
       .filter(v => v._isNew || v._isModified)
-      .every(v => 
+      .every(v =>
         !checkVacancyFormat('vacTitle', v.title) &&
         !checkVacancyFormat('vacDesc', v.description) &&
         !checkVacancyFormat('vacTags', v.requiredTags?.join(' ') || '')
       )
 
     return nameValid && shortDescValid && vacanciesValid
-  })();
+  }, [name, shortDesc, localVacancies, deletedVacancyIds])
 
-  const sendNotification = (
-    userId: string,
-    referenceType: string,
-    referenceId: string,
-    eventType: string,
-    contextData: Record<string, any>
-  ) => {
-    const notificationData = {
-      userId,
-      referenceType,
-      referenceId,
-      contextData: {
-        ...contextData,
-        eventType,
-        projectName: name || project?.title || 'Проект',
-      }
-    }
-    
-    notificationApi.create(notificationData)
-      .then(() => {})
-      .catch(err => {
-        console.error('Ошибка создания уведомления:', err)
-        console.error('Данные:', notificationData)
-      })
-  }
-
-  const notifyAllMembersExceptOwner = (
-    referenceType: string,
-    referenceId: string,
-    eventType: string,
-    contextData: Record<string, any>,
-    excludeUserIds: string[] = []
-  ) => {
-    const ownerId = project?.ownerId
-    const membersToNotify = localTeamMembers.filter(m => 
-      !m.isOwner && 
-      m.userId !== ownerId && 
-      !excludeUserIds.includes(m.userId)
-    )
-  
-    membersToNotify.forEach(member => {
-      sendNotification(member.userId, referenceType, referenceId, eventType, contextData)
-    })
-  }
-
-  const handleCancel = async () => { 
+  // Отмена изменений и сброс черновика
+  const handleCancel = async () => {
     if (hasChanges && projectId) {
       try {
         await projectDraftApi.discardDraft(projectId)
@@ -896,26 +945,27 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
         console.error('Ошибка сброса черновика:', error)
       }
     }
-    
+
     setName(initialState.name)
     setShortDesc(initialState.shortDesc)
     setStatus(initialState.status)
     setDescription(initialState.description)
     setIsPrivate(initialState.isPrivate)
-    
+
     setHasBasicInfoDraft(false)
     setHasDescriptionDraft(false)
     setHasTeamDraft(false)
     setHasVacanciesDraft(false)
-    
+
     setLocalTeamMembers(initialTeamState.map(m => ({ ...m })))
     setDeletedMemberIds([])
     setEditedRoles({})
     setLocalVacancies(vacanciesFromDb.map(v => ({ ...v })))
     setDeletedVacancyIds([])
   }
-  
-  const handleBack = async () => { 
+
+  // Навигация назад
+  const handleBack = async () => {
     if (hasChanges && projectId) {
       try {
         await projectDraftApi.discardDraft(projectId)
@@ -923,11 +973,12 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
         console.error('Ошибка сброса черновика:', error)
       }
     }
-    
-    if (onCancel) { onCancel(); return } 
-    navigate(`${profilePath}/activity`, { replace: true }) 
+
+    if (onCancel) { onCancel(); return }
+    navigate(`${profilePath}/activity`, { replace: true })
   }
 
+  // Обработка клавиши Escape
   useEffect(() => {
     const handleEscKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -936,12 +987,13 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
     }
 
     window.addEventListener('keydown', handleEscKey)
-  
+
     return () => {
       window.removeEventListener('keydown', handleEscKey)
     }
   }, [handleBack])
 
+  // Сохранение проекта
   const handleSave = async () => {
     if (!projectId || !hasChanges || !isProjectFormValid) return
     setIsSaving(true)
@@ -959,10 +1011,10 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
       if (deletedVacancyIds.length > 0) {
         deletedVacancyIds.forEach(vacancyId => {
           if (vacancyId.startsWith('temp_')) return
-          
+
           const vacancy = localVacancies.find(v => v.vacancyId === vacancyId)
           if (!vacancy) return
-          
+
           const vacancyResponses = responses.filter(r => r.vacancyId === vacancyId)
           const uniqueRespondents = new Map<string, ResponseData>()
           vacancyResponses.forEach(r => {
@@ -970,14 +1022,14 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
               uniqueRespondents.set(r.userId, r)
             }
           })
-          
+
           uniqueRespondents.forEach((_, userId) => {
             sendNotification(userId, 'response', projectId!, 'responses_revoked_vacancy_deleted', {
               projectName: name || project?.title || 'Проект',
               vacancyName: vacancy.title || 'Заявка',
-            })
+            }, name || project?.title || 'Проект')
           })
-          
+
           const vacancyInvites = projectInvites.filter(i => i.role === vacancy.title && i.status === 'pending')
           const uniqueInvitees = new Map<string, InviteData>()
           vacancyInvites.forEach(i => {
@@ -985,15 +1037,15 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
               uniqueInvitees.set(i.userId, i)
             }
           })
-          
+
           uniqueInvitees.forEach((_, userId) => {
             sendNotification(userId, 'invite', projectId!, 'invites_revoked_vacancy_deleted', {
               projectName: name || project?.title || 'Проект',
               vacancyName: vacancy.title || 'Заявка',
-            })
+            }, name || project?.title || 'Проект')
           })
         })
-        
+
         await Promise.all(deletedVacancyIds.map(id => vacanciesApi.delete(id)))
         setDeletedVacancyIds([])
       }
@@ -1015,27 +1067,27 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
 
       if (deletedMemberIds.length > 0) {
         const removedMembers = initialTeamState.filter(m => deletedMemberIds.includes(m.memberId))
-        
-        await Promise.all(deletedMemberIds.map(memberId => 
+
+        await Promise.all(deletedMemberIds.map(memberId =>
           projectMembersApi.removeMember(memberId)
         ))
-        
+
         removedMembers.forEach(member => {
           const nickname = member.userData?.nickname || 'Пользователь'
           const projectName = name || project?.title || 'Проект'
-          
+
           if (project?.ownerId) {
             sendNotification(project.ownerId, 'project', projectId!, 'removed', {
               nickname,
               projectName,
-            })
+            }, projectName)
           }
-          
+
           sendNotification(member.userId, 'project', projectId!, 'removed_self', {
             projectName,
-          })
+          }, projectName)
         })
-        
+
         setDeletedMemberIds([])
       }
 
@@ -1048,45 +1100,45 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
         await Promise.all(roleUpdates.map(({ memberId, newRole }) =>
           projectMembersApi.updateMemberRole(memberId, newRole)
         ))
-        
+
         roleUpdates.forEach(({ memberId, newRole }) => {
           const member = initialTeamState.find(m => m.memberId === memberId)
           if (!member) return
-          
+
           const nickname = member.userData?.nickname || 'Пользователя'
           const projectName = name || project?.title || 'Проект'
-          
+
           if (project?.ownerId) {
             sendNotification(project.ownerId, 'project', projectId!, 'role_changed', {
               nickname,
               projectName,
               role: newRole,
-            })
+            }, projectName)
           }
-          
+
           sendNotification(member.userId, 'project', projectId!, 'role_changed_self', {
             projectName,
             role: newRole,
-          })
+          }, projectName)
         })
-        
+
         setEditedRoles({})
       }
 
       if (status !== initialState.status) {
         const projectName = name || project?.title || 'Проект'
-        
+
         if (project?.ownerId) {
           sendNotification(project.ownerId, 'project', projectId!, 'status_changed', {
             projectName,
             status,
-          })
+          }, projectName)
         }
-        
-        notifyAllMembersExceptOwner('project', projectId!, 'status_changed', {
+
+        notifyAllMembersExceptOwner(localTeamMembers, project?.ownerId, 'project', projectId!, 'status_changed', {
           projectName,
           status,
-        })
+        }, projectName)
       }
 
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.byId(projectId) })
@@ -1099,12 +1151,12 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
       setLoadedDraft(undefined)
 
       setInitialState({ name, shortDesc, status, description, isPrivate })
-      
+
       setHasBasicInfoDraft(false)
       setHasDescriptionDraft(false)
       setHasTeamDraft(false)
       setHasVacanciesDraft(false)
-      
+
       setSaveSuccess(true)
       setTimeout(() => setSaveSuccess(false), 3000)
 
@@ -1117,38 +1169,45 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
     }
   }
 
+  // Выбор статуса проекта
+  const handleStatusSelect = (item: { id: string; label: string }) => {
+    setStatus(item.label)
+    setStatusOpen(false)
+  }
+
+  // Мутация приглашения участника
   const inviteMemberMutation = useMutation({
     mutationFn: async ({ email, role }: { email: string; role: string }) => {
       const emailValid = validatorFormat.email(email)
       const roleError = checkRoleFormat(role)
-      
+
       if (!emailValid) {
         throw new Error('Введите корректный email')
       }
-      
+
       if (roleError) {
         throw new Error(roleError)
       }
-      
+
       const targetUser = await usersApi.findByEmail(email)
-      
+
       if (!targetUser) throw new Error('Пользователя с такой почтой не существует')
-      
+
       try {
-        await projectMembersApi.addMember({ 
-          projectId: projectId!, 
-          userId: targetUser.userId, 
-          role: role.trim() 
+        await projectMembersApi.addMember({
+          projectId: projectId!,
+          userId: targetUser.userId,
+          role: role.trim()
         })
       } catch (addError: any) {
         const errorMsg = String(
-          addError?.message || 
-          addError?.details?.message || 
+          addError?.message ||
+          addError?.details?.message ||
           addError?.details?.error ||
-          addError?.toString?.() || 
+          addError?.toString?.() ||
           ''
         ).toLowerCase()
-        
+
         if (
           errorMsg.includes('уже является участником') ||
           errorMsg.includes('already') ||
@@ -1159,7 +1218,7 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
         ) {
           throw new Error('Этот пользователь уже в команде')
         }
-        
+
         throw addError
       }
       return targetUser
@@ -1171,27 +1230,27 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
       setInviteMessage('Участник успешно добавлен в команду')
       setInviteMessageType('success')
       setTimeout(() => resetInviteMessage(), 3000)
-      
+
       teamInitializedRef.current = false
       await queryClient.invalidateQueries({ queryKey: queryKeys.projects.memberProjects(projectId!) })
-      
+
       const projectName = name || project?.title || 'Проект'
       const nickname = targetUser.nickname || 'Пользователь'
       const role = inviteRole.trim()
-      
+
       if (project?.ownerId) {
         sendNotification(project.ownerId, 'project', projectId!, 'added', {
           nickname,
           projectName,
           role,
-        })
+        }, projectName)
       }
-      
+
       sendNotification(targetUser.userId, 'project', projectId!, 'added_self', {
         projectName,
         role,
-      })
-      
+      }, projectName)
+
       queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all })
     },
     onError: (error: any) => {
@@ -1202,32 +1261,37 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
     },
   })
 
+  // Приглашение участника по email
   const handleInvite = () => {
     const roleError = checkRoleFormat(inviteRole)
     setInviteRoleError(roleError)
-    
+
     if (!roleError) {
       inviteMemberMutation.mutate({ email: inviteEmail, role: inviteRole })
     }
   }
 
+  // Изменение роли приглашения
   const handleInviteRoleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInviteRole(e.target.value)
     if (inviteRoleError) setInviteRoleError(null)
   }
 
+  // Потеря фокуса поля роли приглашения
   const handleInviteRoleBlur = () => {
     if (inviteRole.trim()) {
       setInviteRoleError(checkRoleFormat(inviteRole))
     }
   }
 
-  const resetInviteMessage = () => { 
+  // Сброс сообщения приглашения
+  const resetInviteMessage = () => {
     setInviteMessage('На указанный email будет отправлено приглашение на участие в проекте')
     setInviteMessageType('info')
     setInviteRoleError(null)
   }
 
+  // Удаление участника из команды
   const handleRemoveMember = (memberId: string) => {
     setLocalTeamMembers(prev => prev.filter(m => m.memberId !== memberId))
     setDeletedMemberIds(prev => [...prev, memberId])
@@ -1238,8 +1302,9 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
     })
   }
 
+  // Обновление роли участника
   const handleUpdateMemberRole = (memberId: string, newRole: string) => {
-    setLocalTeamMembers(prev => prev.map(m => 
+    setLocalTeamMembers(prev => prev.map(m =>
       m.memberId === memberId ? { ...m, role: newRole } : m
     ))
 
@@ -1256,6 +1321,7 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
     })
   }
 
+  // Открытие формы вакансии
   const openVacancyForm = (v?: LocalVacancy) => {
     if (v) {
       setEditingVacancy(v)
@@ -1270,6 +1336,7 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
     setShowVacancyForm(true)
   }
 
+  // Закрытие формы вакансии
   const closeVacancyForm = () => {
     setShowVacancyForm(false)
     setEditingVacancy(null)
@@ -1277,6 +1344,7 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
     setVacancyTouched({ vacTitle: false, vacDesc: false, vacTags: false })
   }
 
+  // Сохранение вакансии
   const saveVacancy = () => {
     if (!vacTitle.trim()) return
     const tags = vacTags.trim().split(/\s+/).filter(Boolean)
@@ -1307,6 +1375,7 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
     closeVacancyForm()
   }
 
+  // Удаление вакансии
   const deleteVacancy = (vacancyId: string) => {
     setLocalVacancies(prev => prev.filter(v => v.vacancyId !== vacancyId))
     if (!vacancyId.startsWith('temp_')) {
@@ -1314,60 +1383,62 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
     }
   }
 
-  const [showDeleteForm, setShowDeleteForm] = useState(false)
+  // Открытие формы удаления проекта
   const handleDeleteClick = () => { if (projectId) setShowDeleteForm(true) }
-  
+
+  // Успешное удаление проекта
   const handleDeleteSuccess = () => {
     const projectName = name || project?.title || 'Проект'
-    
-    notifyAllMembersExceptOwner('project', projectId!, 'project_deleted', {
+
+    notifyAllMembersExceptOwner(localTeamMembers, project?.ownerId, 'project', projectId!, 'project_deleted', {
       projectName,
-    })
-    
+    }, projectName)
+
     const uniqueRespondents = new Map<string, ResponseData>()
     responses.forEach(r => {
       if (!uniqueRespondents.has(r.userId)) {
         uniqueRespondents.set(r.userId, r)
       }
     })
-    
+
     uniqueRespondents.forEach((response, userId) => {
       sendNotification(userId, 'response', projectId!, 'responses_revoked_project_deleted', {
         projectName,
         nickname: response.userNickname || 'Пользователь',
-      })
+      }, projectName)
     })
-    
+
     const uniqueInvitees = new Map<string, InviteData>()
     projectInvites.forEach(i => {
       if (!uniqueInvitees.has(i.userId)) {
         uniqueInvitees.set(i.userId, i)
       }
     })
-    
+
     uniqueInvitees.forEach((invite, userId) => {
       sendNotification(userId, 'invite', projectId!, 'invites_revoked_project_deleted', {
         projectName,
         nickname: invite.userName || 'Пользователь',
-      })
+      }, projectName)
     })
-    
+
     queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all })
-    
+
     navigate(`${profilePath}/activity`, { replace: true })
   }
 
+  // Обработка отклика на вакансию
   const handleResponseAction = async (response: ResponseData, action: 'accept' | 'decline') => {
     try {
       await responseApi.delete(response.responseId)
-      
+
       const eventType = action === 'accept' ? 'response_accepted' : 'response_rejected'
-      
+
       sendNotification(response.userId, 'response', response.projectId, eventType, {
         projectName: response.projectTitle || 'Проект',
         vacancyName: response.vacancyTitle || 'Заявка',
-      })
-      
+      }, response.projectTitle || 'Проект')
+
       if (action === 'accept' && project?.ownerId) {
         try {
           await projectMembersApi.addMember({
@@ -1375,7 +1446,7 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
             userId: response.userId,
             role: response.vacancyTitle || 'Участник'
           })
-          
+
           queryClient.invalidateQueries({ queryKey: queryKeys.projects.memberProjects(projectId!) })
           teamInitializedRef.current = false
         }
@@ -1383,9 +1454,9 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
           console.error('Ошибка добавления участника:', addError)
         }
       }
-      
+
       queryClient.invalidateQueries({ queryKey: queryKeys.responses.byProject(projectId!) })
-      queryClient.invalidateQueries({ 
+      queryClient.invalidateQueries({
         queryKey: queryKeys.notifications.all,
         refetchType: 'active'
       })
@@ -1395,18 +1466,19 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
     }
   }
 
+  // Отмена приглашения
   const handleCancelInvite = async (invite: InviteData) => {
     try {
       await inviteApi.delete(invite.inviteId)
-      
+
       sendNotification(invite.userId, 'invite', invite.projectId, 'invite_cancelled', {
         projectName: invite.projectTitle || 'Проект',
         vacancyName: invite.role || 'Заявка',
         nickname: currentUserNickname || 'Пользователь',
-      })
-      
+      }, invite.projectTitle || 'Проект')
+
       queryClient.invalidateQueries({ queryKey: queryKeys.invites.outgoing(profileId || '') })
-      queryClient.invalidateQueries({ 
+      queryClient.invalidateQueries({
         queryKey: queryKeys.notifications.all,
         refetchType: 'active'
       })
@@ -1416,207 +1488,209 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
     }
   }
 
+  // Мутация создания комментария
   const createCommentMutation = useMutation({
     mutationFn: (dto: any) => commentApi.create(dto),
     onSuccess: () => {
-      refetchComments();
-      setNewComment('');
-      setReplyingTo(null);
-      setReplyContent('');
+      refetchComments()
+      setNewComment('')
+      setReplyingTo(null)
+      setReplyContent('')
     },
-  });
+  })
 
+  // Мутация обновления комментария
   const updateCommentMutation = useMutation({
     mutationFn: ({ commentId, content }: { commentId: string, content: string }) => commentApi.update(commentId, content),
     onSuccess: () => {
-      refetchComments();
-      setEditingCommentId(null);
-      setEditContent('');
+      refetchComments()
+      setEditingCommentId(null)
+      setEditContent('')
     },
-  });
+  })
 
+  // Мутация удаления комментария
   const deleteCommentMutation = useMutation({
     mutationFn: (commentId: string) => commentApi.delete(commentId),
     onSuccess: () => {
-      refetchComments();
+      refetchComments()
     },
-  });
+  })
 
-  const buildCommentTree = (commentsList: CommentData[]): CommentNode[] => {
-    const map = new Map<string, CommentNode>();
-    const roots: CommentNode[] = [];
-
-    commentsList.forEach(c => {
-      map.set(c.commentId, { ...c, replies: [] });
-    });
-
-    commentsList.forEach(c => {
-      const node = map.get(c.commentId)!;
-      if (c.parentCommentId && map.has(c.parentCommentId)) {
-        map.get(c.parentCommentId)!.replies.push(node);
+  // Переключение раскрытия ответов комментария
+  const toggleReplies = (commentId: string) => {
+    setExpandedComments(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(commentId)) {
+        newSet.delete(commentId)
       } else {
-        roots.push(node);
+        newSet.add(commentId)
       }
-    });
+      return newSet
+    })
+  }
 
-    return roots;
-  };
+  // Проверка: раскрыт ли комментарий
+  const isExpanded = (commentId: string) => expandedComments.has(commentId)
 
+  // Рендер узла комментария
   const renderCommentNode = (node: CommentNode, depth = 0) => {
-  const isAuthor = node.userId === currentUserId;
-  const canDelete = isAuthor || isOwner;
-  const canEdit = isAuthor;
-  const hasReplies = node.replies.length > 0;
-  const expanded = isExpanded(node.commentId);
+    const isAuthor = node.userId === currentUserId
+    const canDelete = isAuthor || isOwner
+    const canEdit = isAuthor
+    const hasReplies = node.replies.length > 0
+    const expanded = isExpanded(node.commentId)
 
-  return (
-    <div key={node.commentId} className={`comment-item ${depth > 0 ? 'comment-reply' : ''}`}>
-      <div className='comment-wrapper'>
-        <div className='comment-avatar'>
-          <img src={node.avatarUrl || '/default-avatar.png'} alt={node.nickname || 'User'} />
-        </div>
-        
-        <div className='comment-body'>
-          <div className='comment-header'>
-            <div className='comment-meta'>
-              <span className='comment-author'>@{node.nickname || 'deleted_user'}</span>
-              <span className='comment-date'>{new Date(node.createdAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })}, {new Date(node.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</span>
-              {node.isEdited && <span className='comment-edited'>• изменено</span>}
-            </div>
-            
-            {!node.isDeleted && (
-              <div className='comment-actions-right'>
-                {canEdit && (
-                  <button 
-                    className='comment-edit-badge' 
-                    onClick={() => {
-                      setReplyingTo(null)
-                      setReplyContent('')
-                      setEditingCommentId(node.commentId)
-                      setEditContent(node.content || '')
-                    }}
-                  >
-                    <Edit className='ico' />
-                  </button>
-                )}
-                {canDelete && (
-                  <button 
-                    className='comment-remove-badge' 
-                    onClick={() => {
-                      if (window.confirm('Удалить этот комментарий?')) {
-                        deleteCommentMutation.mutate(node.commentId)
-                      }
-                    }}
-                  >
-                    <Delete className='ico' />
-                  </button>
-                )}
-              </div>
-            )}
+    return (
+      <div key={node.commentId} className={`comment-item ${depth > 0 ? 'comment-reply' : ''}`}>
+        <div className='comment-wrapper'>
+          <div className='comment-avatar'>
+            <img src={node.avatarUrl || '/default-avatar.png'} alt={node.nickname || 'User'} />
           </div>
-          
-          {node.isDeleted ? (
-            <div className='comment-content deleted'>Комментарий удален</div>
-          ) : (
-            <div className='comment-content'>{node.content}</div>
-          )}
 
-<div className='comment-actions-left'>
-  {!node.isDeleted && (
-    <button 
-      className='comment-action-text' 
-      onClick={() => {
-        setEditingCommentId(null)
-        setEditContent('')
-        setReplyingTo(replyingTo === node.commentId ? null : node.commentId)
-      }}
-    >
-      Ответить
-    </button>
-  )}
-  {hasReplies && (
-    <button 
-      className='comment-action-text expand-replies'
-      onClick={() => toggleReplies(node.commentId)}
-    >
-      {expanded ? 'Скрыть ответы' : `${node.replies.length} ${node.replies.length === 1 ? 'ответ' : node.replies.length < 5 ? 'ответа' : 'ответов'}`}
-      <span className={`expand-icon ${expanded ? 'expanded' : ''}`}>▾</span>
-    </button>
-  )}
-</div>
-
-          {replyingTo === node.commentId && (
-            <div className='comment-reply-input'>
-              <textarea
-                className='comment-textarea small'
-                placeholder={`Ответ для @${node.nickname}...`}
-                value={replyContent}
-                onChange={(e) => setReplyContent(e.target.value)}
-              />
-              <div className='comment-form-actions'>
-                <button 
-                  className='comment-btn confirm'
-                  onClick={() => createCommentMutation.mutate({
-                    referenceType: 'project',
-                    referenceId: projectId!,
-                    content: replyContent,
-                    parentCommentId: node.commentId
-                  })} 
-                  disabled={!replyContent.trim() || createCommentMutation.isPending}
-                >
-                  Ответить
-                </button>
-                <button 
-                  className='comment-btn cancel'
-                  onClick={() => {
-                    setReplyingTo(null)
-                    setReplyContent('')
-                  }}
-                >
-                  Отмена
-                </button>
+          <div className='comment-body'>
+            <div className='comment-header'>
+              <div className='comment-meta'>
+                <span className='comment-author'>@{node.nickname || 'deleted_user'}</span>
+                <span className='comment-date'>{new Date(node.createdAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })}, {new Date(node.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</span>
+                {node.isEdited && <span className='comment-edited'>• изменено</span>}
               </div>
-            </div>
-          )}
 
-          {editingCommentId === node.commentId && (
-            <div className='comment-edit-input'>
-              <textarea
-                className='comment-textarea small'
-                value={editContent}
-                onChange={(e) => setEditContent(e.target.value)}
-              />
-              <div className='comment-form-actions'>
-                <button 
-                  className='comment-btn confirm'
-                  onClick={() => updateCommentMutation.mutate({ commentId: node.commentId, content: editContent })} 
-                  disabled={!editContent.trim() || updateCommentMutation.isPending}
-                >
-                  Изменить
-                </button>
-                <button 
-                  className='comment-btn cancel'
+              {!node.isDeleted && (
+                <div className='comment-actions-right'>
+                  {canEdit && (
+                    <button
+                      className='comment-edit-badge'
+                      onClick={() => {
+                        setReplyingTo(null)
+                        setReplyContent('')
+                        setEditingCommentId(node.commentId)
+                        setEditContent(node.content || '')
+                      }}
+                    >
+                      <Edit className='ico' />
+                    </button>
+                  )}
+                  {canDelete && (
+                    <button
+                      className='comment-remove-badge'
+                      onClick={() => {
+                        if (window.confirm('Удалить этот комментарий?')) {
+                          deleteCommentMutation.mutate(node.commentId)
+                        }
+                      }}
+                    >
+                      <Delete className='ico' />
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {node.isDeleted ? (
+              <div className='comment-content deleted'>Комментарий удален</div>
+            ) : (
+              <div className='comment-content'>{node.content}</div>
+            )}
+
+            <div className='comment-actions-left'>
+              {!node.isDeleted && (
+                <button
+                  className='comment-action-text'
                   onClick={() => {
                     setEditingCommentId(null)
                     setEditContent('')
+                    setReplyingTo(replyingTo === node.commentId ? null : node.commentId)
                   }}
                 >
-                  Отмена
+                  Ответить
                 </button>
-              </div>
+              )}
+              {hasReplies && (
+                <button
+                  className='comment-action-text expand-replies'
+                  onClick={() => toggleReplies(node.commentId)}
+                >
+                  {expanded ? 'Скрыть ответы' : `${node.replies.length} ${node.replies.length === 1 ? 'ответ' : node.replies.length < 5 ? 'ответа' : 'ответов'}`}
+                  <span className={`expand-icon ${expanded ? 'expanded' : ''}`}>▾</span>
+                </button>
+              )}
             </div>
-          )}
-        </div>
-      </div>
 
-      {hasReplies && expanded && (
-        <div className='comment-replies'>
-          {node.replies.map(reply => renderCommentNode(reply, depth + 1))}
+            {replyingTo === node.commentId && (
+              <div className='comment-reply-input'>
+                <textarea
+                  className='comment-textarea small'
+                  placeholder={`Ответ для @${node.nickname}...`}
+                  value={replyContent}
+                  onChange={(e) => setReplyContent(e.target.value)}
+                />
+                <div className='comment-form-actions'>
+                  <button
+                    className='comment-btn confirm'
+                    onClick={() => createCommentMutation.mutate({
+                      referenceType: 'project',
+                      referenceId: projectId!,
+                      content: replyContent,
+                      parentCommentId: node.commentId
+                    })}
+                    disabled={!replyContent.trim() || createCommentMutation.isPending}
+                  >
+                    Ответить
+                  </button>
+                  <button
+                    className='comment-btn cancel'
+                    onClick={() => {
+                      setReplyingTo(null)
+                      setReplyContent('')
+                    }}
+                  >
+                    Отмена
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {editingCommentId === node.commentId && (
+              <div className='comment-edit-input'>
+                <textarea
+                  className='comment-textarea small'
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                />
+                <div className='comment-form-actions'>
+                  <button
+                    className='comment-btn confirm'
+                    onClick={() => updateCommentMutation.mutate({ commentId: node.commentId, content: editContent })}
+                    disabled={!editContent.trim() || updateCommentMutation.isPending}
+                  >
+                    Изменить
+                  </button>
+                  <button
+                    className='comment-btn cancel'
+                    onClick={() => {
+                      setEditingCommentId(null)
+                      setEditContent('')
+                    }}
+                  >
+                    Отмена
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-      )}
-    </div>
-  );
-};
+
+        {hasReplies && expanded && (
+          <div className='comment-replies'>
+            {node.replies.map(reply => renderCommentNode(reply, depth + 1))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  const reverseStatusMap: Record<string, string> = { 'В процессе': 'in_progress', 'Завершён': 'completed', 'Приостановлен': 'paused' }
 
   return (
     <div className='project-page'>
@@ -1632,28 +1706,28 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
             <div className='project-form-grid'>
               <div className='project-field-row'>
                 <label className='project-field-label'>Название проекта: <span className='required-mark'>*</span></label>
-                <input 
+                <input
                   name="name"
-                  className={`project-field-input ${projectTouched.name && projectDirty.name && checkProjectFormat('name', name) ? 'input-error' : ''}`} 
-                  value={name} 
+                  className={`project-field-input ${projectTouched.name && projectDirty.name && checkProjectFormat('name', name) ? 'input-error' : ''}`}
+                  value={name}
                   onChange={e => {
                     setName(e.target.value)
                     handleProjectChange(e)
-                  }} 
+                  }}
                   onBlur={handleProjectBlur}
                   maxLength={50} />
               </div>
               <div className='project-field-row'>
                 <label className='project-field-label'>Краткое описание:</label>
-                <textarea 
+                <textarea
                   name="shortDesc"
-                  className={`project-short-desc-editor ${projectTouched.shortDesc && projectDirty.shortDesc && checkProjectFormat('shortDesc', shortDesc) ? 'input-error' : ''}`} 
-                  value={shortDesc} 
+                  className={`project-short-desc-editor ${projectTouched.shortDesc && projectDirty.shortDesc && checkProjectFormat('shortDesc', shortDesc) ? 'input-error' : ''}`}
+                  value={shortDesc}
                   onChange={e => {
                     if (e.target.value.length > 150) return;
                     setShortDesc(e.target.value)
                     handleProjectChange(e)
-                  }} 
+                  }}
                   onBlur={handleProjectBlur}
                   maxLength={150}
                   placeholder='Кратко опишите суть проекта в 1-2 предложениях'
@@ -1671,8 +1745,8 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
               <div className='project-field-row'>
                 <label className='project-field-label'>Приватность:</label>
                 <div className='privacy-toggle-container'>
-                  <button 
-                    className='privacy-toggle-btn' 
+                  <button
+                    className='privacy-toggle-btn'
                     onClick={() => setIsPrivate(!isPrivate)}
                     type="button"
                   >
@@ -1680,8 +1754,8 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
                     <span>{isPrivate ? 'Приватный' : 'Публичный'}</span>
                   </button>
                   <p className='privacy-hint'>
-                    {isPrivate 
-                      ? 'Только участники команды могут видеть проект' 
+                    {isPrivate
+                      ? 'Только участники команды могут видеть проект'
                       : 'Проект виден всем пользователям'}
                   </p>
                 </div>
@@ -1705,26 +1779,26 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
               {hasTeamDraft && <span className='draft-indicator'>(черновик)</span>}
             </div>
             <div className='team-invite-row'>
-              <input 
-                className='project-field-input' 
-                placeholder='Email участника' 
-                value={inviteEmail} 
-                onChange={e => setInviteEmail(e.target.value)} 
+              <input
+                className='project-field-input'
+                placeholder='Email участника'
+                value={inviteEmail}
+                onChange={e => setInviteEmail(e.target.value)}
               />
-              <input 
-                className={`project-field-input ${inviteRoleError ? 'input-error' : ''}`} 
-                placeholder='Роль участника' 
-                value={inviteRole} 
+              <input
+                className={`project-field-input ${inviteRoleError ? 'input-error' : ''}`}
+                placeholder='Роль участника'
+                value={inviteRole}
                 onChange={handleInviteRoleChange}
                 onBlur={handleInviteRoleBlur}
                 maxLength={50}
               />
-              <button 
-                className='team-invite-btn' 
-                onClick={handleInvite} 
+              <button
+                className='team-invite-btn'
+                onClick={handleInvite}
                 disabled={
-                  !validatorFormat.email(inviteEmail) || 
-                  !inviteRole.trim() || 
+                  !validatorFormat.email(inviteEmail) ||
+                  !inviteRole.trim() ||
                   !!inviteRoleError ||
                   inviteMemberMutation.isPending
                 }>
@@ -1735,11 +1809,11 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
             <div className={`team-invite-hint ${inviteMessageType}`}><InfoCircleIcon className='info-icon' /><span>{inviteMessage}</span></div>
             <div className='team-members-list'>
               {localTeamMembers.map(member => (
-                <TeamMemberProjectCard 
-                  key={member.memberId} 
-                  member={member} 
-                  onRemove={() => handleRemoveMember(member.memberId)} 
-                  onUpdateRole={handleUpdateMemberRole} 
+                <TeamMemberProjectCard
+                  key={member.memberId}
+                  member={member}
+                  onRemove={() => handleRemoveMember(member.memberId)}
+                  onUpdateRole={handleUpdateMemberRole}
                   isOwner={member.isOwner || false}
                 />
               ))}
@@ -1755,43 +1829,43 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
             </div>
             {showVacancyForm ? (
               <div className='vacancy-form'>
-                <input 
+                <input
                   name="vacTitle"
-                  className={`project-field-input ${vacancyTouched.vacTitle && checkVacancyFormat('vacTitle', vacTitle) ? 'input-error' : ''}`} 
-                  placeholder='Название роли' 
-                  value={vacTitle} 
-                  onChange={e => setVacTitle(e.target.value)} 
+                  className={`project-field-input ${vacancyTouched.vacTitle && checkVacancyFormat('vacTitle', vacTitle) ? 'input-error' : ''}`}
+                  placeholder='Название роли'
+                  value={vacTitle}
+                  onChange={e => setVacTitle(e.target.value)}
                   onBlur={() => setVacancyTouched(prev => ({ ...prev, vacTitle: true }))}
-                  maxLength={50}/>
-                <textarea 
+                  maxLength={50} />
+                <textarea
                   name="vacDesc"
-                  className={`project-md-editor small ${vacancyTouched.vacDesc && checkVacancyFormat('vacDesc', vacDesc) ? 'input-error' : ''}`} 
-                  placeholder='Описание заявки' 
-                  value={vacDesc} 
+                  className={`project-md-editor small ${vacancyTouched.vacDesc && checkVacancyFormat('vacDesc', vacDesc) ? 'input-error' : ''}`}
+                  placeholder='Описание заявки'
+                  value={vacDesc}
                   onChange={e => {
                     const value = e.target.value;
                     if (value.length > 500) return;
                     if (getVisualLineCount(value, e.target) > 10) return;
                     setVacDesc(value);
-                  }} 
+                  }}
                   onBlur={() => setVacancyTouched(prev => ({ ...prev, vacDesc: true }))} />
-                <textarea 
+                <textarea
                   name="vacTags"
-                  className={`project-field-input vacancy-tags-input ${vacancyTouched.vacTags && checkVacancyFormat('vacTags', vacTags) ? 'input-error' : ''}`} 
-                  placeholder='Теги через пробел: #react #typescript' 
-                  value={vacTags} 
+                  className={`project-field-input vacancy-tags-input ${vacancyTouched.vacTags && checkVacancyFormat('vacTags', vacTags) ? 'input-error' : ''}`}
+                  placeholder='Теги через пробел: #react #typescript'
+                  value={vacTags}
                   onChange={e => {
                     let value = validatorRegex.tags(e.target.value);
                     if (getVisualLineCount(value, e.target) > 2) return;
                     setVacTags(value);
-                  }} 
-                  onBlur={() => setVacancyTouched(prev => ({ ...prev, vacTags: true }))}/>
+                  }}
+                  onBlur={() => setVacancyTouched(prev => ({ ...prev, vacTags: true }))} />
                 <div className='vacancy-form-actions'>
-                  <button 
-                    className='manage-button' 
-                    onClick={saveVacancy} 
+                  <button
+                    className='manage-button'
+                    onClick={saveVacancy}
                     disabled={
-                      !vacTitle.trim() || 
+                      !vacTitle.trim() ||
                       !!checkVacancyFormat('vacTitle', vacTitle) ||
                       !!checkVacancyFormat('vacDesc', vacDesc) ||
                       !!checkVacancyFormat('vacTags', vacTags)
@@ -1835,13 +1909,13 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
                       </div>
                     </div>
                     <div className='response-actions'>
-                      <button 
-                        className='response-button accept' 
+                      <button
+                        className='response-button accept'
                         onClick={() => handleResponseAction(response, 'accept')}>
                         Принять
                       </button>
-                      <button 
-                        className='response-button decline' 
+                      <button
+                        className='response-button decline'
                         onClick={() => handleResponseAction(response, 'decline')}>
                         Отклонить
                       </button>
@@ -1857,29 +1931,29 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
               <h2 className='project-section-title'>
                 Приглашения: <span className='project-count'>{projectInvites.length}</span>
               </h2>
-              <div className='invites-list'> 
+              <div className='invites-list'>
                 {projectInvites.map(invite => (
-                  <div key={invite.inviteId} className='response-card'> 
-                    <div className='response-card-header'>  
-                      <div className='response-icon-wrapper'> 
+                  <div key={invite.inviteId} className='response-card'>
+                    <div className='response-card-header'>
+                      <div className='response-icon-wrapper'>
                         <InfoIcon className='response-icon' />
                       </div>
-                      <div className='response-text'> 
+                      <div className='response-text'>
                         <p>
                           Приглашение <strong><em>{invite.userName}</em></strong> на участие в проекте{' '}
                           <span className='response-project'><em>{invite.projectTitle}</em></span> на роль{' '}
                           <span className='response-role'><em>{invite.role}</em></span> было отправлено
                         </p>
-                        <p className='response-date'> 
+                        <p className='response-date'>
                           {new Date(invite.createdAt).toLocaleDateString('ru-RU')}
                           {', '}
                           {new Date(invite.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
                         </p>
                       </div>
                     </div>
-                    <div className='response-actions'> 
-                      <button 
-                        className='response-button decline' 
+                    <div className='response-actions'>
+                      <button
+                        className='response-button decline'
                         onClick={() => handleCancelInvite(invite)}>
                         Отменить
                       </button>
@@ -1899,11 +1973,11 @@ const isExpanded = (commentId: string) => expandedComments.has(commentId)
             </div>
           </section>
 
-           <section className='project-section'>
+          <section className='project-section'>
             <h2 className='project-section-title'>
               Комментарии: <span className='project-count'>{comments.length}</span>
             </h2>
-            
+
             <div className='comment-input-wrapper'>
               <textarea
                 className='comment-textarea'

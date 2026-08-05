@@ -10,17 +10,17 @@
 .response-section {
   display: flex;
   flex-direction: column;
-  gap: rem(16);
+  gap: rem(24);
 }
 
 .response-section-title {
   font-size: rem(20);
-  font-weight: 600;
+  font-weight: bold;
   color: var(--neutral-100);
   margin: 0;
   
   .response-count {
-    font-weight: normal;
+    font-weight: bold;
     color: color-mix(in srgb, var(--neutral-100), transparent 50%);
   }
 }
@@ -28,7 +28,7 @@
 .response-list {
   display: flex;
   flex-direction: column;
-  gap: rem(16);
+  gap: rem(24);
 }
 
 .empty-state {
@@ -92,14 +92,13 @@
         line-height: 1.5;
 
         strong {
-          font-weight: 600;
+          font-weight: bold;
           color: var(--neutral-100);
         }
 
         .response-project,
         .response-role {
           color: var(--primary-accent);
-          font-weight: 500;
         }
       }
 
@@ -117,8 +116,8 @@
 
     .response-button {
       padding: rem(6) rem(16);
-      font-size: rem(13);
-      font-weight: 600;
+      font-size: rem(14);
+      font-weight: bold;
       border: 1px solid;
       border-radius: var(--border-radius-base);
       transition: 0.25s;
@@ -127,10 +126,6 @@
         background: var(--success-color);
         border-color: var(--success-color);
         color: var(--neutral-0);
-
-        &:hover {
-          filter: brightness(0.95);
-        }
       }
 
       &.decline {
@@ -141,6 +136,50 @@
         &:hover {
           background: color-mix(in srgb, var(--important-color), transparent 90%);
         }
+      }
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .response-card {
+    padding: rem(14);
+    gap: rem(10);
+
+    .response-card-header {
+      gap: rem(10);
+
+      .response-icon-wrapper {
+        width: rem(36);
+        height: rem(36);
+
+        .response-icon {
+          width: rem(18);
+          height: rem(18);
+        }
+      }
+    }
+
+    .response-actions {
+      margin-left: 0;
+      flex-wrap: wrap;
+
+      .response-button {
+        flex: 1;
+        min-width: rem(100);
+        text-align: center;
+      }
+    }
+  }
+}
+
+@media (max-width: 360px) {
+  .response-card {
+    .response-actions {
+      flex-direction: column;
+
+      .response-button {
+        width: 100%;
       }
     }
   }

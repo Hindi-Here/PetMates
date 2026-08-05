@@ -73,12 +73,6 @@
             fill: var(--neutral-0);
         }
 
-        &:hover{
-            filter: brightness(0.975);
-        }
-        &:active{
-            filter: brightness(0.95);
-        }
         &:disabled {
             opacity: 0.4;
             pointer-events: none; 
@@ -149,7 +143,6 @@
             .auth-service-item-text{
                 font-size: rem(12);
                 color: color-mix(in srgb, var(--neutral-100), transparent 25%);
-                user-select: none;
             }
 
             &:hover{
@@ -215,7 +208,7 @@
         }
 
         &:active {
-            transform: translateY(-50%) scale(0.9);
+            transform: translateY(-50%) scale(0.98);
         }
 
         .password-toggle-icon {
@@ -229,4 +222,22 @@
             fill: var(--neutral-100);
         }
     }
+}
+
+@media (max-width: 480px) {
+  .auth-service-items-container {
+    flex-wrap: wrap;
+    gap: rem(8);
+    justify-content: center;
+
+    .auth-service-item-container {
+      width: calc(50% - #{rem(4)});
+      padding-left: 0;
+      justify-content: center;
+    }
+  }
+
+  .form-complete-container .form-complete-button {
+    width: 100%;
+  }
 }

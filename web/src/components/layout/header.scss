@@ -45,6 +45,7 @@
         color: var(--neutral-0);
         font-size: rem(32);
         font-family: var(--font-family-logo);
+        user-select: none;
     }
 }
 
@@ -62,11 +63,6 @@
         height: rem(40);
         width: rem(125);
         outline: none;
-
-        &:active{
-            filter: brightness(1.05);
-            transform: scale(0.98);
-        }
     }
     .login-button:hover{
         background-color: var(--base2-color);
@@ -307,12 +303,12 @@
 
                 .notification-item-text {
                     margin: 0 0 rem(4);
-                    font-size: rem(13);
+                    font-size: rem(14);
                     color: var(--neutral-0);
                     line-height: 1.4;
 
                     strong {
-                        font-weight: 600;
+                        font-weight: bold;
                     }
 
                     em {
@@ -351,8 +347,7 @@
             border: none;
             border-radius: var(--border-radius-base);
             color: var(--primary-accent);
-            font-size: rem(13);
-            font-weight: 500;
+            font-size: rem(14);
             transition: 0.25s;
             text-decoration: underline;
 

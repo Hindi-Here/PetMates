@@ -2,12 +2,90 @@
   display: flex;
   flex-direction: column;
   gap: rem(24);
+  width: 100%;
 }
 
 .messages-search {
   padding-top: 0;
   width: 100%;
   margin-left: 0;
+  max-width: 100%;
+}
+
+.search-content-container.messages-search {
+  width: 100%;
+  max-width: 100%;
+  margin-left: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.search-line-container {
+  width: 100%;
+  display: flex;
+  gap: rem(12);
+  align-items: center;
+}
+
+.search-input-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: rem(8);
+  padding: rem(8) rem(12);
+  border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 80%);
+  border-radius: var(--border-radius-base);
+  background: var(--neutral-0);
+  transition: 0.25s;
+
+  &:focus-within {
+    border-color: var(--primary-accent);
+  }
+
+  .search-ico {
+    width: rem(18);
+    height: rem(18);
+    color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+    flex-shrink: 0;
+  }
+
+  .search-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-size: rem(14);
+    background: transparent;
+    color: var(--neutral-100);
+    min-width: 0;
+
+    &::placeholder {
+      color: color-mix(in srgb, var(--neutral-100), transparent 60%);
+    }
+  }
+}
+
+.search-button-container {
+  flex-shrink: 0;
+}
+
+.search-button {
+  padding: rem(8) rem(24);
+  background: var(--neutral-100);
+  color: var(--neutral-0);
+  border: none;
+  border-radius: var(--border-radius-base);
+  font-size: rem(14);
+  font-weight:bold;
+  transition: 0.25s;
+  white-space: nowrap;
+
+  &:hover {
+    filter: brightness(1.1);
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
 }
 
 .messages-section {
@@ -18,7 +96,7 @@
 
 .messages-section-title {
   font-size: rem(20);
-  font-weight: 600;
+  font-weight: bold;
 }
 
 .messages-count {
@@ -69,7 +147,7 @@
 
 .found-user-nickname {
   font-size: rem(16);
-  font-weight: 600;
+  font-weight: bold;
 }
 
 .conversation-list {
@@ -100,7 +178,7 @@
   }
 
   &.unread .conversation-nickname {
-    font-weight: 700;
+    font-weight: bold;
   }
 }
 
@@ -142,7 +220,7 @@
 
 .conversation-nickname {
   font-size: rem(16);
-  font-weight: 600;
+  font-weight: bold;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -211,7 +289,7 @@
   }
 
   &:active {
-    transform: scale(0.95);
+    transform: scale(0.98);
   }
 
   .ico {
@@ -251,5 +329,46 @@
     font-size: rem(16);
     color: color-mix(in srgb, var(--neutral-100), transparent 50%);
     margin: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .conversation-card,
+  .found-user-card {
+    padding: rem(10);
+  }
+
+  .conversation-avatar img,
+  .found-user-avatar img {
+    width: rem(38);
+    height: rem(38);
+  }
+
+  .conversation-actions {
+    gap: rem(6);
+    margin-left: rem(8);
+  }
+
+  .conversation-pin-btn,
+  .conversation-delete-btn {
+    width: rem(30);
+    height: rem(30);
+
+    .ico {
+      width: rem(14);
+      height: rem(14);
+    }
+  }
+
+  .conversation-date {
+    padding-right: 0; 
+  }
+
+  .conversation-nickname {
+    font-size: rem(14);
+  }
+
+  .conversation-preview {
+    font-size: rem(14);
   }
 }

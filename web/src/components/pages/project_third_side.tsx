@@ -28,12 +28,47 @@ import { VacancyCard } from '../common/vacancyCard'
 import { UserCard } from '../common/userCard'
 
 export interface TeamMemberWithUser {
-  memberId: string; projectId: string; userId: string; role: string;
-  joinedAt?: string; userData?: UserData; isOwner?: boolean
+  memberId: string
+  projectId: string
+  userId: string
+  role: string
+  joinedAt?: string
+  userData?: UserData
+  isOwner?: boolean
 }
 
 interface CommentNode extends CommentData {
-  replies: CommentNode[];
+  replies: CommentNode[]
+}
+
+// Получение конфигурации статуса проекта
+const getStatusConfig = (status: string) => {
+  const configs: Record<string, {
+    text: string
+    className: string
+    Icon: React.ComponentType<{ className?: string }>
+  }> = {
+    'В процессе': { text: 'В процессе', className: 'status-working', Icon: StatusWorkingIcon },
+    'Завершён': { text: 'Завершён', className: 'status-end', Icon: StatusEndIcon },
+    'Приостановлен': { text: 'Приостановлен', className: 'status-pause', Icon: StatusPauseIcon }
+  }
+  return configs[status] || configs['В процессе']
+}
+
+// Построение дерева комментариев
+const buildCommentTree = (commentsList: CommentData[]): CommentNode[] => {
+  const map = new Map<string, CommentNode>()
+  const roots: CommentNode[] = []
+  commentsList.forEach(c => map.set(c.commentId, { ...c, replies: [] }))
+  commentsList.forEach(c => {
+    const node = map.get(c.commentId)!
+    if (c.parentCommentId && map.has(c.parentCommentId)) {
+      map.get(c.parentCommentId)!.replies.push(node)
+    } else {
+      roots.push(node)
+    }
+  })
+  return roots
 }
 
 export default function ProjectThirdSide() {
@@ -41,7 +76,7 @@ export default function ProjectThirdSide() {
   const { projectId } = useParams<{ projectId: string }>()
   const { userId } = useAuth()
   const queryClient = useQueryClient()
-  
+
   const [hasRated, setHasRated] = useState(false)
   const [isRatingLoading, setIsRatingLoading] = useState(false)
   const [showInviteForm, setShowInviteForm] = useState<UserData | null>(null)
@@ -53,6 +88,7 @@ export default function ProjectThirdSide() {
   const [editContent, setEditContent] = useState('')
   const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set())
 
+  // Загрузка данных проекта
   const { data: project } = useQuery({
     queryKey: queryKeys.projects.byId(projectId!),
     queryFn: () => projectsApi.getProject(projectId!),
@@ -63,7 +99,8 @@ export default function ProjectThirdSide() {
     refetchOnWindowFocus: true,
   })
 
-  const { data: teamMembers = []} = useQuery({
+  // Загрузка участников команды
+  const { data: teamMembers = [] } = useQuery({
     queryKey: queryKeys.projects.memberProjects(projectId!),
     queryFn: async () => {
       if (!projectId) return []
@@ -71,7 +108,7 @@ export default function ProjectThirdSide() {
         projectMembersApi.getByProject(projectId),
         projectsApi.getProject(projectId)
       ])
-      
+
       const membersWithUsers = await Promise.all(
         members.map(async (member) => {
           try {
@@ -82,7 +119,7 @@ export default function ProjectThirdSide() {
           }
         })
       )
-      
+
       return membersWithUsers.sort((a, b) => {
         if (!a.joinedAt || !b.joinedAt) return 0
         return new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime()
@@ -95,7 +132,8 @@ export default function ProjectThirdSide() {
     refetchOnWindowFocus: true,
   })
 
-  const { data: vacancies = []} = useQuery({
+  // Загрузка вакансий проекта
+  const { data: vacancies = [] } = useQuery({
     queryKey: queryKeys.vacancies.byProject(projectId!),
     queryFn: () => vacanciesApi.getByProject(projectId!),
     enabled: !!projectId,
@@ -105,12 +143,14 @@ export default function ProjectThirdSide() {
     refetchOnWindowFocus: true,
   })
 
+  // Загрузка комментариев проекта
   const { data: comments = [], refetch: refetchComments } = useQuery({
     queryKey: ['comments', 'project', projectId],
     queryFn: () => commentApi.getComments('project', projectId!),
     enabled: !!projectId,
   })
 
+  // Обработка клавиши Escape
   useEffect(() => {
     const handleEscKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -119,15 +159,16 @@ export default function ProjectThirdSide() {
     }
 
     window.addEventListener('keydown', handleEscKey)
-    
+
     return () => {
       window.removeEventListener('keydown', handleEscKey)
     }
   }, [])
 
+  // Проверка статуса оценки пользователя
   useEffect(() => {
     if (!projectId || !userId || userId === project?.ownerId) return
-    
+
     const fetchRatingStatus = async () => {
       try {
         const ratingStatus = await projectsApi.getUserRating(projectId)
@@ -139,13 +180,17 @@ export default function ProjectThirdSide() {
     fetchRatingStatus()
   }, [projectId, userId, project?.ownerId])
 
+  // Навигация назад
+  const handleBack = () => navigate(-1)
+
+  // Переключение оценки проекта
   const handleRateClick = async () => {
     if (!userId || isRatingLoading) return
     setIsRatingLoading(true)
     try {
       const result = await projectsApi.toggleRating(projectId!, hasRated)
       setHasRated(result.hasRated)
-      
+
       queryClient.setQueryData(queryKeys.projects.byId(projectId!), (old: any) => {
         if (!old) return old
         return { ...old, ratingCount: result.ratingCount }
@@ -157,17 +202,7 @@ export default function ProjectThirdSide() {
     }
   }
 
-  const handleBack = () => navigate(-1)
-
-  const getStatusConfig = (status: string) => {
-    const configs: Record<string, { text: string; className: string; Icon: React.ComponentType<{ className?: string }> }> = {
-      'В процессе': { text: 'В процессе', className: 'status-working', Icon: StatusWorkingIcon },
-      'Завершён': { text: 'Завершён', className: 'status-end', Icon: StatusEndIcon },
-      'Приостановлен': { text: 'Приостановлен', className: 'status-pause', Icon: StatusPauseIcon }
-    }
-    return configs[status] || configs['В процессе']
-  }
-
+  // Мутация создания комментария
   const createCommentMutation = useMutation({
     mutationFn: (dto: any) => commentApi.create(dto),
     onSuccess: () => {
@@ -178,6 +213,7 @@ export default function ProjectThirdSide() {
     },
   })
 
+  // Мутация обновления комментария
   const updateCommentMutation = useMutation({
     mutationFn: ({ commentId, content }: { commentId: string, content: string }) => commentApi.update(commentId, content),
     onSuccess: () => {
@@ -187,6 +223,7 @@ export default function ProjectThirdSide() {
     },
   })
 
+  // Мутация удаления комментария
   const deleteCommentMutation = useMutation({
     mutationFn: (commentId: string) => commentApi.delete(commentId),
     onSuccess: () => {
@@ -194,6 +231,7 @@ export default function ProjectThirdSide() {
     },
   })
 
+  // Переключение раскрытия ответов комментария
   const toggleReplies = (commentId: string) => {
     setExpandedComments(prev => {
       const newSet = new Set(prev)
@@ -203,26 +241,12 @@ export default function ProjectThirdSide() {
     })
   }
 
+  // Проверка: раскрыт ли комментарий
   const isExpanded = (commentId: string) => expandedComments.has(commentId)
 
-  const buildCommentTree = (commentsList: CommentData[]): CommentNode[] => {
-    const map = new Map<string, CommentNode>()
-    const roots: CommentNode[] = []
-    commentsList.forEach(c => map.set(c.commentId, { ...c, replies: [] }))
-    commentsList.forEach(c => {
-      const node = map.get(c.commentId)!
-      if (c.parentCommentId && map.has(c.parentCommentId)) {
-        map.get(c.parentCommentId)!.replies.push(node)
-      } else {
-        roots.push(node)
-      }
-    })
-    return roots
-  }
-
+  // Рендер узла комментария
   const renderCommentNode = (node: CommentNode, depth = 0) => {
     const isAuthor = node.userId === userId
-
     const canDelete = isAuthor
     const canEdit = isAuthor
     const hasReplies = node.replies.length > 0
@@ -234,7 +258,7 @@ export default function ProjectThirdSide() {
           <div className='comment-avatar'>
             <img src={node.avatarUrl || '/default-avatar.png'} alt={node.nickname || 'User'} />
           </div>
-          
+
           <div className='comment-body'>
             <div className='comment-header'>
               <div className='comment-meta'>
@@ -245,7 +269,7 @@ export default function ProjectThirdSide() {
                 </span>
                 {node.isEdited && <span className='comment-edited'>• изменено</span>}
               </div>
-              
+
               {!node.isDeleted && (
                 <div className='comment-actions-right'>
                   {canEdit && (
@@ -265,7 +289,7 @@ export default function ProjectThirdSide() {
                 </div>
               )}
             </div>
-            
+
             {node.isDeleted ? (
               <div className='comment-content deleted'>Комментарий удален</div>
             ) : (
@@ -276,7 +300,7 @@ export default function ProjectThirdSide() {
               {!node.isDeleted && (
                 <button className='comment-action-text' onClick={() => {
                   setEditingCommentId(null); setEditContent(''); setReplyingTo(replyingTo === node.commentId ? null : node.commentId)
-              }}>
+                }}>
                   Ответить
                 </button>
               )}
@@ -337,7 +361,7 @@ export default function ProjectThirdSide() {
         </div>
         <div className='project-actions'>
           <button className={`rate-button ${hasRated ? 'rated' : ''}`} onClick={handleRateClick} disabled={isRatingLoading || !userId}>
-            {hasRated ? 'Оценено' : 'Оценить'}  
+            {hasRated ? 'Оценено' : 'Оценить'}
           </button>
           <div className='project-rating'>
             <StarIcon className='star-ico small' />
@@ -381,12 +405,11 @@ export default function ProjectThirdSide() {
         </section>
       )}
 
-      {/* --- РАЗДЕЛ КОММЕНТАРИЕВ --- */}
       <section className='preview-section'>
         <h3 className='preview-section-title'>
           Комментарии: <span className='count'>{comments.length}</span>
         </h3>
-        
+
         <div className='comment-input-wrapper'>
           <textarea
             className='comment-textarea'

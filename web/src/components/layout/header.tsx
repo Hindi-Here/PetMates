@@ -20,11 +20,12 @@ import type { ProfileData } from '../hooks/useProfile'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '../scripts/query/queryKeys'
 import { notificationApi, type NotificationData } from '../services/notification'
-import { conversationApi } from '../services/conversation' // <-- ДОБАВЛЕНО
+import { conversationApi } from '../services/conversation'
 import { useNavigate } from 'react-router-dom'
 
 import { getNotificationIcon, getNotificationText } from '../common/notificationText'
 
+// Рендер логотипа проекта
 const Logo = () => {
   return (
     <div className='logo-container'> 
@@ -38,6 +39,7 @@ const Logo = () => {
   )
 }
 
+// Рендер кнопки входа для неавторизованных пользователей
 const Login = ({ onOpen }: any) => {
   return (
     <div className='login-container'>
@@ -46,6 +48,7 @@ const Login = ({ onOpen }: any) => {
   )
 }
 
+// Рендер короткого меню для мобильных устройств
 const ShortMenu = () => {
   const { isOpen, setIsOpen, menuRef } = useIsOpen();
   const openMenu = () => setIsOpen(X => !X);
@@ -60,6 +63,7 @@ const ShortMenu = () => {
   )
 }
 
+// Рендер выпадающей панели уведомлений
 const NotificationPanel = ({ 
   isOpen, 
   onClose 
@@ -72,6 +76,7 @@ const NotificationPanel = ({
   const { userId } = useAuth()
   const panelRef = useRef<HTMLDivElement>(null)
 
+  // Загрузка списка уведомлений
   const { data: notifications = [] } = useQuery({
     queryKey: queryKeys.notifications.all,
     queryFn: () => notificationApi.getAll(),
@@ -83,6 +88,7 @@ const NotificationPanel = ({
 
   const recentNotifications = notifications.slice(0, 25)
 
+  // Мутация отметки уведомления как прочитанного
   const markAsReadMutation = useMutation({
     mutationFn: (notificationId: string) => notificationApi.markAsRead(notificationId),
     onSuccess: () => {
@@ -90,6 +96,7 @@ const NotificationPanel = ({
     },
   })
 
+  // Мутация отметки всех уведомлений как прочитанных
   const markAllAsReadMutation = useMutation({
     mutationFn: () => notificationApi.markAllAsRead(),
     onSuccess: () => {
@@ -97,6 +104,7 @@ const NotificationPanel = ({
     },
   })
 
+  // Закрытие панели при клике вне её области
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (panelRef.current && !panelRef.current.contains(event.target as Node)) {
@@ -116,6 +124,7 @@ const NotificationPanel = ({
     }
   }, [isOpen, onClose])
 
+  // Обработка клика по уведомлению: чтение + навигация
   const handleNotificationClick = async (notification: NotificationData) => {
     if (!notification.isRead) {
       await markAsReadMutation.mutateAsync(notification.notificationId)
@@ -130,6 +139,7 @@ const NotificationPanel = ({
     }
   }
 
+  // Обработка кнопки "Прочитать все"
   const handleMarkAllAsRead = (e: React.MouseEvent) => {
     e.stopPropagation()
     markAllAsReadMutation.mutateAsync()
@@ -202,6 +212,7 @@ const NotificationPanel = ({
   )
 }
 
+// Главный компонент хедера
 export default function Header() {
   const { isAuthenticated } = useAuth();
   const { data: user } = useProfile(isAuthenticated);
@@ -213,9 +224,9 @@ export default function Header() {
       <div className="container">
         <Logo />
         <div className="header-short-container">
-          {isAuthenticated && <Profile user={user} />}
-          {!isAuthenticated && <Login onOpen={() => setIsAuthOpen(true)} />}
-          {isShortVer && !isAuthenticated && <ShortMenu />}
+          {isShortVer && <ShortMenu />}
+          {!isShortVer && isAuthenticated && <Profile user={user} />}
+          {!isShortVer && !isAuthenticated && <Login onOpen={() => setIsAuthOpen(true)} />}
         </div>
         {isAuthOpen && <AuthorizationForm onClose={() => setIsAuthOpen(false)} />}
       </div>
@@ -223,6 +234,7 @@ export default function Header() {
   )
 }
 
+// Рендер профиля авторизованного пользователя с меню и уведомлениями
 const Profile = ({ user }: { user: ProfileData | null }) => {
   const { isOpen, setIsOpen, menuRef } = useIsOpen();
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
@@ -230,6 +242,7 @@ const Profile = ({ user }: { user: ProfileData | null }) => {
   const { userId } = useAuth();
   const openMenu = () => { setIsOpen(X => !X); };
 
+  // Загрузка уведомлений для подсчёта непрочитанных
   const { data: notifications = [] } = useQuery({
     queryKey: queryKeys.notifications.all,
     queryFn: () => notificationApi.getAll(),
@@ -240,6 +253,7 @@ const Profile = ({ user }: { user: ProfileData | null }) => {
 
   const unreadCount = notifications.filter(n => !n.isRead).length
 
+  // Загрузка диалогов для проверки непрочитанных сообщений
   const { data: conversations = [] } = useQuery({
     queryKey: queryKeys.conversations?.all ?? ['conversations', 'all'],
     queryFn: () => conversationApi.getConversations(),

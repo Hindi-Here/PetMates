@@ -97,7 +97,7 @@
   min-width: 0;
   
   .project-title {
-    font-weight: 600;
+    font-weight: bold;
     color: var(--neutral-100);
     font-size: rem(14);
     margin: 0;
@@ -135,7 +135,7 @@
   padding: rem(20);
   text-align: center;
   color: color-mix(in srgb, var(--neutral-100), transparent 50%);
-  font-size: rem(13);
+  font-size: rem(14);
   background: color-mix(in srgb, var(--neutral-100), transparent 97%);
   border-radius: var(--border-radius-base);
   border: 1px dashed color-mix(in srgb, var(--neutral-100), transparent 80%);
@@ -214,7 +214,7 @@
   min-width: 0;
   
   .invite-vacancy-title {
-    font-weight: 600;
+    font-weight: bold;
     color: var(--neutral-100);
     font-size: rem(14);
     margin: 0;
@@ -237,7 +237,7 @@
   padding: rem(20);
   text-align: center;
   color: color-mix(in srgb, var(--neutral-100), transparent 50%);
-  font-size: rem(13);
+  font-size: rem(14);
   background: color-mix(in srgb, var(--neutral-100), transparent 97%);
   border-radius: var(--border-radius-base);
   border: 1px dashed color-mix(in srgb, var(--neutral-100), transparent 80%);
@@ -262,7 +262,7 @@
   
   p {
     margin: 0;
-    font-size: rem(13);
+    font-size: rem(14);
     color: var(--important-color);
   }
   
@@ -302,13 +302,6 @@
     border: none;
     transition: 0.25s;
 
-    &:hover {
-      filter: brightness(0.975);
-    }
-    &:active {
-      filter: brightness(0.95);
-      transform: scale(0.98);
-    }
     &:disabled {
       opacity: 0.4;
       pointer-events: none; 
@@ -326,4 +319,28 @@
 
 .form-field-text.no-required::after {
   content: none;
+}
+
+@media (max-width: 480px) {
+  .form-manage {
+    flex-wrap: wrap;
+    height: auto;
+
+    .form-manage-button {
+      width: 100%;
+    }
+  }
+
+  .project-item,
+  .invite-vacancy-item {
+    padding: rem(10) rem(12);
+    gap: rem(8);
+  }
+
+  .project-avatar,
+  .invite-vacancy-avatar {
+    width: rem(34);
+    height: rem(34);
+    font-size: rem(14);
+  }
 }

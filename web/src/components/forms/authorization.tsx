@@ -17,6 +17,7 @@ import { authApi } from '../services/auth';
 import EyeIcon from '@icons/eye.svg?react'
 import EyeHiddenIcon from '@icons/eye_hidden.svg?react'
 
+// Рендер формы авторизации/регистрации
 const Form = ({ onClose }: any) => {
   const [isRegister, setIsRegister] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -197,6 +198,7 @@ const Form = ({ onClose }: any) => {
   )
 }
 
+// Рендер модального окна авторизации с блокировкой скролла
 export default function AuthorizationForm({ onClose }: any) { 
   useBlockScroll(true); 
   return (
@@ -208,6 +210,7 @@ export default function AuthorizationForm({ onClose }: any) {
   )
 }
 
+// Валидация поля формы и возврат сообщения об ошибке
 const checkFormat = (fieldName: string, value: string, data: any, isRegister: boolean): string | null => {
   const isLogin = !isRegister;
   
@@ -241,6 +244,7 @@ const checkFormat = (fieldName: string, value: string, data: any, isRegister: bo
   return error?.[1] ?? null;
 };
 
+// Проверка валидности всей формы
 const checkForm = (data: any, isRegister: boolean): boolean => {
   if (!isRegister) {
     return (
@@ -266,6 +270,7 @@ const checkForm = (data: any, isRegister: boolean): boolean => {
   );
 };
 
+// Регистрация пользователя
 const Register = async (data: any, onError: (msg: string | null) => void, onClose?: () => void) => {
   onError(null); 
   try {
@@ -277,6 +282,7 @@ const Register = async (data: any, onError: (msg: string | null) => void, onClos
   }
 };
 
+// Вход пользователя
 const Login = async (data: any, onError: (msg: string | null) => void, onClose?: () => void) => {
   onError(null);
   try {
@@ -288,6 +294,7 @@ const Login = async (data: any, onError: (msg: string | null) => void, onClose?:
   }
 };
 
+// Вход через GitHub
 const GitHubLogin = async () => {
   try {
     await authApi.signInWithGitHub();
@@ -296,6 +303,7 @@ const GitHubLogin = async () => {
   }
 };
 
+// Вход через Google
 const GoogleLogin = async () => {
   try {
     await authApi.signInWithGoogle();
@@ -304,6 +312,7 @@ const GoogleLogin = async () => {
   }
 };
 
+// Вход через Twitch
 const TwitchLogin = async () => {
   try {
     await authApi.signInWithTwitch();

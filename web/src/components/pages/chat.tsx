@@ -23,12 +23,14 @@ import { useAuth } from '../hooks/useAuth'
 
 type MessageStatus = 'wait' | 'sent' | 'read'
 
+// Определение статуса доставки сообщения
 const getMessageStatus = (msg: MessageData, otherLastReadAt: string | null): MessageStatus => {
   if (msg.messageId.startsWith('temp-')) return 'wait'
   if (otherLastReadAt && new Date(msg.createdAt) <= new Date(otherLastReadAt)) return 'read'
   return 'sent'
 }
 
+// Форматирование даты для заголовка сообщения
 const formatDateLabel = (dateStr: string) => {
   const date = new Date(dateStr)
   const today = new Date()
@@ -71,6 +73,7 @@ export const Chat = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
+  // Загрузка списка диалогов
   const { data: conversations = [] } = useQuery({
     queryKey: queryKeys.conversations.all,
     queryFn: () => conversationApi.getConversations(),
@@ -79,12 +82,14 @@ export const Chat = () => {
 
   const currentConversation = conversations.find(c => c.conversationId === conversationId)
 
+  // Загрузка данных собеседника
   const { data: otherUser } = useQuery({
     queryKey: ['users', 'byId', currentConversation?.otherUserId],
     queryFn: () => usersApi.getUserById(currentConversation!.otherUserId),
     enabled: !!currentConversation?.otherUserId,
   })
 
+  // Загрузка сообщений чата
   const { data: messagesResponse } = useQuery({
     queryKey: queryKeys.conversations.messages(conversationId!),
     queryFn: () => conversationApi.getMessages(conversationId!),
@@ -96,6 +101,7 @@ export const Chat = () => {
   const messages = messagesResponse?.messages || []
   const otherLastReadAt = messagesResponse?.otherLastReadAt ?? null
 
+  // Установка метки времени для разделителя "Новые сообщения"
   useEffect(() => {
     if (messagesResponse && !hasCapturedUnreadRef.current) {
       setUnreadDividerTimestamp((messagesResponse as any)?.previousLastReadAt ?? null)
@@ -103,6 +109,7 @@ export const Chat = () => {
     }
   }, [messagesResponse])
 
+  // Сброс состояния при смене чата
   useEffect(() => {
     hasCapturedUnreadRef.current = false
     setUnreadDividerTimestamp(null)
@@ -110,12 +117,15 @@ export const Chat = () => {
     setOpenMenuId(null)
   }, [conversationId])
 
+  // Автопрокрутка к последнему сообщению
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'auto' })
   }, [messages.length])
 
+  // Навигация назад к списку чатов
   const handleBack = () => navigate(`/profile/${profileId}/messages`)
 
+  // Обработка нажатия клавиши Escape
   useEffect(() => {
     const handleEscKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -130,6 +140,7 @@ export const Chat = () => {
     return () => window.removeEventListener('keydown', handleEscKey)
   }, [showSearch, selectionMode, replyingTo, editingMessageId])
 
+  // Автоизменение высоты textarea
   useEffect(() => {
     const el = textareaRef.current
     if (!el) return
@@ -141,6 +152,7 @@ export const Chat = () => {
     el.style.overflowY = el.scrollHeight > maxHeight ? 'auto' : 'hidden'
   }, [newMessage])
 
+  // Закрытие меню при скролле списка сообщений
   useEffect(() => {
     const el = messagesListRef.current
     if (!el) return
@@ -153,10 +165,12 @@ export const Chat = () => {
     }
   }, [])
 
+  // Закрытие меню при включении режима выделения
   useEffect(() => {
     if (selectionMode) setOpenMenuId(null)
   }, [selectionMode])
 
+  // Закрытие меню при клике вне области сообщения
   useEffect(() => {
     if (!openMenuId) return
     const handleClickOutside = (e: MouseEvent) => {
@@ -169,6 +183,7 @@ export const Chat = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [openMenuId])
 
+  // Плавная прокрутка к сообщению с подсветкой
   const scrollToMessage = (messageId: string) => {
     const el = messageBubbleRefs.current.get(messageId)
     if (!el) return
@@ -177,6 +192,7 @@ export const Chat = () => {
     setTimeout(() => el.classList.remove('chat-message-highlight'), 1200)
   }
 
+  // Мутация отправки сообщения
   const sendMutation = useMutation({
     mutationFn: (content: string) => conversationApi.sendMessage(conversationId!, content, replyingTo?.messageId),
     onMutate: async (content: string) => {
@@ -222,6 +238,7 @@ export const Chat = () => {
     },
   })
 
+  // Мутация редактирования сообщения
   const updateMutation = useMutation({
     mutationFn: ({ messageId, content }: { messageId: string; content: string }) =>
       conversationApi.updateMessage(messageId, content),
@@ -232,6 +249,7 @@ export const Chat = () => {
     },
   })
 
+  // Мутация удаления сообщения у всех
   const deleteMutation = useMutation({
     mutationFn: (messageId: string) => conversationApi.deleteMessage(messageId),
     onSuccess: () => {
@@ -240,6 +258,7 @@ export const Chat = () => {
     },
   })
 
+  // Мутация удаления сообщения у себя
   const deleteForMeMutation = useMutation({
     mutationFn: (messageId: string) => conversationApi.deleteMessageForMe(messageId),
     onSuccess: () => {
@@ -247,6 +266,7 @@ export const Chat = () => {
     },
   })
 
+  // Мутация пересылки сообщения
   const forwardMutation = useMutation({
     mutationFn: ({ sourceMessageId, targetConversationId }: { sourceMessageId: string; targetConversationId: string }) =>
       conversationApi.forwardMessage(sourceMessageId, targetConversationId),
@@ -256,6 +276,7 @@ export const Chat = () => {
     },
   })
 
+  // Обработка отправки или редактирования сообщения
   const handleSubmit = () => {
     if (!newMessage.trim()) return
     if (editingMessageId) {
@@ -265,6 +286,7 @@ export const Chat = () => {
     }
   }
 
+  // Начало редактирования сообщения
   const startEdit = (msg: MessageData) => {
     setReplyingTo(null)
     setOpenMenuId(null)
@@ -273,11 +295,13 @@ export const Chat = () => {
     textareaRef.current?.focus()
   }
 
+  // Отмена редактирования
   const cancelEdit = () => {
     setEditingMessageId(null)
     setNewMessage('')
   }
 
+  // Начало ответа на сообщение
   const startReply = (msg: MessageData) => {
     setEditingMessageId(null)
     setOpenMenuId(null)
@@ -286,6 +310,7 @@ export const Chat = () => {
     textareaRef.current?.focus()
   }
 
+  // Копирование текста сообщения в буфер обмена
   const handleCopy = async (msg: MessageData) => {
     if (!msg.content) return
     try {
@@ -297,6 +322,7 @@ export const Chat = () => {
     }
   }
 
+  // Переключение выбора сообщения
   const toggleSelect = (messageId: string) => {
     setSelectedIds(prev => {
       const next = new Set(prev)
@@ -306,40 +332,236 @@ export const Chat = () => {
     })
   }
 
+  // Вход в режим выделения с одним сообщением
   const enterSelectionMode = (messageId: string) => {
     setSelectionMode(true)
     setSelectedIds(new Set([messageId]))
   }
 
+  // Выход из режима выделения
   const exitSelectionMode = () => {
     setSelectionMode(false)
     setSelectedIds(new Set())
   }
 
+  // Массовое удаление выбранных сообщений у себя
   const handleBulkDeleteForMe = async () => {
     if (!window.confirm(`Удалить ${selectedIds.size} сообщений у себя?`)) return
     await Promise.all(Array.from(selectedIds).map(id => deleteForMeMutation.mutateAsync(id)))
     exitSelectionMode()
   }
 
+  // Массовое удаление выбранных сообщений у всех
   const handleBulkDeleteForAll = async () => {
     if (!window.confirm(`Удалить ${selectedIds.size} сообщений у всех?`)) return
     await Promise.all(Array.from(selectedIds).map(id => deleteMutation.mutateAsync(id)))
     exitSelectionMode()
   }
 
+  // Подготовка к массовой пересылке выбранных сообщений
   const handleBulkForward = () => {
     setForwardTarget(Array.from(selectedIds))
   }
 
-  const selectedMessages = messages.filter(m => selectedIds.has(m.messageId))
-  const allSelectedAreMine = selectedMessages.length > 0 && selectedMessages.every(m => m.senderId === currentUserId)
-
+  // Фильтрация сообщений по поисковому запросу
   const filteredMessages = useMemo(() => {
     if (!searchQuery.trim()) return messages
     const q = searchQuery.trim().toLowerCase()
     return messages.filter(m => !m.isDeleted && (m.content || '').toLowerCase().includes(q))
   }, [messages, searchQuery])
+
+  // Рендер элемента списка диалогов для пересылки
+  const renderForwardItem = (c: any) => (
+    <div
+      key={c.conversationId}
+      className='chat-forward-item'
+      onClick={() => {
+        if (Array.isArray(forwardTarget)) {
+          Promise.all(forwardTarget.map(id =>
+            forwardMutation.mutateAsync({ sourceMessageId: id, targetConversationId: c.conversationId })
+          )).then(() => exitSelectionMode())
+        } else {
+          forwardMutation.mutate({ sourceMessageId: (forwardTarget as MessageData).messageId, targetConversationId: c.conversationId })
+        }
+      }}
+    >
+      <img src={c.otherUserAvatarUrl || '/default-avatar.png'} alt='' />
+      <span>{c.otherUserNickname || 'Пользователь'}</span>
+    </div>
+  )
+
+  // Рендер кнопок действий над сообщением
+  const renderMessageActions = (msg: MessageData, isMine: boolean) => (
+    <div className={`chat-hover-actions ${isMine ? 'mine' : 'theirs'}`}>
+      <button className='chat-hover-btn' onClick={() => startReply(msg)}>
+        <ReplyIcon className='ico' />
+      </button>
+      <button className='chat-hover-btn' onClick={() => setForwardTarget(msg)}>
+        <ForwardIcon className='ico' />
+      </button>
+      <button className='chat-hover-btn' onClick={() => handleCopy(msg)}>
+        {copiedMessageId === msg.messageId ? <AcceptIcon className='ico copied' /> : <CopyIcon className='ico' />}
+      </button>
+      {isMine && (
+        <button className='chat-hover-btn' onClick={() => startEdit(msg)}>
+          <Edit className='ico' />
+        </button>
+      )}
+      <div className='chat-hover-more-wrapper'>
+        <button
+          className='chat-hover-btn'
+          onClick={() => setOpenMenuId(openMenuId === msg.messageId ? null : msg.messageId)}
+        >
+          <MoreIcon className='ico' />
+        </button>
+        {openMenuId === msg.messageId && (
+          <div className={`chat-more-menu ${isMine ? 'align-right' : 'align-left'}`}>
+            <button onClick={() => { enterSelectionMode(msg.messageId); setOpenMenuId(null) }}>
+              Выделить
+            </button>
+            <button onClick={() => { deleteForMeMutation.mutate(msg.messageId); setOpenMenuId(null) }}>
+              Удалить у себя
+            </button>
+            {isMine && (
+              <button
+                className='danger'
+                onClick={() => {
+                  if (window.confirm('Удалить сообщение у всех?')) deleteMutation.mutate(msg.messageId)
+                  setOpenMenuId(null)
+                }}
+              >
+                Удалить у всех
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+
+  // Рендер контента сообщения (пузырь)
+  const renderMessageBubble = (msg: MessageData, isMine: boolean, otherLastReadAt: string | null) => (
+    <div
+      className='chat-message-bubble'
+      ref={(el) => {
+        if (el) messageBubbleRefs.current.set(msg.messageId, el)
+        else messageBubbleRefs.current.delete(msg.messageId)
+      }}
+    >
+      {msg.isForwarded && (
+        <p className='chat-forwarded-label'>Переслано от {msg.forwardedFromNickname || 'Пользователь'}</p>
+      )}
+
+      {msg.parentMessageId && (
+        <div
+          className='chat-reply-quote'
+          onClick={(e) => { e.stopPropagation(); scrollToMessage(msg.parentMessageId!) }}
+        >
+          <p className='quote-author'>{msg.parentNickname || 'Пользователь'}</p>
+          <p className='quote-text'>{msg.parentContent || 'Сообщение удалено'}</p>
+        </div>
+      )}
+
+      <p className={`chat-message-content ${msg.isDeleted ? 'deleted' : ''}`}>
+        {msg.isDeleted ? 'Сообщение удалено' : msg.content}
+      </p>
+      <div className='chat-message-meta'>
+        <span className='chat-message-time'>
+          {new Date(msg.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+        </span>
+        {msg.isEdited && <span className='chat-message-edited'>изменено</span>}
+        {isMine && !msg.isDeleted && (() => {
+          const status = getMessageStatus(msg, otherLastReadAt)
+          return (
+            <span className={`chat-message-status ${status}`}>
+              {status === 'wait' && <WaitIcon className='ico' />}
+              {status === 'sent' && <SentIcon className='ico' />}
+              {status === 'read' && <ReadIcon className='ico' />}
+            </span>
+          )
+        })()}
+      </div>
+    </div>
+  )
+
+  // Рендер одного сообщения в списке
+  const renderMessageItem = (msg: MessageData) => {
+    const isMine = msg.senderId === currentUserId
+    const dateLabel = formatDateLabel(msg.createdAt)
+    const showDateDivider = dateLabel !== lastDateLabel
+    if (showDateDivider) lastDateLabel = dateLabel
+
+    const isFirstUnread =
+      !unreadDividerShown &&
+      !unreadDismissed &&
+      unreadDividerTimestamp &&
+      !isMine &&
+      new Date(msg.createdAt) > new Date(unreadDividerTimestamp)
+    if (isFirstUnread) unreadDividerShown = true
+
+    const isSelected = selectedIds.has(msg.messageId)
+
+    return (
+      <Fragment key={msg.messageId}>
+        {showDateDivider && (
+          <div className='chat-date-divider'>
+            <div className='divider-line' />
+            <span className='divider-text'>{dateLabel}</span>
+            <div className='divider-line' />
+          </div>
+        )}
+        {isFirstUnread && (
+          <div className='chat-unread-divider'>
+            <div className='divider-line' />
+            <span className='divider-text'>Новые сообщения</span>
+            <div className='divider-line' />
+          </div>
+        )}
+
+        <div
+          className={`chat-message-wrapper ${isMine ? 'mine' : 'theirs'} ${isSelected ? 'selected' : ''}`}
+          ref={(el) => {
+            if (el) messageWrapperRefs.current.set(msg.messageId, el)
+            else messageWrapperRefs.current.delete(msg.messageId)
+          }}
+        >
+          {selectionMode && (
+            <div
+              className={`chat-select-checkbox ${isMine ? 'left' : 'right'}`}
+              onClick={(e) => {
+                e.stopPropagation()
+                toggleSelect(msg.messageId)
+              }}
+            >
+              {isSelected && <CheckIcon className='check-icon' />}
+            </div>
+          )}
+
+          <div
+            className={`chat-message ${isMine ? 'mine' : 'theirs'}`}
+            onClick={() => { if (selectionMode) toggleSelect(msg.messageId) }}
+          >
+            <div 
+              className='chat-message-column'
+              onMouseLeave={() => {
+                setTimeout(() => {
+                  if (!messagesListRef.current?.contains(document.activeElement)) {
+                    setOpenMenuId(null)
+                  }
+                }, 100)
+              }}
+            >
+              {!msg.isDeleted && !selectionMode && renderMessageActions(msg, isMine)}
+              {renderMessageBubble(msg, isMine, otherLastReadAt)}
+            </div>
+          </div>
+        </div>
+      </Fragment>
+    )
+  }
+
+  const selectedMessages = messages.filter(m => selectedIds.has(m.messageId))
+  const allSelectedAreMine = selectedMessages.length > 0 && selectedMessages.every(m => m.senderId === currentUserId)
 
   const renderList = showSearch && searchQuery.trim() ? filteredMessages : messages
   let lastDateLabel: string | null = null
@@ -414,165 +636,7 @@ export const Chat = () => {
             {searchQuery.trim() ? 'Ничего не найдено' : 'Пока нет сообщений. Начните переписку!'}
           </p>
         ) : (
-          renderList.map(msg => {
-            const isMine = msg.senderId === currentUserId
-            const dateLabel = formatDateLabel(msg.createdAt)
-            const showDateDivider = dateLabel !== lastDateLabel
-            if (showDateDivider) lastDateLabel = dateLabel
-
-            const isFirstUnread =
-              !unreadDividerShown &&
-              !unreadDismissed &&
-              unreadDividerTimestamp &&
-              !isMine &&
-              new Date(msg.createdAt) > new Date(unreadDividerTimestamp)
-            if (isFirstUnread) unreadDividerShown = true
-
-            const isSelected = selectedIds.has(msg.messageId)
-
-            return (
-              <Fragment key={msg.messageId}>
-                {showDateDivider && (
-                  <div className='chat-date-divider'>
-                    <div className='divider-line' />
-                    <span className='divider-text'>{dateLabel}</span>
-                    <div className='divider-line' />
-                  </div>
-                )}
-                {isFirstUnread && (
-                  <div className='chat-unread-divider'>
-                    <div className='divider-line' />
-                    <span className='divider-text'>Новые сообщения</span>
-                    <div className='divider-line' />
-                  </div>
-                )}
-
-                <div
-                  className={`chat-message-wrapper ${isMine ? 'mine' : 'theirs'} ${isSelected ? 'selected' : ''}`}
-                  ref={(el) => {
-                    if (el) messageWrapperRefs.current.set(msg.messageId, el)
-                    else messageWrapperRefs.current.delete(msg.messageId)
-                  }}
-                >
-                  {selectionMode && (
-                    <div
-                      className={`chat-select-checkbox ${isMine ? 'left' : 'right'}`}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        toggleSelect(msg.messageId)
-                      }}
-                    >
-                      {isSelected && <CheckIcon className='check-icon' />}
-                    </div>
-                  )}
-
-                  <div
-                    className={`chat-message ${isMine ? 'mine' : 'theirs'}`}
-                    onClick={() => { if (selectionMode) toggleSelect(msg.messageId) }}
-                  >
-                    <div className='chat-message-column'
-                      onMouseLeave={() => {
-                        setTimeout(() => {
-                        if (!messagesListRef.current?.contains(document.activeElement)) {
-                          setOpenMenuId(null)
-                        }
-                      }, 100)
-                      }}>
-                      {!msg.isDeleted && !selectionMode && (
-                        <div className={`chat-hover-actions ${isMine ? 'mine' : 'theirs'}`}>
-                          <button className='chat-hover-btn' onClick={() => startReply(msg)}>
-                            <ReplyIcon className='ico' />
-                          </button>
-                          <button className='chat-hover-btn' onClick={() => setForwardTarget(msg)}>
-                            <ForwardIcon className='ico' />
-                          </button>
-                          <button className='chat-hover-btn' onClick={() => handleCopy(msg)}>
-                            {copiedMessageId === msg.messageId ? <AcceptIcon className='ico copied' /> : <CopyIcon className='ico' />}
-                          </button>
-                          {isMine && (
-                            <button className='chat-hover-btn' onClick={() => startEdit(msg)}>
-                              <Edit className='ico' />
-                            </button>
-                          )}
-                          <div className='chat-hover-more-wrapper'>
-                            <button
-                              className='chat-hover-btn'
-                              onClick={() => setOpenMenuId(openMenuId === msg.messageId ? null : msg.messageId)}
-                            >
-                              <MoreIcon className='ico' />
-                            </button>
-                            {openMenuId === msg.messageId && (
-                              <div className={`chat-more-menu ${isMine ? 'align-right' : 'align-left'}`}>
-                                <button onClick={() => { enterSelectionMode(msg.messageId); setOpenMenuId(null) }}>
-                                  Выделить
-                                </button>
-                                <button onClick={() => { deleteForMeMutation.mutate(msg.messageId); setOpenMenuId(null) }}>
-                                  Удалить у себя
-                                </button>
-                                {isMine && (
-                                  <button
-                                    className='danger'
-                                    onClick={() => {
-                                      if (window.confirm('Удалить сообщение у всех?')) deleteMutation.mutate(msg.messageId)
-                                      setOpenMenuId(null)
-                                    }}
-                                  >
-                                    Удалить у всех
-                                  </button>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      <div
-                        className='chat-message-bubble'
-                        ref={(el) => {
-                          if (el) messageBubbleRefs.current.set(msg.messageId, el)
-                          else messageBubbleRefs.current.delete(msg.messageId)
-                        }}
-                      >
-                        {msg.isForwarded && (
-                          <p className='chat-forwarded-label'>Переслано от {msg.forwardedFromNickname || 'Пользователь'}</p>
-                        )}
-
-                        {msg.parentMessageId && (
-                          <div
-                            className='chat-reply-quote'
-                            onClick={(e) => { e.stopPropagation(); scrollToMessage(msg.parentMessageId!) }}
-                          >
-                            <p className='quote-author'>{msg.parentNickname || 'Пользователь'}</p>
-                            <p className='quote-text'>{msg.parentContent || 'Сообщение удалено'}</p>
-                          </div>
-                        )}
-
-                        <p className={`chat-message-content ${msg.isDeleted ? 'deleted' : ''}`}>
-                          {msg.isDeleted ? 'Сообщение удалено' : msg.content}
-                        </p>
-                        <div className='chat-message-meta'>
-                          <span className='chat-message-time'>
-                            {new Date(msg.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                          {msg.isEdited && <span className='chat-message-edited'>изменено</span>}
-                          {isMine && !msg.isDeleted && (() => {
-                            const status = getMessageStatus(msg, otherLastReadAt)
-                            return (
-                              <span className={`chat-message-status ${status}`}>
-                                {status === 'wait' && <WaitIcon className='ico' />}
-                                {status === 'sent' && <SentIcon className='ico' />}
-                                {status === 'read' && <ReadIcon className='ico' />}
-                              </span>
-                            )
-                          })()}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </Fragment>
-            )
-          })
+          renderList.map(renderMessageItem)
         )}
         <div ref={messagesEndRef} />
       </div>
@@ -628,24 +692,7 @@ export const Chat = () => {
             <div className='chat-forward-list'>
               {conversations
                 .filter(c => c.conversationId !== conversationId)
-                .map(c => (
-                  <div
-                    key={c.conversationId}
-                    className='chat-forward-item'
-                    onClick={() => {
-                      if (Array.isArray(forwardTarget)) {
-                        Promise.all(forwardTarget.map(id =>
-                          forwardMutation.mutateAsync({ sourceMessageId: id, targetConversationId: c.conversationId })
-                        )).then(() => exitSelectionMode())
-                      } else {
-                        forwardMutation.mutate({ sourceMessageId: (forwardTarget as MessageData).messageId, targetConversationId: c.conversationId })
-                      }
-                    }}
-                  >
-                    <img src={c.otherUserAvatarUrl || '/default-avatar.png'} alt='' />
-                    <span>{c.otherUserNickname || 'Пользователь'}</span>
-                  </div>
-                ))}
+                .map(renderForwardItem)}
             </div>
           </div>
         </div>

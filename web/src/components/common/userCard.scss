@@ -3,7 +3,6 @@
   flex-direction: column;
   width: 100%;
   margin-bottom: rem(24);
-  user-select: none;
   background-color: var(--neutral-0);
   border-radius: var(--border-radius-base);
   box-shadow: inset 0 0 0 0 var(--primary-accent), 0 4px 4px rgba(0, 0, 0, 0.15);
@@ -139,11 +138,14 @@
   color: var(--important-color);
   border-radius: rem(20);
   font-size: rem(12);
-  font-weight: 600;
   display: flex;
   align-items: center;
   gap: rem(4);
   margin-left: auto;
+
+  &::selection{
+    background-color: color-mix(in srgb, var(--important-color), transparent 75%);
+  }
 
   .owner-icon {
     width: rem(12);
@@ -210,7 +212,7 @@
     background-color: var(--primary-accent);
     color: var(--neutral-0);
     font-weight: bold;
-    font-size: rem(13);
+    font-size: rem(14);
     border-radius: var(--border-radius-base);
     border: none;
     transition: 0.25s;
@@ -237,5 +239,56 @@
     color: color-mix(in srgb, var(--neutral-100), transparent 50%);
     margin: 0;
     white-space: nowrap;
+  }
+}
+
+@media (max-width: 480px) {
+  .info-place-container {
+    gap: rem(12);
+    padding: rem(12);
+
+    .avatar-container .avatar-ico {
+      width: rem(60);
+      height: rem(60);
+    }
+  }
+
+  .owner-badge {
+    margin-left: 0;
+  }
+
+  .tag-place-container {
+    padding: rem(8) rem(12);
+  }
+
+  .invite-place-container {
+    flex-wrap: wrap;
+    gap: rem(8);
+    padding: rem(12);
+
+    .invite-button {
+      width: 100%;
+    }
+
+    .project-count-text {
+      width: 100%;
+      white-space: normal;
+      text-align: center;
+    }
+  }
+}
+
+@media (max-width: 400px) {
+  .info-place-container {
+    gap: rem(10);
+
+    .avatar-container .avatar-ico {
+      width: rem(48);
+      height: rem(48);
+    }
+  }
+
+  .info-container .meta-info {
+    display: none;
   }
 }
