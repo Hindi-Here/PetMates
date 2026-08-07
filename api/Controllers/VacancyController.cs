@@ -13,7 +13,7 @@ namespace api.Controllers
         private readonly SupportManager _SupMan = SupMan;
 
         [HttpGet]
-        public async Task<IActionResult> GetAllVacancies()
+        public async Task<IActionResult> GetAllVacancies([FromQuery] string? search,  [FromQuery] string searchField = "name", [FromQuery] string sortField = "date", [FromQuery] bool sortAsc = false)
         {
             try
             {
@@ -28,35 +28,82 @@ namespace api.Controllers
                     .Where(v => v.IsOpen == true)
                     .Get();
 
-                var vacancies = new List<object>();
+                var enriched = new List<(Vacancy Vacancy, Project? Project, int MembersCount, string? OwnerNickname)>();
 
                 foreach (var v in response.Models)
                 {
                     var project = await _client.From<Project>()
                         .Where(p => p.ProjectId == v.ProjectId)
                         .Get();
-
                     var projectData = project.Models.FirstOrDefault();
 
                     var membersResponse = await _client.From<ProjectMember>()
                         .Where(pm => pm.ProjectId == v.ProjectId)
                         .Get();
 
-                    vacancies.Add(new
+                    string? ownerNickname = null;
+                    if (projectData != null)
                     {
-                        v.VacancyId,
-                        v.ProjectId,
-                        ProjectTitle = projectData?.Title ?? "Unknown",
-                        ProjectShortDesc = projectData?.ShortDescription ?? "",
-                        v.Title,
-                        v.Role,
-                        v.Description,
-                        v.RequiredTags,
-                        PublishedAt = v.PublishedAt?.ToString("o"),
-                        MembersCount = membersResponse.Models.Count,
-                        RatingCount = projectData?.RatingCount ?? 0
-                    });
+                        var owner = await _client.From<User>().Where(u => u.UserId == projectData.OwnerId).Get();
+                        ownerNickname = owner.Models.FirstOrDefault()?.Nickname;
+                    }
+
+                    enriched.Add((v, projectData, membersResponse.Models.Count, ownerNickname));
                 }
+
+                var query = search?.Trim().ToLower();
+                if (!string.IsNullOrEmpty(query))
+                {
+                    enriched = enriched.Where(e =>
+                    {
+                        switch (searchField)
+                        {
+                            case "name":
+                                return e.Vacancy.Title?.ToLower().Contains(query) == true;
+                            case "tag":
+                                return SupportManager.ParseSkills(string.Join(" ", e.Vacancy.RequiredTags ?? []))
+                                    .Any(t => t.ToLower().Contains(query));
+                            case "author":
+                                return e.OwnerNickname?.ToLower().Contains(query) == true;
+                            case "project":
+                                return e.Project?.Title?.ToLower().Contains(query) == true;
+                            default:
+                                return true;
+                        }
+                    }).ToList();
+                }
+
+                enriched = sortField switch
+                {
+                    "date" => sortAsc
+                        ? enriched.OrderBy(e => e.Vacancy.PublishedAt).ToList()
+                        : enriched.OrderByDescending(e => e.Vacancy.PublishedAt).ToList(),
+                    "alphabet" => sortAsc
+                        ? enriched.OrderBy(e => e.Vacancy.Title).ToList()
+                        : enriched.OrderByDescending(e => e.Vacancy.Title).ToList(),
+                    "count" => sortAsc
+                        ? enriched.OrderBy(e => e.Project?.RatingCount ?? 0).ToList()
+                        : enriched.OrderByDescending(e => e.Project?.RatingCount ?? 0).ToList(),
+                    "activity" => sortAsc
+                        ? enriched.OrderBy(e => e.MembersCount).ToList()
+                        : enriched.OrderByDescending(e => e.MembersCount).ToList(),
+                    _ => enriched
+                };
+
+                var vacancies = enriched.Select(e => new
+                {
+                    e.Vacancy.VacancyId,
+                    e.Vacancy.ProjectId,
+                    ProjectTitle = e.Project?.Title ?? "Unknown",
+                    ProjectShortDesc = e.Project?.ShortDescription ?? "",
+                    e.Vacancy.Title,
+                    e.Vacancy.Role,
+                    e.Vacancy.Description,
+                    e.Vacancy.RequiredTags,
+                    PublishedAt = e.Vacancy.PublishedAt?.ToString("o"),
+                    e.MembersCount,
+                    RatingCount = e.Project?.RatingCount ?? 0
+                });
 
                 return Ok(vacancies);
             }

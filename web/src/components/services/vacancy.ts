@@ -16,18 +16,34 @@ export interface VacancyData {
   ratingCount?: number;
 }
 
+export interface VacancySearchParams {
+  search?: string;
+  searchField?: string;
+  sortField?: string;
+  sortAsc?: boolean;
+}
+
 export const vacanciesApi = {
   // Получить все открытые заявки
-  getAll: async (): Promise<VacancyData[]> => {
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    const response = await fetch(`${API_BASE}/api/vacancy`, {
-      headers: { 
+  getAll: async (params?: VacancySearchParams): Promise<VacancyData[]> => {
+  const { data: { session } } = await supabase.auth.getSession();
+
+  const query = new URLSearchParams();
+    if (params?.search)
+      query.set('search', params.search);
+    if (params?.searchField)
+      query.set('searchField', params.searchField);
+    if (params?.sortField)
+      query.set('sortField', params.sortField);
+    if (params?.sortAsc !== undefined)
+      query.set('sortAsc', String(params.sortAsc));
+
+    const response = await fetch(`${API_BASE}/api/vacancy?${query.toString()}`, {
+      headers: {
         'Authorization': `Bearer ${session?.access_token}`,
-        'Content-Type': 'application/json' 
+        'Content-Type': 'application/json'
       },
     });
-
     if (!response.ok) throw new Error('Ошибка загрузки заявок');
     return await response.json();
   },

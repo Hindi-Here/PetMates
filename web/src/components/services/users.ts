@@ -22,18 +22,34 @@ export interface UserSearchResult {
   avatarUrl: string | null;
 }
 
+export interface UserSearchParams {
+  search?: string;
+  searchField?: string;
+  sortField?: string;
+  sortAsc?: boolean;
+}
+
 export const usersApi = {
   // Получить всех пользователей
-  getAll: async (): Promise<UserData[]> => {
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    const response = await fetch(`${API_BASE}/api/users`, {
-      headers: { 
+  getAll: async (params?: UserSearchParams): Promise<UserData[]> => {
+  const { data: { session } } = await supabase.auth.getSession();
+
+  const query = new URLSearchParams();
+    if (params?.search)
+      query.set('search', params.search);
+    if (params?.searchField)
+      query.set('searchField', params.searchField);
+    if (params?.sortField)
+      query.set('sortField', params.sortField);
+    if (params?.sortAsc !== undefined)
+      query.set('sortAsc', String(params.sortAsc));
+
+    const response = await fetch(`${API_BASE}/api/users?${query.toString()}`, {
+      headers: {
         'Authorization': `Bearer ${session?.access_token}`,
-        'Content-Type': 'application/json' 
+        'Content-Type': 'application/json'
       },
     });
-
     if (!response.ok) throw new Error('Ошибка загрузки пользователей');
     return await response.json();
   },

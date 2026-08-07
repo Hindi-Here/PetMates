@@ -14,7 +14,7 @@ namespace api.Controllers
         private readonly SupportManager _SupMan = SupMan;
 
         [HttpGet]
-        public async Task<IActionResult> GetAllUsers()
+        public async Task<IActionResult> GetAllUsers([FromQuery] string? search, [FromQuery] string searchField = "name", [FromQuery] string sortField = "date",[FromQuery] bool sortAsc = false)
         {
             try
             {
@@ -28,7 +28,61 @@ namespace api.Controllers
                 var response = await _client.From<User>().Get();
                 var users = response.Models;
 
-                var result = users.Select(u => new
+                var query = search?.Trim().ToLower();
+                if (!string.IsNullOrEmpty(query))
+                {
+                    users = users.Where(u =>
+                    {
+                        switch (searchField)
+                        {
+                            case "name":
+                                return u.Nickname?.ToLower().Contains(query) == true ||
+                                       u.RealName?.ToLower().Contains(query) == true;
+                            case "tag":
+                                return SupportManager.ParseSkills(u.HardSkills).Any(t => t.ToLower().Contains(query));
+                            case "role":
+                                return u.ProfileRole?.ToLower().Contains(query) == true;
+                            default:
+                                return true;
+                        }
+                    }).ToList();
+                }
+
+                Dictionary<string, int> projectCounts = [];
+                Dictionary<string, int> ratingCounts = [];
+
+                if (sortField == "project_count")
+                {
+                    foreach (var u in users)
+                    {
+                        var owned = await _client.From<Project>().Where(p => p.OwnerId == u.UserId).Get();
+                        projectCounts[u.UserId] = owned.Models.Count;
+                    }
+                }
+                else if (sortField == "_count")
+                {
+                    foreach (var u in users)
+                    {
+                        var ratings = await _client.From<ProjectRating>().Where(r => r.UserId == u.UserId).Get();
+                        ratingCounts[u.UserId] = ratings.Models.Count;
+                    }
+                }
+
+                IEnumerable<User> sorted = sortField switch
+                {
+                    "date" => sortAsc ? users.OrderBy(u => u.CreatedAt) : users.OrderByDescending(u => u.CreatedAt),
+                    "alphabet" => sortAsc ? users.OrderBy(u => u.Nickname) : users.OrderByDescending(u => u.Nickname),
+                    "activity" => sortAsc ? users.OrderBy(u => u.LastOnlineAt) : users.OrderByDescending(u => u.LastOnlineAt),
+                    "project_count" => sortAsc
+                        ? users.OrderBy(u => projectCounts.GetValueOrDefault(u.UserId, 0))
+                        : users.OrderByDescending(u => projectCounts.GetValueOrDefault(u.UserId, 0)),
+                    "_count" => sortAsc
+                        ? users.OrderBy(u => ratingCounts.GetValueOrDefault(u.UserId, 0))
+                        : users.OrderByDescending(u => ratingCounts.GetValueOrDefault(u.UserId, 0)),
+                    _ => users
+                };
+
+                var result = sorted.Select(u => new
                 {
                     userId = u.UserId,
                     nickname = u.Nickname,

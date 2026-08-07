@@ -146,9 +146,9 @@ const Content = () => {
           <Route path="notifications" element={null} />
           <Route path="settings" element={<Setting />} />
         </Route>
-        <Route path="/vacancy" element={<><Search activeId={activeId}/><Vacancy /></>} />
-        <Route path="/events" element={<><Search activeId={activeId}/><Events/></>} />
-        <Route path="/users" element={<><Search activeId={activeId}/><Users/></>} />
+        <Route path="/vacancy" element={<Vacancy />} />
+        <Route path="/events" element={<Events />} />
+        <Route path="/users" element={<Users />} />
         <Route path="/users/:userId" element={<RedirectUsersProfile />} />
         <Route path="/bug" element={<Bug/>}/>
         <Route path="*" element={<Navigate to="/vacancy" replace />} />
