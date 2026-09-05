@@ -21,14 +21,15 @@ export interface VacancySearchParams {
   searchField?: string;
   sortField?: string;
   sortAsc?: boolean;
+  showBannedOnly?: boolean;
 }
 
 export const vacanciesApi = {
   // Получить все открытые заявки
   getAll: async (params?: VacancySearchParams): Promise<VacancyData[]> => {
-  const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await supabase.auth.getSession();
 
-  const query = new URLSearchParams();
+    const query = new URLSearchParams();
     if (params?.search)
       query.set('search', params.search);
     if (params?.searchField)
@@ -37,6 +38,8 @@ export const vacanciesApi = {
       query.set('sortField', params.sortField);
     if (params?.sortAsc !== undefined)
       query.set('sortAsc', String(params.sortAsc));
+    if (params?.showBannedOnly !== undefined)
+      query.set('showBannedOnly', String(params.showBannedOnly));
 
     const response = await fetch(`${API_BASE}/api/vacancy?${query.toString()}`, {
       headers: {
@@ -45,7 +48,7 @@ export const vacanciesApi = {
       },
     });
     if (!response.ok) throw new Error('Ошибка загрузки заявок');
-    return await response.json();
+      return await response.json();
   },
 
   // Получить заявки проекта

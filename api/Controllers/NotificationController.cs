@@ -1,7 +1,6 @@
 ﻿using api.Models;
 using api.Support;
 using Microsoft.AspNetCore.Mvc;
-using Supabase;
 using Supabase.Postgrest;
 using System.Text.Json;
 using static Supabase.Postgrest.Constants;
@@ -15,6 +14,7 @@ namespace api.Controllers
         private readonly Supabase.Client _client = client;
         private readonly SupportManager _SupMan = SupMan;
 
+        // Извлечь данные контекста из JSON
         private static Dictionary<string, object?> ExtractContextData(object? contextData)
         {
             if (contextData == null)
@@ -86,6 +86,7 @@ namespace api.Controllers
             };
         }
 
+        // Получить уведомления
         [HttpGet]
         public async Task<IActionResult> GetNotifications([FromQuery] string? referenceType)
         {
@@ -126,6 +127,7 @@ namespace api.Controllers
             }
         }
 
+        // Прочитать уведомление
         [HttpPut("{notificationId}/read")]
         public async Task<IActionResult> MarkAsRead(string notificationId)
         {
@@ -158,6 +160,7 @@ namespace api.Controllers
             }
         }
 
+        // Пометить все, как прочитанные
         [HttpPut("mark-all-read")]
         public async Task<IActionResult> MarkAllAsRead()
         {
@@ -190,6 +193,7 @@ namespace api.Controllers
             }
         }
 
+        // Создать уведомление
         [HttpPost]
         public async Task<IActionResult> CreateNotification([FromBody] CreateNotificationDto dto)
         {
@@ -238,6 +242,7 @@ namespace api.Controllers
             }
         }
 
+        // Удалить уведомление
         [HttpDelete("{notificationId}")]
         public async Task<IActionResult> DeleteNotification(string notificationId)
         {

@@ -41,7 +41,7 @@ const UnauthorizedProfile = () => {
     <div className='profile-info-container' style={{ backgroundColor: 'white', minHeight: '400px' }}>
         <div className='info-container'>
             <LockIcon className='info-ico'/>
-            <p className='info-comment'> Зарегистрируйтесь или войдите в аккаунт, чтобы управлять профилем</p>
+            <p className='info-comment'> Зарегистрируйтесь или войдите в аккаунт, чтобы управлять своим профилем</p>
         </div>
     </div>
   )
@@ -319,9 +319,18 @@ const AuthorizedProfile = () => {
   const handleAvatarClick = () => fileInputRef.current?.click()
 
   // Обработка выбора файла аватара
+  const MAX_AVATAR_SIZE = 5 * 1024 * 1024
+
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+
+    if (file.size > MAX_AVATAR_SIZE) {
+      setSaveError('Максимальный размер аватара 5 МБ')
+      setTimeout(() => setSaveError(null), 3000)
+      e.target.value = ''
+      return
+    }
 
     const localUrl = URL.createObjectURL(file)
     setFormData(prev => ({ ...prev, avatarUrl: localUrl }))
@@ -605,10 +614,12 @@ const ProjectOrThirdSide = () => {
   const { projectId } = useParams<{ projectId: string }>()
   const { userId } = useAuth()
   const [ownerId, setOwnerId] = useState<string | null>(null)
+  const [isChecking, setIsChecking] = useState(true)
 
   useEffect(() => {
     if (!projectId) return
 
+    setIsChecking(true)
     projectsApi.getProject(projectId)
       .then(projectData => {
         setOwnerId(projectData.ownerId)
@@ -616,13 +627,16 @@ const ProjectOrThirdSide = () => {
       .catch(err => {
         console.error('Project load error:', err)
       })
+      .finally(() => {
+        setIsChecking(false)
+      })
   }, [projectId])
 
-  if (!ownerId) {
+  if (isChecking) {
     return <div className='project-page' />
   }
 
-  return ownerId === userId ? <Project /> : <ProjectThirdSide />
+  return ownerId === userId && ownerId !== null ? <Project /> : <ProjectThirdSide />
 }
 
 // Главный компонент с логикой маршрутизации профиля
@@ -637,7 +651,13 @@ export default function Profile() {
     return isAuthenticated ? <AuthorizedProfile /> : <UnauthorizedProfile />
   }
 
-  return isAuthenticated ? <AuthorizedProfile /> : <UnauthorizedProfile />
+  const isThirdParty = profileId !== userId
+  
+  if (isThirdParty || isAuthenticated) {
+    return <AuthorizedProfile />
+  }
+  
+  return <UnauthorizedProfile />
 }
 
 // Валидация поля профиля и возврат сообщения об ошибке

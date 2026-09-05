@@ -12,6 +12,7 @@ namespace api.Controllers
         private readonly Client _client = client;
         private readonly SupportManager _SupMan = SupMan;
 
+        // Получить отклики
         [HttpGet("project/{projectId}")]
         public async Task<IActionResult> GetProjectResponses(string projectId)
         {
@@ -76,6 +77,7 @@ namespace api.Controllers
             }
         }
 
+        // Получить исходящие отклики
         [HttpGet("outgoing/{userId}")]
         public async Task<IActionResult> GetOutgoingResponses(string userId)
         {
@@ -128,6 +130,7 @@ namespace api.Controllers
             }
         }
 
+        // Проверка отклика
         [HttpGet("check/{vacancyId}")]
         public async Task<IActionResult> CheckResponse(string vacancyId)
         {
@@ -150,6 +153,7 @@ namespace api.Controllers
             }
         }
 
+        // Отправить отклик
         [HttpPost]
         public async Task<IActionResult> CreateResponse([FromBody] CreateResponseDto dto)
         {
@@ -220,6 +224,7 @@ namespace api.Controllers
             }
         }
 
+        // Удалить отклик (отменить)
         [HttpDelete("{responseId}")]
         public async Task<IActionResult> DeleteResponse(string responseId)
         {

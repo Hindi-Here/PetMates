@@ -27,14 +27,16 @@ export interface UserSearchParams {
   searchField?: string;
   sortField?: string;
   sortAsc?: boolean;
+  showBannedOnly?: boolean;
+  showStaffOnly?: boolean;
 }
 
 export const usersApi = {
   // Получить всех пользователей
   getAll: async (params?: UserSearchParams): Promise<UserData[]> => {
-  const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await supabase.auth.getSession();
 
-  const query = new URLSearchParams();
+    const query = new URLSearchParams();
     if (params?.search)
       query.set('search', params.search);
     if (params?.searchField)
@@ -43,6 +45,10 @@ export const usersApi = {
       query.set('sortField', params.sortField);
     if (params?.sortAsc !== undefined)
       query.set('sortAsc', String(params.sortAsc));
+    if (params?.showBannedOnly !== undefined)
+      query.set('showBannedOnly', String(params.showBannedOnly));
+    if (params?.showStaffOnly !== undefined)
+      query.set('showStaffOnly', String(params.showStaffOnly));
 
     const response = await fetch(`${API_BASE}/api/users?${query.toString()}`, {
       headers: {

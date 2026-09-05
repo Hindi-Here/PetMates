@@ -97,25 +97,29 @@
       .dropdown-nav-item-text {
         filter: brightness(1.1); 
       }
-    }s
+    }
 
     &.logout {
       background-color: var(--base1-color);
-      margin-top: 0;
-      margin-right: 0;
 
-      .logout-text {
+      .dropdown-nav-item-text {
         color: var(--important-color);
+        padding-top: rem(6);
+        padding-bottom: rem(6);
       }
 
-      &:hover .logout-text {
-        color: var(--important-color);
-        filter: brightness(1.05); 
+      &:hover {
+        background-color: var(--base3-color);
+        
+        .dropdown-nav-item-text {
+          color: color-mix(in srgb, var(--important-color) 100%, white 10%);
+        }
       }
       
-      &:active .logout-text {
-        color: var(--important-color);
-        filter: brightness(1.1); 
+      &:active {
+        .dropdown-nav-item-text {
+          filter: brightness(0.9); 
+        }
       }
     }
   }

@@ -161,10 +161,7 @@ export const Messages = () => {
         </button>
         <button
           className='conversation-delete-btn'
-          onClick={() => {
-            if (window.confirm('Удалить переписку? Она пропадёт только у вас.')) {
-              hideMutation.mutate(conv.conversationId)
-            }
+          onClick={() => {{hideMutation.mutate(conv.conversationId) }
           }}
         >
           <Delete className='ico' />

@@ -1,7 +1,6 @@
 ﻿using api.Models;
 using api.Support;
 using Microsoft.AspNetCore.Mvc;
-using Supabase;
 using Supabase.Postgrest;
 using static Supabase.Postgrest.Constants;
 
@@ -14,6 +13,7 @@ namespace api.Controllers
         private readonly Supabase.Client _client = client;
         private readonly SupportManager _SupMan = SupMan;
 
+        // Получить список переписок пользователя
         [HttpGet]
         public async Task<IActionResult> GetConversations()
         {
@@ -45,7 +45,7 @@ namespace api.Controllers
 
                     var allMessages = await _client.From<Message>()
                         .Where(m => m.ConversationId == conv.ConversationId)
-                        .Order(m => m.CreatedAt, Ordering.Descending)
+                        .Order(m => m.CreatedAt!, Ordering.Descending)
                         .Get();
 
                     var last = allMessages.Models.FirstOrDefault(m => !hiddenIds.Contains(m.MessageId));
@@ -79,6 +79,7 @@ namespace api.Controllers
             }
         }
 
+        // Начать новую переписку с пользователем
         [HttpPost("start")]
         public async Task<IActionResult> StartConversation([FromBody] StartConversationDto dto)
         {
@@ -131,6 +132,7 @@ namespace api.Controllers
             }
         }
 
+        // Убедиться, что пользователь является участником переписки
         private async Task EnsureParticipant(string conversationId, string participantUserId)
         {
             var existing = await _client.From<ConversationParticipant>()
@@ -156,6 +158,7 @@ namespace api.Controllers
             }
         }
 
+        // Получить сообщения
         [HttpGet("{conversationId}/messages")]
         public async Task<IActionResult> GetMessages(string conversationId)
         {
@@ -191,7 +194,7 @@ namespace api.Controllers
 
                 var messages = await _client.From<Message>()
                     .Where(m => m.ConversationId == conversationId)
-                    .Order(m => m.CreatedAt, Ordering.Ascending)
+                    .Order(m => m.CreatedAt!, Ordering.Ascending)
                     .Get();
 
                 var result = new List<object>();
@@ -258,6 +261,7 @@ namespace api.Controllers
             }
         }
 
+        // Отправить сообщение
         [HttpPost("message")]
         public async Task<IActionResult> SendMessage([FromBody] SendMessageDto dto)
         {
@@ -310,6 +314,7 @@ namespace api.Controllers
             }
         }
 
+        // Отредактировать сообщение
         [HttpPut("message/{messageId}")]
         public async Task<IActionResult> UpdateMessage(string messageId, [FromBody] UpdateMessageDto dto)
         {
@@ -345,6 +350,7 @@ namespace api.Controllers
             }
         }
 
+        // Закрепить/открепить переписку
         [HttpPut("{conversationId}/pin")]
         public async Task<IActionResult> TogglePin(string conversationId)
         {
@@ -375,6 +381,7 @@ namespace api.Controllers
             }
         }
 
+        // Удалить сообщение (только для отправителя)
         [HttpDelete("message/{messageId}")]
         public async Task<IActionResult> DeleteMessage(string messageId)
         {
@@ -404,6 +411,7 @@ namespace api.Controllers
             }
         }
 
+        // Удалить переписку
         [HttpDelete("{conversationId}")]
         public async Task<IActionResult> HideConversation(string conversationId)
         {
@@ -446,6 +454,7 @@ namespace api.Controllers
             }
         }
 
+        // Удалить сообщение только для себя
         [HttpDelete("message/{messageId}/for-me")]
         public async Task<IActionResult> DeleteMessageForMe(string messageId)
         {
@@ -468,12 +477,7 @@ namespace api.Controllers
             }
         }
 
-        public class ForwardMessageDto
-        {
-            public string SourceMessageId { get; set; } = string.Empty;
-            public string TargetConversationId { get; set; } = string.Empty;
-        }
-
+        // Переслать сообщение
         [HttpPost("message/forward")]
         public async Task<IActionResult> ForwardMessage([FromBody] ForwardMessageDto dto)
         {
@@ -521,22 +525,5 @@ namespace api.Controllers
                 return StatusCode(500, ex.Message);
             }
         }
-    }
-
-    public class StartConversationDto
-    {
-        public string TargetUserId { get; set; } = string.Empty;
-    }
-
-    public class SendMessageDto
-    {
-        public string ConversationId { get; set; } = string.Empty;
-        public string Content { get; set; } = string.Empty;
-        public string? ParentMessageId { get; set; }
-    }
-
-    public class UpdateMessageDto
-    {
-        public string Content { get; set; } = string.Empty;
     }
 }

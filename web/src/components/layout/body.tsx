@@ -10,8 +10,6 @@ import { Routes, Route, Navigate, NavLink, useLocation, useParams } from 'react-
 import { useIsShort } from '../scripts/function';
 import { useAuth } from '../hooks/useAuth';
 
-import Search from '../common/search';
-
 import Profile from '../pages/profile';
 import Vacancy from '../pages/vacancy';
 import Events from '../pages/events';
@@ -127,9 +125,7 @@ const RedirectUsersProfile = () => {
 
 // Рендер контента с маршрутизацией
 const Content = () => {
-  const location = useLocation();
   const { userId } = useAuth();
-  const activeId = location.pathname.split('/')[1] || 'vacancy';
   
   return (
     <div className='content-container'>

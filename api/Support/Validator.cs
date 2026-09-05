@@ -29,6 +29,7 @@ namespace api.Support
         [GeneratedRegex(@"[!@#$%^&*()\-_=+\[\]{};':""\\|,.<>\/?]")]
         private static partial Regex PasswordSpecialRegex();
 
+        // Валидация профиля пользователя
         public static string? ValidateProfile(Models.User data)
         {
             var errors = new List<string>();
@@ -97,12 +98,60 @@ namespace api.Support
             return errors.Count > 0 ? errors[0] : null;
         }
 
+        // Разрешённые типы аватара
+        private static readonly Dictionary<string, (string Extension, byte[][] Signatures)> AllowedAvatarTypes = new()
+        {
+            ["image/png"] = (".png", [[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]]),
+            ["image/jpeg"] = (".jpg", [[0xFF, 0xD8, 0xFF]]),
+            ["image/webp"] = (".webp", [[0x52, 0x49, 0x46, 0x46]]),
+        };
+
+        private const long MaxAvatarSize = 5 * 1024 * 1024; // 5 МБ размер аватара
+
+        // Валидация аватара
+        public static (string? Error, string? Extension) ValidateAvatar(IFormFile? file)
+        {
+            if (file == null || file.Length == 0)
+                return ("[Аватар] файл не передан", null);
+
+            if (file.Length > MaxAvatarSize)
+                return ("[Аватар] максимальный размер файла 5 МБ", null);
+
+            var contentType = file.ContentType?.ToLowerInvariant() ?? "";
+            if (!AllowedAvatarTypes.TryGetValue(contentType, out var typeInfo))
+                return ("[Аватар] допустимы только PNG, JPEG или WEBP", null);
+
+            using var stream = file.OpenReadStream();
+            var header = new byte[12];
+            var read = stream.Read(header, 0, header.Length);
+            stream.Position = 0;
+
+            if (read < 4)
+                return ("[Аватар] повреждённый файл", null);
+
+            var signatureMatches = typeInfo.Signatures.Any(sig =>
+                sig.Length <= read && sig.SequenceEqual(header.Take(sig.Length)));
+
+            if (!signatureMatches)
+                return ("[Аватар] содержимое файла не соответствует заявленному типу", null);
+
+            if (contentType == "image/webp")
+            {
+                if (read < 12 || header[8] != 0x57 || header[9] != 0x45 || header[10] != 0x42 || header[11] != 0x50)
+                    return ("[Аватар] содержимое файла не соответствует заявленному типу", null);
+            }
+
+            return (null, typeInfo.Extension);
+        }
+
+        // Валидация тегов
         private static bool ValidateTags(string value)
         {
             var tags = value.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
             return tags.All(tag => TagRegex().IsMatch(tag));
         }
 
+        // Валидация окна регистрации/входа
         public static string? ValidateRegister(string nickname, string email, string password, string confirmPassword)
         {
             var errors = new List<string>();
@@ -147,6 +196,7 @@ namespace api.Support
             return errors.Count > 0 ? errors[0] : null;
         }
 
+        // Валидация смены пароля
         public static string? ValidateChangePassword(string newPassword, string confirmPassword)
         {
             if (string.IsNullOrWhiteSpace(newPassword))
@@ -168,6 +218,7 @@ namespace api.Support
             return null;
         }
 
+        // Валидация смены почты
         public static string? ValidateChangeEmail(string newEmail)
         {
             if (string.IsNullOrWhiteSpace(newEmail))
@@ -180,6 +231,7 @@ namespace api.Support
             return null;
         }
 
+        // Валидация проекта
         public static string? ValidateProject(string? title, string? shortDescription)
         {
             var errors = new List<string>();
@@ -198,6 +250,7 @@ namespace api.Support
             return errors.Count > 0 ? errors[0] : null;
         }
 
+        // Валидация роли пользователя
         public static string? ValidateRole(string? role)
         {
             if (string.IsNullOrWhiteSpace(role))
@@ -210,6 +263,7 @@ namespace api.Support
             return null;
         }
 
+        // Валидация заявок
         public static string? ValidateVacancy(string? title, string? description, string? tags)
         {
             var errors = new List<string>();

@@ -108,21 +108,21 @@ const Form = ({ onClose, invitedUser }: any) => {
       if (!selectedProject) {
         setVacancies([])
         setSelectedVacancy('')
-        setExistingMembers(new Set())
-        setExistingInvites(new Set())
+        setExistingMembers(new Set<string>())
+        setExistingInvites(new Set<string>()) 
         return
       }
-      
-      setExistingMembers(new Set())
-      setExistingInvites(new Set())
-      
+    
+      setExistingMembers(new Set<string>()) 
+      setExistingInvites(new Set<string>())
+    
       try {
         const projectVacancies = await vacanciesApi.getByProject(selectedProject)
         setVacancies(projectVacancies)
         setSelectedVacancy('')
         
         const members = await projectMembersApi.getByProject(selectedProject)
-        const memberIds = new Set(members.map((m: any) => m.userId))
+        const memberIds = new Set<string>(members.map((m: any) => m.userId))
         setExistingMembers(memberIds)
         
         const outgoingInvites = await inviteApi.getOutgoing()
@@ -131,12 +131,12 @@ const Form = ({ onClose, invitedUser }: any) => {
           .filter(invite => invite.projectId === selectedProject && invite.status === 'pending')
           .map(invite => invite.userId)
         
-        setExistingInvites(new Set(pendingInvitesForProject))
+        setExistingInvites(new Set<string>(pendingInvitesForProject))
       } catch (error) {
         console.error('Ошибка загрузки вакансий:', error)
         setVacancies([])
-        setExistingMembers(new Set())
-        setExistingInvites(new Set())
+        setExistingMembers(new Set<string>())
+        setExistingInvites(new Set<string>())
       }
     }
     fetchVacancies()

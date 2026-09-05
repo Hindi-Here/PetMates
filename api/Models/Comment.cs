@@ -29,6 +29,9 @@ namespace api.Models
 
         [Column("is_deleted")]
         public bool IsDeleted { get; set; }
+        
+        [Column("deleted_by_moderator")]
+        public bool DeletedByModerator { get; set; }
 
         [Column("created_at")]
         public DateTime? CreatedAt { get; set; }
@@ -51,5 +54,18 @@ namespace api.Models
 
         [Column("created_at")]
         public DateTime? CreatedAt { get; set; }
+    }
+
+    public class CreateCommentDto
+    {
+        public string ReferenceId { get; set; } = string.Empty;
+        public string ReferenceType { get; set; } = string.Empty;
+        public string Content { get; set; } = string.Empty;
+        public string? ParentCommentId { get; set; }
+    }
+
+    public class UpdateCommentDto
+    {
+        public string Content { get; set; } = string.Empty;
     }
 }

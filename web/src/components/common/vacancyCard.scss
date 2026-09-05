@@ -3,11 +3,13 @@
   flex-direction: column;
   width: 100%;
   margin-bottom: rem(24);
+  padding-bottom: rem(0);
   background-color: var(--neutral-0);
   border-radius: var(--border-radius-base);
   box-shadow: inset 0 0 0 0 var(--primary-accent), 0 4px 4px rgba(0, 0, 0, 0.15);
   border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 75%);
   transition: border-color 0.25s, box-shadow 0.25s;
+  position: relative;
 
   &:hover {
     box-shadow: inset 2px 0 0 0 var(--primary-accent), 0 4px 4px rgba(0, 0, 0, 0.25);
@@ -17,6 +19,76 @@
 
   &:active {
     background-color: color-mix(in srgb, var(--neutral-100), transparent 98%);
+  }
+
+  &.banned-owner-card {
+    border: 1px solid var(--important-color) !important;
+    background-color: color-mix(in srgb, var(--important-color), transparent 95%) !important;
+    opacity: 0.9;
+
+    &:hover {
+      box-shadow: inset 2px 0 0 0 var(--important-color), 0 4px 4px rgba(0, 0, 0, 0.25) !important;
+      border-color: color-mix(in srgb, var(--important-color), transparent 50%) !important;
+      border-left-color: var(--important-color) !important;
+    }
+
+    .vacancy-title {
+      color: var(--important-color) !important;
+    }
+
+    .vacancy-project-name {
+      color: var(--important-color) !important;
+    }
+
+    .vacancy-role {
+      color: var(--important-color) !important;
+    }
+
+    .tag-place-container {
+      .tag-item {
+        background: color-mix(in srgb, var(--important-color), transparent 85%) !important;
+
+        .tag-text {
+          color: var(--important-color) !important;
+        }
+
+        &.more-tag {
+          background-color: color-mix(in srgb, var(--important-color), transparent 70%) !important;
+          
+          .tag-text {
+            color: var(--important-color) !important;
+          }
+        }
+      }
+    }
+
+    .vacancy-apply-button {
+      background-color: color-mix(in srgb, var(--important-color), transparent 70%) !important;
+      color: var(--important-color) !important;
+      opacity: 0.7;
+      border-color: var(--important-color) !important;
+
+      &:hover {
+        filter: none !important;
+      }
+
+      &:active {
+        transform: none !important;
+        filter: none !important;
+      }
+
+      &:disabled {
+        opacity: 0.7 !important;
+        background-color: color-mix(in srgb, var(--important-color), transparent 70%) !important;
+        color: var(--important-color) !important;
+      }
+    }
+
+    .moderation-delete-btn {
+      background-color: color-mix(in srgb, var(--important-color), transparent 75%) !important;
+      border: 1px solid color-mix(in srgb, var(--important-color), transparent 50%) !important;
+      color: var(--important-color) !important;
+    }
   }
 
   .vacancy-info-container {
@@ -50,6 +122,13 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+      }
+
+      .vacancy-role {
+        font-size: rem(14);
+        color: var(--primary-accent);
+        margin: rem(4) 0 0 0;
+        font-weight: bold;
       }
     }
 
@@ -92,8 +171,8 @@
   .vacancy-footer-container {
     display: flex;
     align-items: center;
-    padding: rem(16);
-    padding-top: rem(16);
+    padding: rem(12) rem(16);
+    padding-bottom: rem(16);
     border: none;
 
     .vacancy-left-group {
@@ -175,7 +254,8 @@
     }
 
     .vacancy-footer-container {
-      padding: rem(12);
+      padding: rem(10) rem(12);
+      padding-bottom: rem(12);
 
       .vacancy-left-group {
         gap: rem(10);
@@ -206,6 +286,52 @@
       .vacancy-date > span {
         display: none;
       }
+    }
+  }
+}
+
+.moderation-delete-btn {
+  position: absolute;
+  top: rem(12);
+  right: rem(12);
+  z-index: 5;
+  width: rem(28);
+  height: rem(28);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--border-radius-base);
+  background-color: color-mix(in srgb, var(--important-color), transparent 85%);
+  color: var(--important-color);
+  transition: 0.25s;
+  flex-shrink: 0;
+  padding: 0;
+
+  &:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--important-color), transparent 80%);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+  }
+
+  .ico {
+    width: rem(14);
+    height: rem(14);
+  }
+}
+
+@media (max-width: 480px) {
+  .moderation-delete-btn {
+    top: rem(10);
+    right: rem(10);
+    width: rem(26);
+    height: rem(26);
+
+    .ico {
+      width: rem(12);
+      height: rem(12);
     }
   }
 }

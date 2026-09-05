@@ -12,6 +12,7 @@ namespace api.Controllers
     {
         private readonly Client _client = client;
 
+        // Получить профиль текущего пользователя
         [HttpGet("me")]
         public async Task<IActionResult> GetProfile()
         {
@@ -33,7 +34,21 @@ namespace api.Controllers
 
                 var data = response.Models.FirstOrDefault();
 
-                return Ok(ModelFromResponse(data!, userAuth.Email));
+                if (data == null)
+                {
+                    return NotFound(new { message = "Пользователь не найден" });
+                }
+
+                if (data.IsBanned)
+                {
+                    return StatusCode(403, new
+                    {
+                        message = "Аккаунт заблокирован",
+                        isBanned = true
+                    });
+                }
+
+                return Ok(ModelFromResponse(data, userAuth.Email));
             }
             catch (Exception)
             {
@@ -41,6 +56,7 @@ namespace api.Controllers
             }
         }
 
+        // Отредактировать профиль текущего пользователя
         [HttpPut("me")]
         public async Task<IActionResult> UpdateProfile([FromBody] Dictionary<string, JsonElement> data)
         {
@@ -129,6 +145,7 @@ namespace api.Controllers
             }
         }
 
+        // Преобразовать профиль пользователя в объект
         private static object ModelFromResponse(User profile, string? email = null)
         {
             return new
@@ -154,7 +171,9 @@ namespace api.Controllers
             };
         }
 
+        // Обновить аватар
         [HttpPost("me/avatar")]
+        [RequestSizeLimit(5_500_000)] 
         public async Task<IActionResult> UploadAvatar(IFormFile file)
         {
             var authHeader = Request.Headers.Authorization.ToString();
@@ -162,6 +181,10 @@ namespace api.Controllers
                 return Unauthorized();
 
             var token = authHeader["Bearer ".Length..];
+
+            var (error, extension) = Validator.ValidateAvatar(file);
+            if (error != null)
+                return BadRequest(new { message = error });
 
             try
             {
@@ -173,8 +196,7 @@ namespace api.Controllers
                 await stream.CopyToAsync(memoryStream);
                 var bytes = memoryStream.ToArray();
 
-                var ext = Path.GetExtension(file.FileName);
-                var fileName = $"{userAuth.Id}/avatar{ext}";
+                var fileName = $"{userAuth.Id}/avatar{extension}";
 
                 await _client.Storage
                     .From("Avatar")
@@ -193,9 +215,8 @@ namespace api.Controllers
 
                 return Ok(new { avatarUrl = urlWithCacheBuster });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Console.WriteLine($"❌ [UploadAvatar] Exception: {ex.Message}");
                 return StatusCode(500);
             }
         }

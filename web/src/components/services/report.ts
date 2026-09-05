@@ -1,20 +1,34 @@
 import { API_BASE } from './cfg';
 import { supabase } from './cfg';
 
+export type ReportType = 'bug' | 'complaint' | 'suggestion' | 'opinion';
+
 export const reportApi = {
   // Отправить сообщение от пользователя (bug страница)
-  send: async (message: string, isAnonymous: boolean, nickname?: string) => {
+  send: async (
+    message: string,
+    isAnonymous: boolean,
+    nickname: string | undefined,
+    type: ReportType,
+    files: File[]
+  ) => {
     const { data: { session } } = await supabase.auth.getSession();
+
+    const formData = new FormData();
+    formData.append('Message', message);
+    formData.append('IsAnonymous', String(isAnonymous));
+    if (nickname) formData.append('Nickname', nickname);
+    formData.append('Type', type);
+    files.forEach(file => formData.append('Files', file));
 
     const response = await fetch(`${API_BASE}/api/report/send`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        ...(session?.access_token 
-          ? { 'Authorization': `Bearer ${session.access_token}` } 
+        ...(session?.access_token
+          ? { 'Authorization': `Bearer ${session.access_token}` }
           : {}),
       },
-      body: JSON.stringify({ message, isAnonymous, nickname }),
+      body: formData,
     });
 
     if (!response.ok) {

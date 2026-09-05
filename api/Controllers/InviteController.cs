@@ -12,6 +12,7 @@ namespace api.Controllers
         private readonly Client _client = client;
         private readonly SupportManager _SupMan = SupMan;
 
+        // Получить входящие приглашения
         [HttpGet("incoming")]
         public async Task<IActionResult> GetIncomingInvites()
         {
@@ -61,11 +62,11 @@ namespace api.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ [GetIncomingInvites] Exception: {ex.Message}");
                 return StatusCode(500, ex.Message);
             }
         }
 
+        // Получить исходящие приглашения
         [HttpGet("outgoing")]
         public async Task<IActionResult> GetOutgoingInvites()
         {
@@ -118,11 +119,11 @@ namespace api.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ [GetOutgoingInvites] Exception: {ex.Message}");
                 return StatusCode(500, ex.Message);
             }
         }
 
+        // Создать приглашение
         [HttpPost]
         public async Task<IActionResult> CreateInvite([FromBody] CreateInviteDto dto)
         {
@@ -179,11 +180,11 @@ namespace api.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ [CreateInvite] Exception: {ex.Message}");
                 return StatusCode(500, ex.Message);
             }
         }
 
+        // Обновить статус приглашения (принять/отклонить)
         [HttpPut("{inviteId}/status")]
         public async Task<IActionResult> UpdateInviteStatus(string inviteId, [FromBody] object data)
         {
@@ -224,11 +225,11 @@ namespace api.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ [UpdateInviteStatus] Exception: {ex.Message}");
                 return StatusCode(500, ex.Message);
             }
         }
 
+        // Удалить приглашение (отправитель или получатель)
         [HttpDelete("{inviteId}")]
         public async Task<IActionResult> DeleteInvite(string inviteId)
         {
@@ -265,7 +266,6 @@ namespace api.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ [DeleteInvite] Exception: {ex.Message}");
                 return StatusCode(500, ex.Message);
             }
         }

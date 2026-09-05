@@ -2,6 +2,7 @@ import DropdownIcon from '@icons/dropdown.svg?react'
 import SearchIcon from '@icons/search.svg?react'
 import SortUpIcon from '@icons/sort_up.svg?react'
 import SortDownIcon from '@icons/sort_down.svg?react'
+import CheckIcon from '@icons/accept.svg?react'
 
 import './search.scss'
 import { Dropdown } from './dropdown';
@@ -67,6 +68,12 @@ interface SearchProps {
   onSortFieldSelect: (id: string) => void;
   isSortUp: boolean;
   onToggleSortDirection: () => void;
+  showBannedFilter?: boolean; 
+  showBannedOnly: boolean;
+  onToggleShowBannedOnly: () => void;
+  showStaffFilter?: boolean;
+  showStaffOnly: boolean;
+  onToggleShowStaffOnly: () => void;
 }
 
 export default function Search({
@@ -80,6 +87,12 @@ export default function Search({
   onSortFieldSelect,
   isSortUp,
   onToggleSortDirection,
+  showBannedFilter = false,
+  showBannedOnly,
+  onToggleShowBannedOnly,
+  showStaffFilter = false,
+  showStaffOnly,
+  onToggleShowStaffOnly,
 }: SearchProps) {
   const { isOpen: isSearchDropdownOpen, setIsOpen: setIsNameDropdownOpen, menuRef: searchMenuRef } = useIsOpen();
   const { isOpen: isSortDropdownOpen, setIsOpen: setIsDateDropdownOpen, menuRef: sortMenuRef } = useIsOpen();
@@ -133,6 +146,22 @@ export default function Search({
         <div className='sort-vector-ico-container' onClick={onToggleSortDirection}>
           {isSortUp ? (<SortUpIcon className='sort-vector-ico' />) : (<SortDownIcon className='sort-vector-ico' />)}
         </div>
+        {showStaffFilter && (
+        <div className={`staff-filter-container ${showStaffOnly ? 'active' : ''}`} onClick={onToggleShowStaffOnly}>
+          <div className='staff-filter-checkbox'>
+            {showStaffOnly && <CheckIcon className='staff-filter-check-ico' />}
+          </div>
+          <p className='staff-filter-text'>Модерация</p>
+        </div>
+        )}
+        {showBannedFilter && (
+        <div className={`banned-filter-container ${showBannedOnly ? 'active' : ''}`} onClick={onToggleShowBannedOnly}>
+          <div className='banned-filter-checkbox'>
+            {showBannedOnly && <CheckIcon className='banned-filter-check-ico' />}
+          </div>
+          <p className='banned-filter-text'>Заблокированные</p>
+        </div>
+        )}
       </div>
     </div>
   )

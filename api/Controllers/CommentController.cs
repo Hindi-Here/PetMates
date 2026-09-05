@@ -1,7 +1,6 @@
 ﻿using api.Models;
 using api.Support;
 using Microsoft.AspNetCore.Mvc;
-using Supabase;
 using Supabase.Postgrest;
 using System.Text.RegularExpressions;
 
@@ -14,6 +13,7 @@ namespace api.Controllers
         private readonly Supabase.Client _client = client;
         private readonly SupportManager _SupMan = SupMan;
 
+        // Получить комментарии
         [HttpGet("{referenceType}/{referenceId}")]
         public async Task<IActionResult> GetComments(string referenceType, string referenceId)
         {
@@ -36,6 +36,7 @@ namespace api.Controllers
                 {
                     string? nickname = null;
                     string? avatarUrl = null;
+                    string? authorSystemRole = null;
                     if (!string.IsNullOrEmpty(c.UserId))
                     {
                         var user = await _client.From<User>()
@@ -44,6 +45,7 @@ namespace api.Controllers
                         var userData = user.Models.FirstOrDefault();
                         nickname = userData?.Nickname;
                         avatarUrl = userData?.AvatarUrl;
+                        authorSystemRole = userData?.SystemRole;
                     }
 
                     result.Add(new
@@ -54,8 +56,10 @@ namespace api.Controllers
                         AvatarUrl = avatarUrl,
                         c.ParentCommentId,
                         Content = c.IsDeleted ? null : c.Content,
+                        AuthorSystemRole = authorSystemRole,
                         c.IsEdited,
                         c.IsDeleted,
+                        c.DeletedByModerator,
                         CreatedAt = c.CreatedAt?.ToString("o"),
                         UpdatedAt = c.UpdatedAt?.ToString("o")
                     });
@@ -69,6 +73,7 @@ namespace api.Controllers
             }
         }
 
+        // Отправить комментарий
         [HttpPost]
         public async Task<IActionResult> CreateComment([FromBody] CreateCommentDto dto)
         {
@@ -97,6 +102,7 @@ namespace api.Controllers
                     Content = dto.Content,
                     IsEdited = false,
                     IsDeleted = false,
+                    DeletedByModerator = false,
                     CreatedAt = DateTime.UtcNow
                 };
 
@@ -115,6 +121,7 @@ namespace api.Controllers
                     newComment.Content,
                     newComment.IsEdited,
                     newComment.IsDeleted,
+                    newComment.DeletedByModerator,
                     CreatedAt = newComment.CreatedAt?.ToString("o")
                 });
             }
@@ -124,6 +131,7 @@ namespace api.Controllers
             }
         }
 
+        // Отредактировать комментарий
         [HttpPut("{commentId}")]
         public async Task<IActionResult> UpdateComment(string commentId, [FromBody] UpdateCommentDto dto)
         {
@@ -163,6 +171,7 @@ namespace api.Controllers
             }
         }
 
+        // Удалить комментарий
         [HttpDelete("{commentId}")]
         public async Task<IActionResult> DeleteComment(string commentId)
         {
@@ -182,12 +191,12 @@ namespace api.Controllers
                     return NotFound();
 
                 var isAuthor = comment.UserId == userId;
-                var isModerator = !isAuthor && await IsReferenceOwner(comment.ReferenceType, comment.ReferenceId, userId);
+                var isModeratorDeleting = !isAuthor && await IsReferenceOwner(comment.ReferenceType, comment.ReferenceId, userId);
 
-                if (!isAuthor && !isModerator)
+                if (!isAuthor && !isModeratorDeleting)
                     return Forbid();
 
-                await DeleteOrSoftDelete(comment);
+                await DeleteOrSoftDelete(comment, isModeratorDeleting);
 
                 return Ok(new { message = "Комментарий удалён" });
             }
@@ -197,7 +206,8 @@ namespace api.Controllers
             }
         }
 
-        private async Task DeleteOrSoftDelete(Comment comment)
+        // Удаление комментария с проверкой наличия дочерних комментариев
+        private async Task DeleteOrSoftDelete(Comment comment, bool isModeratorDeleting)
         {
             var childrenResponse = await _client.From<Comment>()
                 .Where(c => c.ParentCommentId == comment.CommentId)
@@ -219,11 +229,13 @@ namespace api.Controllers
                 await _client.From<Comment>()
                     .Where(c => c.CommentId == comment.CommentId)
                     .Set(c => c.IsDeleted, true)
+                    .Set(c => c.DeletedByModerator, isModeratorDeleting)
                     .Set(c => c.UpdatedAt!, DateTime.UtcNow)
                     .Update();
             }
         }
 
+        // Очистить родительский комментарий при условии, если нет дочерних комментариев
         private async Task CleanupAncestorIfOrphaned(string parentId)
         {
             var parentResponse = await _client.From<Comment>()
@@ -251,6 +263,7 @@ namespace api.Controllers
             }
         }
 
+        // Проверка доступа
         private async Task<bool> CanAccessReference(string referenceType, string referenceId, string userId)
         {
             if (referenceType == "project")
@@ -273,6 +286,7 @@ namespace api.Controllers
             return true;
         }
 
+        // Проверка на владельца
         private async Task<bool> IsReferenceOwner(string referenceType, string referenceId, string userId)
         {
             if (referenceType == "project")
@@ -286,6 +300,7 @@ namespace api.Controllers
             return false;
         }
 
+        // Упоминание (ответить пользователю)
         private async Task ProcessMentions(Comment comment, string authorId)
         {
             var matches = MyRegex().Matches(comment.Content ?? "");
@@ -351,18 +366,5 @@ namespace api.Controllers
 
         [GeneratedRegex(@"@([a-zA-Z0-9_]+)")]
         private static partial Regex MyRegex();
-    }
-
-    public class CreateCommentDto
-    {
-        public string ReferenceId { get; set; } = string.Empty;
-        public string ReferenceType { get; set; } = string.Empty;
-        public string Content { get; set; } = string.Empty;
-        public string? ParentCommentId { get; set; }
-    }
-
-    public class UpdateCommentDto
-    {
-        public string Content { get; set; } = string.Empty;
     }
 }

@@ -10,6 +10,7 @@ namespace api.Support
         private readonly Client _client = client;
         private const int ONLINE_THRESHOLD_MINUTES = 2;
 
+        // Получение идентификатора пользователя из токена JWT
         private static string? GetToken(string token)
         {
             try
@@ -24,6 +25,7 @@ namespace api.Support
             }
         }
 
+        // Получение идентификатора пользователя из заголовка авторизации
         public string? GetUserId(string? authHeader)
         {
             if (string.IsNullOrWhiteSpace(authHeader) || !authHeader.StartsWith("Bearer "))
@@ -35,6 +37,7 @@ namespace api.Support
             return GetToken(token);
         }
 
+        // Обновление онлайна
         public async Task UpdateLastOnlineAsync(string userId)
         {
             try
@@ -44,12 +47,13 @@ namespace api.Support
                     .Set(u => u.LastOnlineAt!, DateTime.UtcNow)
                     .Update();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Console.WriteLine($"Failed to update last_online_at for {userId}: {ex.Message}");
+
             }
         }
 
+        // Время онлайна
         public static string FormatLastSeen(DateTimeOffset? lastOnlineAt)
         {
             if (!lastOnlineAt.HasValue) return "давно";
@@ -83,10 +87,18 @@ namespace api.Support
             if (diff.TotalDays < 365)
             {
                 var months = (int)(diff.TotalDays / 30);
-                var ending = months >= 5 && months < 21 ? "ев" :
-                             months % 10 == 1 ? "ец" :
-                             months % 10 >= 2 && months % 10 <= 4 ? "ца" : "ев";
-                return $"{months} мес{ending} назад";
+
+                string ending;
+                if (months % 100 >= 11 && months % 100 <= 14)
+                    ending = "ев";
+                else if (months % 10 == 1)
+                    ending = "";
+                else if (months % 10 >= 2 && months % 10 <= 4)
+                    ending = "а";
+                else
+                    ending = "ев";
+
+                return $"{months} месяц{ending} назад";
             }
 
             var years = (int)(diff.TotalDays / 365);
@@ -96,6 +108,7 @@ namespace api.Support
             return $"{years} год{endingYear} назад";
         }
 
+        // Онлайн ли пользователь?
         public static bool IsOnline(DateTimeOffset? lastOnlineAt)
         {
             if (!lastOnlineAt.HasValue) return false;
@@ -103,6 +116,7 @@ namespace api.Support
             return diff.TotalMinutes < ONLINE_THRESHOLD_MINUTES && diff.TotalMinutes >= 0;
         }
 
+        // Парсинг навыков из строки
         public static List<string> ParseSkills(string? skills)
         {
             if (string.IsNullOrEmpty(skills)) return [];

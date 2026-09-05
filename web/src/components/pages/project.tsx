@@ -13,10 +13,15 @@ import PublicIcon from '@icons/public.svg?react'
 import InfoCircleIcon from '@icons/info_circle.svg?react'
 import InfoIcon from '@icons/info.svg?react'
 import DropdownIcon from '@icons/dropdown.svg?react'
+import CopyIcon from '@icons/copy.svg?react'
+import RejectIcon from '@icons/reject.svg?react'
 
 import { useEffect, useState, useRef, Fragment, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Toggle } from '../common/toggle'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import rehypeRaw from 'rehype-raw'
 import { Dropdown } from '../common/dropdown'
 import { validatorFormat, validatorRegex, useChangeInput, useIsOpen } from '../scripts/function'
 import { useAuth } from '../hooks/useAuth'
@@ -158,7 +163,6 @@ const TeamMemberProjectCard = ({
     }
   }, [isEditingRole])
 
-  // Валидация роли участника
   const checkRoleFormat = (value: string): string | null => {
     const rules: Array<[boolean, string]> = [
       [!validatorFormat.required(value), 'Введите роль'],
@@ -169,8 +173,24 @@ const TeamMemberProjectCard = ({
     return error?.[1] ?? null
   }
 
+  const parseSkills = (skillsData: any): string[] => {
+    if (Array.isArray(skillsData)) return skillsData;
+    if (typeof skillsData === 'string') {
+      if (skillsData.trim().startsWith('[')) {
+        try {
+          const parsed = JSON.parse(skillsData);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
+      }
+      return skillsData.split(/[\s,]+/).filter(Boolean);
+    }
+    return [];
+  };
+
   const metaInfo = [user?.realName, user?.age && `${user.age} лет`, user?.city, user?.workplace].filter(Boolean)
-  const skills: string[] = user?.hardSkills || []
+  const skills: string[] = parseSkills(user?.hardSkills)
   const [visibleMetaCount, setVisibleMetaCount] = useState(metaInfo.length)
   const [visibleTagCount, setVisibleTagCount] = useState(skills.length)
 
@@ -223,13 +243,11 @@ const TeamMemberProjectCard = ({
 
   const hiddenSkillsCount = Math.max(0, skills.length - visibleTagCount)
 
-  // Навигация к профилю участника
   const handleCardClick = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('.member-remove, .member-edit, .member-accept, .member-reject, .role-input')) return
     if (user?.userId) navigate(`/profile/${user.userId}/info`)
   }
 
-  // Начало редактирования роли
   const handleEditRoleClick = (e: React.MouseEvent) => {
     e.stopPropagation()
     setIsEditingRole(true)
@@ -237,7 +255,6 @@ const TeamMemberProjectCard = ({
     setRoleError(null)
   }
 
-  // Подтверждение изменения роли
   const handleAcceptRoleClick = (e: React.MouseEvent) => {
     e.stopPropagation()
     const error = checkRoleFormat(editedRole)
@@ -252,7 +269,6 @@ const TeamMemberProjectCard = ({
     setRoleError(null)
   }
 
-  // Обработка клавиш при редактировании роли
   const handleRoleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') handleAcceptRoleClick(e as any)
     else if (e.key === 'Escape') {
@@ -262,7 +278,6 @@ const TeamMemberProjectCard = ({
     }
   }
 
-  // Изменение текста роли
   const handleRoleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEditedRole(e.target.value)
     if (roleError) setRoleError(null)
@@ -270,8 +285,10 @@ const TeamMemberProjectCard = ({
 
   if (!user) return null
 
+  const isBanned = (user as any)?.isBanned === true;
+
   return (
-    <div className='team-member-project-card' onClick={handleCardClick}>
+    <div className={`team-member-project-card ${isBanned ? 'banned-member-card' : ''}`} onClick={handleCardClick}>
       <div className='info-place-container'>
         <div className='avatar-container'>
           <img src={user.avatarUrl || '/default-avatar.png'} alt={user.nickname} />
@@ -322,7 +339,10 @@ const TeamMemberProjectCard = ({
             <p className='role-text'>{member.role || 'Нет указанной роли'}</p>
           )}
           {user.isOnline ? (
-            <div className='online-container'><div className='circle-online' /><p className='online-text'>Онлайн</p></div>
+            <div className={`online-container ${isBanned ? 'banned-online' : ''}`}>
+              <div className='circle-online' />
+              <p className='online-text'>Онлайн</p>
+            </div>
           ) : (
             <p className='online-text offline'>Был(а) {user.lastSeen}</p>
           )}
@@ -340,7 +360,6 @@ const TeamMemberProjectCard = ({
   )
 }
 
-// Отправка уведомления пользователю
 const sendNotification = (
   userId: string,
   referenceType: string,
@@ -368,7 +387,6 @@ const sendNotification = (
     })
 }
 
-// Уведомление всех участников кроме владельца
 const notifyAllMembersExceptOwner = (
   members: TeamMemberWithUser[],
   ownerId: string | undefined,
@@ -390,7 +408,6 @@ const notifyAllMembersExceptOwner = (
   })
 }
 
-// Построение дерева комментариев
 const buildCommentTree = (commentsList: CommentData[]): CommentNode[] => {
   const map = new Map<string, CommentNode>()
   const roots: CommentNode[] = []
@@ -480,9 +497,121 @@ export const Project = ({ onCancel }: ProjectProps) => {
   const [currentUserNickname, setCurrentUserNickname] = useState<string | null>(null)
   const [showDeleteForm, setShowDeleteForm] = useState(false)
 
+  const [isPreviewDescription, setIsPreviewDescription] = useState(false)
+
   const [initialState, setInitialState] = useState(() => ({
     name: 'Unnamed', shortDesc: '', status: STATUS_OPTIONS[0], description: '', isPrivate: false,
   }))
+
+  const MAX_TOTAL_MEDIA_SIZE = 50 * 1024 * 1024 
+  const descriptionTextareaRef = useRef<HTMLTextAreaElement>(null)
+  const mediaInputRef = useRef<HTMLInputElement>(null)
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false)
+  const [projectMedia, setProjectMedia] = useState<Array<{
+    name: string;
+    url: string;
+    size: number;
+    uploadedAt: string;
+    isDraft: boolean;
+  }>>([])
+  const [mediaError, setMediaError] = useState<string | null>(null)
+  const [deletedMediaFileNames, setDeletedMediaFileNames] = useState<string[]>([])
+
+  const hasMediaChanges = useMemo(() => {
+    return deletedMediaFileNames.length > 0
+  }, [deletedMediaFileNames])
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Б'
+    const k = 1024
+    const sizes = ['Б', 'КБ', 'МБ', 'ГБ']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
+  }
+
+  const getTotalMediaSize = () => {
+    return projectMedia.reduce((acc, media) => acc + media.size, 0)
+  }
+
+  const insertAtCursor = (textToInsert: string) => {
+    const textarea = descriptionTextareaRef.current
+    if (!textarea) return
+
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const newValue = description.slice(0, start) + textToInsert + description.slice(end)
+
+    setDescription(newValue)
+
+    requestAnimationFrame(() => {
+      textarea.focus()
+      const newPos = start + textToInsert.length
+      textarea.setSelectionRange(newPos, newPos)
+    })
+  }
+
+  const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file || !projectId) return
+
+    const currentTotalSize = getTotalMediaSize()
+    if (currentTotalSize + file.size > MAX_TOTAL_MEDIA_SIZE) {
+      setMediaError('Общий размер вложений не должен превышать 50 МБ')
+      setTimeout(() => setMediaError(null), 4000)
+      return
+    }
+
+    setIsUploadingMedia(true)
+    try {
+      const { url } = await projectDraftApi.uploadDraftMedia(projectId, file)
+      
+      insertAtCursor(`\n<img src="${url}" width="400" alt="${file.name}" />\n`)
+      
+      const media = await projectsApi.getMedia(projectId)
+      setProjectMedia(media)
+    } catch (error) {
+      console.error('Ошибка загрузки изображения:', error)
+      setMediaError('Не удалось загрузить изображение')
+      setTimeout(() => setMediaError(null), 4000)
+    } finally {
+      setIsUploadingMedia(false)
+    }
+  }
+
+  const handleInsertMedia = (url: string, fileName: string) => {
+    insertAtCursor(`\n<img src="${url}" width="400" alt="${fileName}" />\n`)
+  }
+
+  const handleDeleteMedia = async (fileName: string, fileUrl: string, isDraft: boolean) => {
+    if (!projectId)
+      return
+
+    try {
+      await projectDraftApi.deleteMedia(projectId, fileName)
+      
+      const escapedUrl = fileUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      const imgTagRegex = new RegExp(`<img\\s+[^>]*src=["']${escapedUrl}["'][^>]*>\\s*`, 'gi')
+      setDescription(prev => prev.replace(imgTagRegex, ''))
+      
+      if (!isDraft) {
+        setDeletedMediaFileNames(prev => [...prev, fileName])
+      }
+      
+      const media = await projectsApi.getMedia(projectId)
+      setProjectMedia(media)
+    } catch (error) {
+      console.error('Ошибка удаления:', error)
+    }
+  }
+
+  useEffect(() => {
+    if (projectId) {
+      projectsApi.getMedia(projectId)
+        .then(setProjectMedia)
+        .catch(console.error)
+    }
+  }, [projectId])
 
   const {
     touched: projectTouched,
@@ -504,7 +633,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
     }
   )
 
-  // Валидация поля проекта
   const checkProjectFormat = (fieldName: string, value: string): string | null => {
     const rules: Record<string, Array<[boolean, string]>> = {
       name: [
@@ -521,7 +649,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
     return error?.[1] ?? null
   }
 
-  // Валидация роли участника
   const checkRoleFormat = (value: string): string | null => {
     const rules: Array<[boolean, string]> = [
       [!validatorFormat.required(value), 'Введите роль'],
@@ -532,7 +659,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
     return error?.[1] ?? null
   }
 
-  // Валидация поля вакансии
   const checkVacancyFormat = (fieldName: string, value: string): string | null => {
     const rules: Record<string, Array<[boolean, string]>> = {
       vacTitle: [
@@ -554,7 +680,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
     return error?.[1] ?? null
   }
 
-  // Загрузка проекта
   const { data: project } = useQuery({
     queryKey: queryKeys.projects.byId(projectId!),
     queryFn: () => projectsApi.getProject(projectId!),
@@ -564,27 +689,41 @@ export const Project = ({ onCancel }: ProjectProps) => {
 
   const isOwner = project?.ownerId === currentUserId
 
-  // Загрузка участников команды
-  const { data: teamMembers = [] } = useQuery({
+  const { data: teamMembers = [] } = useQuery<TeamMemberWithUser[]>({
     queryKey: queryKeys.projects.memberProjects(projectId!),
     queryFn: async () => {
       if (!projectId) return []
-      const [members, proj] = await Promise.all([
-        projectMembersApi.getByProject(projectId),
-        projectsApi.getProject(projectId)
-      ])
-      const membersWithUsers = await Promise.all(
-        members.map(async (member) => {
-          try {
-            const userData = await usersApi.getUserById(member.userId)
-            return { ...member, userData, isOwner: member.userId === proj.ownerId }
-          }
-          catch {
-            return { ...member, isOwner: member.userId === proj.ownerId }
-          }
-        })
-      )
-      return membersWithUsers.sort((a, b) => {
+      
+      const members = await projectMembersApi.getByProject(projectId)
+      const proj = await projectsApi.getProject(projectId)
+
+      const membersWithUsers: TeamMemberWithUser[] = members.map((member: any) => ({
+        memberId: member.memberId,
+        projectId: member.projectId,
+        userId: member.userId,
+        role: member.role,
+        joinedAt: member.joinedAt,
+        isOwner: member.userId === proj.ownerId,
+        userData: {
+          userId: member.userId,
+          nickname: member.nickname,
+          avatarUrl: member.avatarUrl,
+          realName: member.realName,
+          age: member.age,
+          city: member.city,
+          workplace: member.workplace,
+          profileRole: member.profileRole,
+          systemRole: member.systemRole,
+          isBanned: member.isBanned,
+          hardSkills: member.hardSkills,
+          softSkills: member.softSkills,
+          lastOnlineAt: member.lastOnlineAt,
+          isOnline: member.isOnline,
+          lastSeen: member.lastSeen
+        } as UserData
+      }))
+
+      return membersWithUsers.sort((a: TeamMemberWithUser, b: TeamMemberWithUser) => {
         if (!a.joinedAt || !b.joinedAt) return 0
         return new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime()
       })
@@ -593,7 +732,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
     staleTime: 0,
   })
 
-  // Загрузка вакансий проекта
   const { data: vacanciesFromDb = [] } = useQuery({
     queryKey: queryKeys.vacancies.byProject(projectId!),
     queryFn: () => vacanciesApi.getByProject(projectId!),
@@ -601,7 +739,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
     staleTime: 0,
   })
 
-  // Загрузка откликов на проект
   const { data: responses = [] } = useQuery({
     queryKey: queryKeys.responses.byProject(projectId!),
     queryFn: () => responseApi.getByProject(projectId!),
@@ -609,7 +746,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
     staleTime: 0,
   })
 
-  // Загрузка исходящих приглашений
   const { data: allInvites = [] } = useQuery({
     queryKey: queryKeys.invites.outgoing(profileId || ''),
     queryFn: () => inviteApi.getOutgoing(),
@@ -617,7 +753,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
     staleTime: 0,
   })
 
-  // Загрузка комментариев проекта
   const { data: comments = [], refetch: refetchComments } = useQuery({
     queryKey: ['comments', 'project', projectId],
     queryFn: () => commentApi.getComments('project', projectId!),
@@ -629,7 +764,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
     [allInvites, projectId]
   )
 
-  // Получение никнейма текущего пользователя
   useEffect(() => {
     const fetchNickname = async () => {
       if (!currentUserId) return
@@ -644,14 +778,12 @@ export const Project = ({ onCancel }: ProjectProps) => {
     fetchNickname()
   }, [currentUserId])
 
-  // Сброс состояния при смене проекта
   useEffect(() => {
     setLoadedDraft(undefined)
     teamInitializedRef.current = false
     vacanciesSyncedRef.current = false
   }, [projectId])
 
-  // Синхронизация вакансий с черновиком
   useEffect(() => {
     if (vacanciesFromDb.length > 0 && !vacanciesSyncedRef.current && loadedDraft !== undefined) {
       let vacancies: LocalVacancy[] = vacanciesFromDb.map(v => ({ ...v } as LocalVacancy))
@@ -675,7 +807,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
     }
   }, [vacanciesFromDb, loadedDraft, projectId, name])
 
-  // Синхронизация команды с черновиком
   useEffect(() => {
     if (teamMembers.length > 0 && !teamInitializedRef.current && loadedDraft !== undefined) {
       const membersCopy = teamMembers.map(m => ({ ...m }))
@@ -694,7 +825,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
     }
   }, [teamMembers, loadedDraft])
 
-  // Загрузка данных проекта и черновика
   useEffect(() => {
     if (project && projectId) {
       const cleanState = {
@@ -735,7 +865,8 @@ export const Project = ({ onCancel }: ProjectProps) => {
               (draft.status && draft.status !== cleanState.status) ||
               (draft.isPrivate !== undefined && draft.isPrivate !== cleanState.isPrivate)
             )
-            setHasDescriptionDraft(!!(draft.fullDescription && draft.fullDescription !== cleanState.description))
+            setHasDescriptionDraft(!!(draft.fullDescription && draft.fullDescription !== cleanState.description))    
+            setDeletedMediaFileNames(draft.deletedMediaFiles || [])
           } else {
             const projectStatus = project.status ? (statusMap[project.status] || project.status) : STATUS_OPTIONS[0]
 
@@ -747,6 +878,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
 
             setHasBasicInfoDraft(false)
             setHasDescriptionDraft(false)
+            setDeletedMediaFileNames([])
           }
         }
         catch (error) {
@@ -758,13 +890,13 @@ export const Project = ({ onCancel }: ProjectProps) => {
           setStatus(projectStatus)
           setDescription(cleanState.description)
           setIsPrivate(cleanState.isPrivate)
+          setDeletedMediaFileNames([])
         }
       }
       loadDraft()
     }
   }, [project, projectId])
 
-  // Автосохранение черновика
   useEffect(() => {
     if (!projectId) return
 
@@ -803,6 +935,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
           deletedVacancyIds,
           deletedMemberIds,
           editedRoles,
+          deletedMediaFiles: deletedMediaFileNames, 
         })
 
         if (isBasicInfoChanged) setHasBasicInfoDraft(true)
@@ -815,9 +948,8 @@ export const Project = ({ onCancel }: ProjectProps) => {
     return () => {
       if (draftTimeoutRef.current) clearTimeout(draftTimeoutRef.current)
     }
-  }, [name, shortDesc, status, description, isPrivate, localVacancies, deletedVacancyIds, deletedMemberIds, editedRoles, initialState, projectId, vacanciesFromDb])
+  }, [name, shortDesc, status, description, isPrivate, localVacancies, deletedVacancyIds, deletedMemberIds, editedRoles, initialState, projectId, vacanciesFromDb, deletedMediaFileNames])
 
-  // Обновление флага черновика команды
   useEffect(() => {
     const hasRealChanges =
       deletedMemberIds.length > 0 ||
@@ -829,7 +961,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
     setHasTeamDraft(hasRealChanges)
   }, [deletedMemberIds, editedRoles, initialTeamState])
 
-  // Обновление флага черновика вакансий
   useEffect(() => {
     const hasRealChanges =
       deletedVacancyIds.length > 0 ||
@@ -854,7 +985,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
     setHasVacanciesDraft(hasRealChanges)
   }, [deletedVacancyIds, localVacancies, vacanciesFromDb])
 
-  // Сброс флага черновика базовой информации
   useEffect(() => {
     const isBasicInfoChanged =
       name !== initialState.name ||
@@ -867,14 +997,12 @@ export const Project = ({ onCancel }: ProjectProps) => {
     }
   }, [name, shortDesc, status, isPrivate, initialState, hasBasicInfoDraft])
 
-  // Сброс флага черновика описания
   useEffect(() => {
     if (description === initialState.description && hasDescriptionDraft) {
       setHasDescriptionDraft(false)
     }
   }, [description, initialState.description, hasDescriptionDraft])
 
-  // Проверка изменений вакансий
   const hasVacancyChanges = useMemo(() =>
     deletedVacancyIds.length > 0 ||
     localVacancies.some(v => {
@@ -896,8 +1024,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
     }),
     [deletedVacancyIds, localVacancies, vacanciesFromDb]
   )
-
-  // Проверка изменений команды
+  
   const hasTeamChanges = useMemo(() =>
     deletedMemberIds.length > 0 ||
     Object.keys(editedRoles).some(memberId => {
@@ -907,7 +1034,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
     [deletedMemberIds, editedRoles, initialTeamState]
   )
 
-  // Проверка общих изменений
   const hasChanges = useMemo(() =>
     name !== initialState.name ||
     shortDesc !== initialState.shortDesc ||
@@ -915,11 +1041,14 @@ export const Project = ({ onCancel }: ProjectProps) => {
     description !== initialState.description ||
     isPrivate !== initialState.isPrivate ||
     hasVacancyChanges ||
-    hasTeamChanges,
-    [name, shortDesc, status, description, isPrivate, initialState, hasVacancyChanges, hasTeamChanges]
+    hasTeamChanges ||
+    hasMediaChanges,
+    [
+      name, shortDesc, status, description, isPrivate, initialState, 
+      hasVacancyChanges, hasTeamChanges, hasMediaChanges
+    ]
   )
 
-  // Проверка валидности формы проекта
   const isProjectFormValid = useMemo(() => {
     const nameValid = !checkProjectFormat('name', name)
     const shortDescValid = !checkProjectFormat('shortDesc', shortDesc)
@@ -936,7 +1065,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
     return nameValid && shortDescValid && vacanciesValid
   }, [name, shortDesc, localVacancies, deletedVacancyIds])
 
-  // Отмена изменений и сброс черновика
   const handleCancel = async () => {
     if (hasChanges && projectId) {
       try {
@@ -945,26 +1073,29 @@ export const Project = ({ onCancel }: ProjectProps) => {
         console.error('Ошибка сброса черновика:', error)
       }
     }
-
+    
     setName(initialState.name)
     setShortDesc(initialState.shortDesc)
     setStatus(initialState.status)
     setDescription(initialState.description)
     setIsPrivate(initialState.isPrivate)
-
     setHasBasicInfoDraft(false)
     setHasDescriptionDraft(false)
     setHasTeamDraft(false)
     setHasVacanciesDraft(false)
-
     setLocalTeamMembers(initialTeamState.map(m => ({ ...m })))
     setDeletedMemberIds([])
     setEditedRoles({})
     setLocalVacancies(vacanciesFromDb.map(v => ({ ...v })))
     setDeletedVacancyIds([])
+    
+    setDeletedMediaFileNames([])
+    if (projectId) {
+      const media = await projectsApi.getMedia(projectId)
+      setProjectMedia(media)
+    }
   }
 
-  // Навигация назад
   const handleBack = async () => {
     if (hasChanges && projectId) {
       try {
@@ -978,7 +1109,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
     navigate(`${profilePath}/activity`, { replace: true })
   }
 
-  // Обработка клавиши Escape
   useEffect(() => {
     const handleEscKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -993,14 +1123,13 @@ export const Project = ({ onCancel }: ProjectProps) => {
     }
   }, [handleBack])
 
-  // Сохранение проекта
   const handleSave = async () => {
     if (!projectId || !hasChanges || !isProjectFormValid) return
     setIsSaving(true)
     setSaveError(null)
 
     try {
-      await projectDraftApi.commitDraft(projectId, {
+      const commitResponse = await projectDraftApi.commitDraft(projectId, {
         title: name,
         shortDescription: shortDesc,
         fullDescription: description,
@@ -1008,10 +1137,18 @@ export const Project = ({ onCancel }: ProjectProps) => {
         isPrivate: isPrivate
       })
 
+      if (commitResponse?.fullDescription !== undefined) {
+        setDescription(commitResponse.fullDescription)
+      }
+
+      setDeletedMediaFileNames([])
+
+      const media = await projectsApi.getMedia(projectId)
+      setProjectMedia(media)
+      
       if (deletedVacancyIds.length > 0) {
         deletedVacancyIds.forEach(vacancyId => {
           if (vacancyId.startsWith('temp_')) return
-
           const vacancy = localVacancies.find(v => v.vacancyId === vacancyId)
           if (!vacancy) return
 
@@ -1150,7 +1287,13 @@ export const Project = ({ onCancel }: ProjectProps) => {
       vacanciesSyncedRef.current = false
       setLoadedDraft(undefined)
 
-      setInitialState({ name, shortDesc, status, description, isPrivate })
+      setInitialState({ 
+        name, 
+        shortDesc, 
+        status, 
+        description: commitResponse?.fullDescription || description, 
+        isPrivate 
+      })
 
       setHasBasicInfoDraft(false)
       setHasDescriptionDraft(false)
@@ -1169,13 +1312,11 @@ export const Project = ({ onCancel }: ProjectProps) => {
     }
   }
 
-  // Выбор статуса проекта
   const handleStatusSelect = (item: { id: string; label: string }) => {
     setStatus(item.label)
     setStatusOpen(false)
   }
 
-  // Мутация приглашения участника
   const inviteMemberMutation = useMutation({
     mutationFn: async ({ email, role }: { email: string; role: string }) => {
       const emailValid = validatorFormat.email(email)
@@ -1261,7 +1402,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
     },
   })
 
-  // Приглашение участника по email
   const handleInvite = () => {
     const roleError = checkRoleFormat(inviteRole)
     setInviteRoleError(roleError)
@@ -1271,27 +1411,23 @@ export const Project = ({ onCancel }: ProjectProps) => {
     }
   }
 
-  // Изменение роли приглашения
   const handleInviteRoleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInviteRole(e.target.value)
     if (inviteRoleError) setInviteRoleError(null)
   }
 
-  // Потеря фокуса поля роли приглашения
   const handleInviteRoleBlur = () => {
     if (inviteRole.trim()) {
       setInviteRoleError(checkRoleFormat(inviteRole))
     }
   }
 
-  // Сброс сообщения приглашения
   const resetInviteMessage = () => {
     setInviteMessage('На указанный email будет отправлено приглашение на участие в проекте')
     setInviteMessageType('info')
     setInviteRoleError(null)
   }
 
-  // Удаление участника из команды
   const handleRemoveMember = (memberId: string) => {
     setLocalTeamMembers(prev => prev.filter(m => m.memberId !== memberId))
     setDeletedMemberIds(prev => [...prev, memberId])
@@ -1302,7 +1438,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
     })
   }
 
-  // Обновление роли участника
   const handleUpdateMemberRole = (memberId: string, newRole: string) => {
     setLocalTeamMembers(prev => prev.map(m =>
       m.memberId === memberId ? { ...m, role: newRole } : m
@@ -1321,7 +1456,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
     })
   }
 
-  // Открытие формы вакансии
   const openVacancyForm = (v?: LocalVacancy) => {
     if (v) {
       setEditingVacancy(v)
@@ -1336,7 +1470,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
     setShowVacancyForm(true)
   }
 
-  // Закрытие формы вакансии
   const closeVacancyForm = () => {
     setShowVacancyForm(false)
     setEditingVacancy(null)
@@ -1344,7 +1477,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
     setVacancyTouched({ vacTitle: false, vacDesc: false, vacTags: false })
   }
 
-  // Сохранение вакансии
   const saveVacancy = () => {
     if (!vacTitle.trim()) return
     const tags = vacTags.trim().split(/\s+/).filter(Boolean)
@@ -1375,7 +1507,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
     closeVacancyForm()
   }
 
-  // Удаление вакансии
   const deleteVacancy = (vacancyId: string) => {
     setLocalVacancies(prev => prev.filter(v => v.vacancyId !== vacancyId))
     if (!vacancyId.startsWith('temp_')) {
@@ -1383,10 +1514,8 @@ export const Project = ({ onCancel }: ProjectProps) => {
     }
   }
 
-  // Открытие формы удаления проекта
   const handleDeleteClick = () => { if (projectId) setShowDeleteForm(true) }
 
-  // Успешное удаление проекта
   const handleDeleteSuccess = () => {
     const projectName = name || project?.title || 'Проект'
 
@@ -1427,7 +1556,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
     navigate(`${profilePath}/activity`, { replace: true })
   }
 
-  // Обработка отклика на вакансию
   const handleResponseAction = async (response: ResponseData, action: 'accept' | 'decline') => {
     try {
       await responseApi.delete(response.responseId)
@@ -1466,7 +1594,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
     }
   }
 
-  // Отмена приглашения
   const handleCancelInvite = async (invite: InviteData) => {
     try {
       await inviteApi.delete(invite.inviteId)
@@ -1488,7 +1615,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
     }
   }
 
-  // Мутация создания комментария
   const createCommentMutation = useMutation({
     mutationFn: (dto: any) => commentApi.create(dto),
     onSuccess: () => {
@@ -1499,7 +1625,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
     },
   })
 
-  // Мутация обновления комментария
   const updateCommentMutation = useMutation({
     mutationFn: ({ commentId, content }: { commentId: string, content: string }) => commentApi.update(commentId, content),
     onSuccess: () => {
@@ -1509,7 +1634,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
     },
   })
 
-  // Мутация удаления комментария
   const deleteCommentMutation = useMutation({
     mutationFn: (commentId: string) => commentApi.delete(commentId),
     onSuccess: () => {
@@ -1517,7 +1641,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
     },
   })
 
-  // Переключение раскрытия ответов комментария
   const toggleReplies = (commentId: string) => {
     setExpandedComments(prev => {
       const newSet = new Set(prev)
@@ -1530,10 +1653,8 @@ export const Project = ({ onCancel }: ProjectProps) => {
     })
   }
 
-  // Проверка: раскрыт ли комментарий
   const isExpanded = (commentId: string) => expandedComments.has(commentId)
 
-  // Рендер узла комментария
   const renderCommentNode = (node: CommentNode, depth = 0) => {
     const isAuthor = node.userId === currentUserId
     const canDelete = isAuthor || isOwner
@@ -1574,11 +1695,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
                   {canDelete && (
                     <button
                       className='comment-remove-badge'
-                      onClick={() => {
-                        if (window.confirm('Удалить этот комментарий?')) {
-                          deleteCommentMutation.mutate(node.commentId)
-                        }
-                      }}
+                      onClick={() => {deleteCommentMutation.mutate(node.commentId)}}
                     >
                       <Delete className='ico' />
                     </button>
@@ -1691,7 +1808,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
   }
 
   const reverseStatusMap: Record<string, string> = { 'В процессе': 'in_progress', 'Завершён': 'completed', 'Приостановлен': 'paused' }
-
+    
   return (
     <div className='project-page'>
       {isPreview ? (
@@ -1763,13 +1880,99 @@ export const Project = ({ onCancel }: ProjectProps) => {
             </div>
           </section>
 
-          <section className='project-section'>
-            <div className='section-header-wrapper'>
-              <h2 className='project-section-title'>Описание проекта</h2>
-              {hasDescriptionDraft && <span className='draft-indicator'>(черновик)</span>}
+        <section className='project-section'>
+          <div className='section-header-wrapper'>
+            <h2 className='project-section-title'>Описание проекта</h2>
+            {hasDescriptionDraft && <span className='draft-indicator'>(черновик)</span>}
+          </div>
+
+          {isPreviewDescription ? (
+            <div className='description-preview-container'>
+              {description ? (
+                <div className='project-description-preview markdown-content'>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                    {description}
+                  </ReactMarkdown>
+                </div>
+              ) : (
+                <div className='empty-state'>
+                  <p className='empty-text'>Описание пока не заполнено</p>
+                </div>
+              )}
             </div>
-            <textarea className='project-md-editor' value={description} onChange={e => setDescription(e.target.value)} placeholder={'### Заголовок проекта\n\nРасскажите о целях и задачах вашего проекта.\n\nИспользуйте **жирный текст** для акцентов и списки для структуры.\n\nПример:\n- Цель проекта\n- Задачи\n- Ожидаемые результаты'} />
-          </section>
+          ) : (
+            <textarea
+              ref={descriptionTextareaRef}
+              className='project-md-editor'
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder={'### Заголовок проекта\n\nРасскажите о целях и задачах вашего проекта.\n\nИспользуйте **жирный текст** для акцентов и списки для структуры.\n\nПример:\n- Цель проекта\n- Задачи\n- Ожидаемые результаты'}
+            />
+          )}
+
+          <div className='media-upload-section'>
+            <input
+              type='file'
+              ref={mediaInputRef}
+              accept='image/*'
+              hidden
+              onChange={handleMediaUpload}
+              disabled={isUploadingMedia || isPreviewDescription}
+            />
+            <div className='media-upload-header'>
+              <button 
+                type='button' 
+                className='media-upload-btn' 
+                onClick={() => mediaInputRef.current?.click()}
+                disabled={isUploadingMedia || isPreviewDescription}
+              >
+                <Add className='media-upload-ico' />
+                <span>Прикрепить медиа</span>
+              </button>
+              <p className='media-upload-hint'>Общий размер медиа до 50 МБ</p>
+              
+              <div className='preview-toggle-container'>
+                <p className='preview-toggle-label'>Предпросмотр</p>
+                <Toggle checked={isPreviewDescription} onChange={setIsPreviewDescription} />
+              </div>
+            </div>
+
+            {mediaError && (
+              <p className='media-error-text'>{mediaError}</p>
+            )}
+
+            {projectMedia.length > 0 && (
+              <div className='media-list'>
+                {projectMedia.map((media, index) => (
+                  <div className='media-item-wrapper' key={`${media.name}-${index}`}>
+                    <div className='media-item'>
+                      <p className='media-name'>{media.name}</p>
+                      <p className='media-size'>{formatFileSize(media.size)}</p>
+                    </div>
+                    <div className='media-actions'>
+                      <button
+                        type='button'
+                        className='media-action-btn copy'
+                        onClick={() => handleInsertMedia(media.url, media.name)}
+                        disabled={isPreviewDescription}
+                      >
+                        <CopyIcon className='ico' />
+                      </button>
+                      <button
+                        type='button'
+                        className='media-action-btn delete'
+                        onClick={() => handleDeleteMedia(media.name, media.url, media.isDraft)}
+                        disabled={isPreviewDescription}
+                      >
+                        <RejectIcon className='ico' />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
 
           <section className='project-section'>
             <div className='section-header-wrapper'>

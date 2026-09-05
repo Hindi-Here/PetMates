@@ -17,17 +17,15 @@ export interface AddProjectMemberDto {
 
 export const projectMembersApi = {
   // Получить всех участников проекта
-  getByProject: async (projectId: string): Promise<ProjectMemberData[]> => {
+  getByProject: async (projectId: string) => {
     const { data: { session } } = await supabase.auth.getSession();
-    
     const response = await fetch(`${API_BASE}/api/projectmembers/project/${projectId}`, {
-      headers: { 
-        'Authorization': `Bearer ${session?.access_token}`,
-        'Content-Type': 'application/json' 
+      headers: {
+        ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {}),
+        'Content-Type': 'application/json'
       },
     });
-
-    if (!response.ok) throw new Error('Ошибка загрузки участников');
+    if (!response.ok) throw new Error('Не удалось загрузить участников');
     return await response.json();
   },
 

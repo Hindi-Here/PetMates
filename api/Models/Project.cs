@@ -73,5 +73,51 @@ namespace api.Models
 
         [Column("updated_at")]
         public DateTime? UpdatedAt { get; set; }
+
+        [Column("deleted_media_files")]
+        public string? DeletedMediaFiles { get; set; }
+    }
+
+    public class CreateProjectDto
+    {
+        public string Title { get; set; } = string.Empty;
+        public string? ShortDescription { get; set; }
+        public string? FullDescription { get; set; }
+        public string? Status { get; set; }
+        public bool IsPrivate { get; set; } = false;
+    }
+
+    public class SaveDraftDto
+    {
+        public string? Title { get; set; }
+        public string? ShortDescription { get; set; }
+        public string? FullDescription { get; set; }
+        public string? Status { get; set; }
+        public bool? IsPrivate { get; set; }
+
+        public List<VacancyDraftItem>? Vacancies { get; set; }
+        public List<string>? DeletedVacancyIds { get; set; }
+        public List<string>? DeletedMemberIds { get; set; }
+        public Dictionary<string, string>? EditedRoles { get; set; }
+        public List<string>? DeletedMediaFiles { get; set; }
+    }
+
+    public class CommitProjectDto
+    {
+        public string? Title { get; set; }
+        public string? ShortDescription { get; set; }
+        public string? FullDescription { get; set; }
+        public string? Status { get; set; }
+        public bool? IsPrivate { get; set; }
+    }
+
+    public class VacancyDraftItem
+    {
+        public string VacancyId { get; set; } = string.Empty;
+        public string Title { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public List<string> RequiredTags { get; set; } = [];
+        public bool IsNew { get; set; }
+        public bool IsModified { get; set; }
     }
 }

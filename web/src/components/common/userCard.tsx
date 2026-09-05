@@ -1,12 +1,20 @@
 import './userCard.scss'
 
 import AdminProjectIcon from '@icons/admin_project.svg?react'
+import MoreIcon from '@icons/more.svg?react'
 
 import { useState, useEffect, useRef, Fragment } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useUserActivity } from '../hooks/useUserActivity'
+import { useSystemRole } from '../hooks/useSystemRole'
+import { canModerateTarget } from '../scripts/moderation'
+import { moderationApi } from '../services/moderation'
+import { useQueryClient } from '@tanstack/react-query'
+import { queryKeys } from '../scripts/query/queryKeys'
 import type { UserData } from '../services/users'
+
+import BanUserForm from '../forms/ban_user'
 
 const getProjectCountText = (count: number): string => {
   if (count === 0) return 'проектах'
@@ -25,17 +33,63 @@ export const UserCard = ({
   onInvite,
   isOwner = false,
   role,
-  disabledInvite = false
+  disabledInvite = false,
+  showModerationDelete = false
 }: { 
   user: UserData
   onInvite?: (user: UserData) => void
   isOwner?: boolean
   role?: string
   disabledInvite?: boolean
-}) => {
+  showModerationDelete?: boolean
+})  => {
   const navigate = useNavigate()
+  const isBanned = (user as any).isBanned
+  const queryClient = useQueryClient()
   const { isAuthenticated, userId: authUserId } = useAuth()
-  const canInvite = isAuthenticated && authUserId !== user.userId && !disabledInvite
+  const currentSystemRole = useSystemRole()
+  
+  const canInvite = isAuthenticated && authUserId !== user.userId && !disabledInvite && !isBanned
+
+  const targetSystemRole = (user as any).systemRole as string | undefined
+  const canModerate = isAuthenticated &&
+    authUserId !== user.userId &&
+    canModerateTarget(currentSystemRole, targetSystemRole)
+
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!isMenuOpen) return
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setIsMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [isMenuOpen])
+
+  const [showBanForm, setShowBanForm] = useState(false)
+
+  const handleBan = () => {
+    setIsMenuOpen(false)
+    setShowBanForm(true)
+  }
+
+  const handleUnban = async () => {
+    await moderationApi.unbanUser(user.userId)
+    queryClient.invalidateQueries({ queryKey: queryKeys.users.allList() })
+    queryClient.invalidateQueries({ queryKey: ['users', 'byId', user.userId] })
+    setIsMenuOpen(false)
+  }
+
+  const handleSetRole = async (newRole: 'user' | 'moderator' | 'admin') => {
+    await moderationApi.setRole(user.userId, newRole)
+    queryClient.invalidateQueries({ queryKey: queryKeys.users.allList() })
+    queryClient.invalidateQueries({ queryKey: ['users', 'byId', user.userId] })
+    setIsMenuOpen(false)
+  }
   
   const metaInfo = [
     user.realName,
@@ -44,10 +98,26 @@ export const UserCard = ({
     user.workplace
   ].filter(Boolean)
 
-  const skills: string[] = user.hardSkills || []
+  const parseSkills = (skillsData: any): string[] => {
+  if (Array.isArray(skillsData)) return skillsData;
+  if (typeof skillsData === 'string') {
+    if (skillsData.trim().startsWith('[')) {
+      try {
+        const parsed = JSON.parse(skillsData);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+    return skillsData.split(/[\s,]+/).filter(Boolean);
+  }
+  return [];
+};
+
+  const skills: string[] = parseSkills(user?.hardSkills);
   
   const handleCardClick = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest('.invite-button')) {
+    if ((e.target as HTMLElement).closest('.invite-button, .moderation-menu-wrapper')) {
       return
     }
     navigate(`/profile/${user.userId}/info`)
@@ -144,92 +214,156 @@ export const UserCard = ({
   const { activityCount, loading: activityLoading } = useUserActivity(user.userId)
 
   return (
-    <div className='user-card-container' onClick={handleCardClick}>
-      <div className='info-place-container'>
-        <div className='avatar-container'>
-          <img className='avatar-ico' src={user.avatarUrl || '/default-avatar.png'} alt={user.nickname} />
-        </div>
-        <div className='info-container'>
-         <div className='nickname-row' ref={rowRef}>
-  <p className='nickname-text'>{user.nickname}</p>
-  <div className='meta-info'>
-    {metaInfo.map((item, index) => (
-      <Fragment key={index}>
-        {index > 0 && (
-          <div
-            className='meta-separator'
-            style={index >= visibleCount ? { position: 'absolute', visibility: 'hidden', pointerEvents: 'none' } : {}}
-          />
+    <>
+      <div className={`user-card-container 
+        ${showModerationDelete ? 'with-moderation' : ''} 
+        ${isBanned ? 'banned-user-card' : ''}`}
+        onClick={handleCardClick}
+      > 
+        {canModerate && (
+          <div className='moderation-menu-wrapper' ref={menuRef}>
+            <button
+              className={`moderation-menu-btn ${isBanned ? 'banned-menu-btn' : ''}`}
+              onClick={(e) => { e.stopPropagation(); setIsMenuOpen(!isMenuOpen) }}
+            >
+              <MoreIcon className='ico' />
+            </button>
+
+            {isMenuOpen && (
+              <div className='moderation-menu'>
+                {(user as any).isBanned ? (
+                  <button onClick={(e) => { e.stopPropagation(); handleUnban() }}>Разблокировать</button>
+                ) : (
+                  <button className='danger' onClick={(e) => { e.stopPropagation(); handleBan() }}>Заблокировать</button>
+                )}
+
+                {currentSystemRole === 'admin' && (
+                  <>
+                    {targetSystemRole === 'admin' ? (
+                      <button onClick={(e) => { e.stopPropagation(); handleSetRole('user') }}>
+                        Снять администратора
+                      </button>
+                    ) : (
+                      <>
+                        {targetSystemRole === 'moderator' ? (
+                          <button onClick={(e) => { e.stopPropagation(); handleSetRole('user') }}>
+                            Снять модератора
+                          </button>
+                        ) : (
+                          <button onClick={(e) => { e.stopPropagation(); handleSetRole('moderator') }}>
+                            Назначить модератором
+                          </button>
+                        )}
+                        <button onClick={(e) => { e.stopPropagation(); handleSetRole('admin') }}>
+                          Назначить администратором
+                        </button>
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         )}
-        <p
-          className='meta-item'
-          style={index >= visibleCount ? { position: 'absolute', visibility: 'hidden', pointerEvents: 'none' } : {}}
-        >
-          {item}
-        </p>
-      </Fragment>
-    ))}
-  </div>
-  {isOwner && (
-    <span className='owner-badge'>
-      <AdminProjectIcon className='owner-icon' />
-      Владелец
-    </span>
-  )}
-</div>
-          <p className='role-text'>{role || user.profileRole || 'Нет указанной роли'}</p>
-          {user.isOnline ? (
-            <div className='online-container'>
-              <div className='circle-online' />
-              <p className='online-text'>Онлайн</p>
+
+        <div className='info-place-container'>
+          <div className='avatar-container'>
+            <img className='avatar-ico' src={user.avatarUrl || '/default-avatar.png'} alt={user.nickname} />
+          </div>
+          <div className='info-container'>
+            <div className='nickname-row' ref={rowRef}>
+              <p className='nickname-text'>{user.nickname}</p>
+              <div className='meta-info'>
+                {metaInfo.map((item, index) => (
+                  <Fragment key={index}>
+                    {index > 0 && (
+                      <div
+                        className='meta-separator'
+                        style={index >= visibleCount ? { position: 'absolute', visibility: 'hidden', pointerEvents: 'none' } : {}}
+                      />
+                    )}
+                    <p
+                      className='meta-item'
+                      style={index >= visibleCount ? { position: 'absolute', visibility: 'hidden', pointerEvents: 'none' } : {}}
+                    >
+                      {item}
+                    </p>
+                  </Fragment>
+                ))}
+              </div>
+              {isOwner && (
+                <span className='owner-badge'>
+                  <AdminProjectIcon className='owner-icon' />
+                  Владелец
+                </span>
+              )}
+            </div>
+            <p className='role-text'>{role || user.profileRole || 'Нет указанной роли'}</p>
+            {user.isOnline ? (
+              <div className='online-container'>
+                <div className='circle-online' />
+                <p className='online-text'>Онлайн</p>
+              </div>
+            ) : (
+              <p className='online-text offline'>Был(а) {user.lastSeen}</p>
+            )}
+          </div>
+        </div>
+
+        <div className='tag-place-container' ref={tagRowRef}>
+          {skills.length === 0 ? (
+            <div className='tag-item empty'>
+              <p className='tag-text empty'>Нет указанных ключевых навыков</p>
             </div>
           ) : (
-            <p className='online-text offline'>Был(а) {user.lastSeen}</p>
+            <>
+              {skills.map((skill, index) => (
+                <div 
+                  key={index} 
+                  className='tag-item'
+                  style={index >= visibleTagCount ? { position: 'absolute', visibility: 'hidden', pointerEvents: 'none' } : {}}>
+                  <p className='tag-text'>{skill}</p>
+                </div>
+              ))}
+              <div
+                className='tag-item more-tag'
+                style={visibleTagCount >= skills.length ? { position: 'absolute', visibility: 'hidden', pointerEvents: 'none' } : {}} >
+                <p className='tag-text'>+{skills.length - visibleTagCount}</p>
+              </div>
+            </>
           )}
+        </div>
+
+        <div className='invite-place-container'>
+          <button 
+            className='invite-button' 
+            disabled={!canInvite} 
+            onClick={(e) => {
+              e.stopPropagation()
+              if (onInvite) onInvite(user)
+            }}>
+            {isBanned ? 'Заблокирован' : 'Пригласить'}
+          </button>
+          <p className='project-count-text'>
+            {activityLoading 
+              ? 'Активность в 0 проектах' 
+              : `Активность в ${activityCount} ${getProjectCountText(activityCount)}`}
+          </p>
         </div>
       </div>
 
-      <div className='tag-place-container' ref={tagRowRef}>
-        {skills.length === 0 ? (
-          <div className='tag-item empty'>
-            <p className='tag-text empty'>Нет указанных ключевых навыков</p>
-          </div>
-        ) : (
-          <>
-            {skills.map((skill, index) => (
-              <div 
-                key={index} 
-                className='tag-item'
-                style={index >= visibleTagCount ? { position: 'absolute', visibility: 'hidden', pointerEvents: 'none' } : {}}>
-                <p className='tag-text'>{skill}</p>
-              </div>
-            ))}
-            <div
-              className='tag-item more-tag'
-              style={visibleTagCount >= skills.length ? { position: 'absolute', visibility: 'hidden', pointerEvents: 'none' } : {}} >
-              <p className='tag-text'>+{skills.length - visibleTagCount}</p>
-            </div>
-          </>
-        )}
-      </div>
-
-      <div className='invite-place-container'>
-        <button 
-          className='invite-button' 
-          disabled={!canInvite} 
-          onClick={(e) => {
-            e.stopPropagation()
-            if (onInvite) onInvite(user)
-          }}>
-          Пригласить
-        </button>
-        <p className='project-count-text'>
-          {activityLoading 
-            ? 'Активность в 0 проектах' 
-            : `Активность в ${activityCount} ${getProjectCountText(activityCount)}`}
-        </p>
-      </div>
-    </div>
+      {showBanForm && (
+        <BanUserForm
+          userId={user.userId}
+          nickname={user.nickname}
+          onClose={() => setShowBanForm(false)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.users.allList() })
+            queryClient.invalidateQueries({ queryKey: ['users', 'byId', user.userId] })
+          }}
+        />
+      )}
+    </>
   )
 }
 

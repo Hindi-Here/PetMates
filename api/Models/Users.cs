@@ -57,5 +57,17 @@ namespace api.Models
 
         [Column("created_at")]
         public DateTime? CreatedAt { get; set; }
+
+        [Column("is_banned")]
+        public bool IsBanned { get; set; }
+
+        [Column("banned_at")]
+        public DateTime? BannedAt { get; set; }
+
+        [Column("banned_reason")]
+        public string? BannedReason { get; set; }
+
+        [Column("banned_by")]
+        public string? BannedBy { get; set; }
     }
 }

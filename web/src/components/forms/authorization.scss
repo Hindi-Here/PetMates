@@ -224,6 +224,33 @@
     }
 }
 
+@media (max-height: 700px) {
+  .auth-change-format-container {
+    padding-bottom: rem(12);
+    margin-top: auto; 
+  }
+  
+  .form-content-container {
+    margin-bottom: rem(6);
+  }
+}
+
+@media (max-height: 600px) {
+  .auth-change-format-container {
+    padding-top: rem(6);
+    padding-bottom: rem(6);
+  }
+  
+  .auth-service-container {
+    margin-bottom: rem(6);
+  }
+  
+  .form-complete-container {
+    margin-top: rem(6);
+    margin-bottom: rem(6);
+  }
+}
+
 @media (max-width: 480px) {
   .auth-service-items-container {
     flex-wrap: wrap;

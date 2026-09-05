@@ -40,6 +40,7 @@ export interface ProjectDraftData {
   deletedVacancyIds?: string[];
   deletedMemberIds?: string[];
   editedRoles?: Record<string, string>;
+  deletedMediaFiles?: string[];
 }
 
 export interface CommitProjectDto {
@@ -51,7 +52,7 @@ export interface CommitProjectDto {
 }
 
 export const projectsApi = {
-  // Получить проекты текущего пользователя
+   // Получить проекты текущего пользователя
   getMyProjects: async (): Promise<ProjectData[]> => {
     const { data: { session } } = await supabase.auth.getSession();
     const response = await fetch(`${API_BASE}/api/projects/my`, {
@@ -138,7 +139,6 @@ export const projectsApi = {
   // Переключить статус оценки проекта (оценить/отменить)
   toggleRating: async (projectId: string, currentHasRated: boolean): Promise<{ success: boolean; ratingCount: number; hasRated: boolean }> => {
     const { data: { session } } = await supabase.auth.getSession();
-    
     if (currentHasRated) {
       const response = await fetch(`${API_BASE}/api/projects/${projectId}/rating`, {
         method: 'DELETE',
@@ -176,6 +176,66 @@ export const projectsApi = {
     });
     if (!response.ok) throw new Error(await response.text() || 'Ошибка загрузки проектов участника');
     return await response.json();
+  },
+
+  // Загрузить медиа в черновик
+  uploadDraftMedia: async (projectId: string, file: File): Promise<{ url: string; fileName: string; size: number }> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${API_BASE}/api/projects/${projectId}/media/draft`, {
+      method: 'POST',
+      headers: {
+        ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {}),
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || 'Ошибка загрузки чернового изображения');
+    }
+    return await response.json();
+  },
+
+  // Получить медиа
+  getMedia: async (projectId: string): Promise<Array<{
+    name: string;
+    url: string;
+    size: number;
+    uploadedAt: string;
+    isDraft: boolean;
+  }>> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const response = await fetch(`${API_BASE}/api/projects/${projectId}/media`, {
+      headers: {
+        ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {}),
+        'Content-Type': 'application/json'
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || 'Ошибка получения списка медиа');
+    }
+    return await response.json();
+  },
+
+  // Удалить медиа
+  deleteMedia: async (projectId: string, fileName: string): Promise<void> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const response = await fetch(`${API_BASE}/api/projects/${projectId}/media/${encodeURIComponent(fileName)}`, {
+      method: 'DELETE',
+      headers: {
+        ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {}),
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || 'Ошибка удаления файла');
+    }
   }
 };
 
@@ -184,11 +244,26 @@ export const projectDraftApi = {
   getDraft: async (projectId: string): Promise<ProjectDraftData | null> => {
     const { data: { session } } = await supabase.auth.getSession();
     const response = await fetch(`${API_BASE}/api/projects/${projectId}/draft`, {
-      headers: { 'Authorization': `Bearer ${session?.access_token}`, 'Content-Type': 'application/json' },
+      headers: { 
+        'Authorization': `Bearer ${session?.access_token}`, 
+        'Content-Type': 'application/json' 
+      },
     });
-    if (response.status === 404) return null;
-    if (!response.ok) throw new Error('Ошибка загрузки черновика');
-    return await response.json();
+    
+    if (response.status === 404 || response.status === 204)
+      return null;
+    if (!response.ok)
+      throw new Error('Ошибка загрузки черновика');
+
+    const text = await response.text();
+    if (!text || text.trim() === '') return null;
+
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      console.error('Не удалось распарсить ответ черновика (возможно, пустой ответ от сервера):', text);
+      return null;
+    }
   },
 
   // Сохранить черновик проекта
@@ -213,7 +288,7 @@ export const projectDraftApi = {
   },
 
   // Применить (сохранить) изменения из черновика в проект
-  commitDraft: async (projectId: string, dto: CommitProjectDto): Promise<void> => {
+  commitDraft: async (projectId: string, dto: CommitProjectDto): Promise<any> => {
     const { data: { session } } = await supabase.auth.getSession();
     const response = await fetch(`${API_BASE}/api/projects/${projectId}/commit`, {
       method: 'POST',
@@ -224,5 +299,43 @@ export const projectDraftApi = {
       const error = await response.json().catch(() => ({}));
       throw new Error(error.message || 'Ошибка сохранения проекта');
     }
-  }
+    return await response.json();
+  },
+
+  // Загрузить медиа в черновик
+  uploadDraftMedia: async (projectId: string, file: File): Promise<{ url: string; fileName: string; size: number }> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${API_BASE}/api/projects/${projectId}/media/draft`, {
+      method: 'POST',
+      headers: {
+        ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {}),
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || 'Ошибка загрузки чернового изображения');
+    }
+    return await response.json();
+  },
+
+  // Удалить медиа черновика
+  deleteMedia: async (projectId: string, fileName: string): Promise<void> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const response = await fetch(`${API_BASE}/api/projects/${projectId}/media/${encodeURIComponent(fileName)}`, {
+      method: 'DELETE',
+      headers: {
+        ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {}),
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || 'Ошибка удаления файла');
+    }
+  },
 };

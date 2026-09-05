@@ -13,8 +13,9 @@ namespace api.Controllers
         private readonly Supabase.Client _client = client;
         private readonly SupportManager _SupMan = SupMan;
 
+        // Получить пользователей с возможностью поиска и сортировки
         [HttpGet]
-        public async Task<IActionResult> GetAllUsers([FromQuery] string? search, [FromQuery] string searchField = "name", [FromQuery] string sortField = "date",[FromQuery] bool sortAsc = false)
+        public async Task<IActionResult> GetAllUsers([FromQuery] string? search, [FromQuery] string searchField = "name", [FromQuery] string sortField = "date", [FromQuery] bool sortAsc = false, [FromQuery] bool showBannedOnly = false, [FromQuery] bool showStaffOnly = false)
         {
             try
             {
@@ -25,27 +26,38 @@ namespace api.Controllers
                     await _SupMan.UpdateLastOnlineAsync(id);
                 }
 
+                var currentRole = string.IsNullOrEmpty(id) ? null : await GetCurrentUserRole(id);
+                var isStaff = currentRole == "moderator" || currentRole == "admin";
+
                 var response = await _client.From<User>().Get();
                 var users = response.Models;
+
+                if (showStaffOnly)
+                {
+                    users = [.. users.Where(u => u.SystemRole == "moderator" || u.SystemRole == "admin")];
+                }
+                else if (isStaff && showBannedOnly)
+                {
+                    users = [.. users.Where(u => u.IsBanned == true)];
+                }
+                else if (!isStaff)
+                {
+                    users = [.. users.Where(u => !u.IsBanned)];
+                }
 
                 var query = search?.Trim().ToLower();
                 if (!string.IsNullOrEmpty(query))
                 {
-                    users = users.Where(u =>
+                    users = [.. users.Where(u =>
                     {
-                        switch (searchField)
+                        return searchField switch
                         {
-                            case "name":
-                                return u.Nickname?.ToLower().Contains(query) == true ||
-                                       u.RealName?.ToLower().Contains(query) == true;
-                            case "tag":
-                                return SupportManager.ParseSkills(u.HardSkills).Any(t => t.ToLower().Contains(query));
-                            case "role":
-                                return u.ProfileRole?.ToLower().Contains(query) == true;
-                            default:
-                                return true;
-                        }
-                    }).ToList();
+                            "name" => u.Nickname?.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase) == true || u.RealName?.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase) == true,
+                            "tag" => SupportManager.ParseSkills(u.HardSkills).Any(t => t.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase)),
+                            "role" => u.ProfileRole?.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase) == true,
+                            _ => true,
+                        };
+                    })];
                 }
 
                 Dictionary<string, int> projectCounts = [];
@@ -55,6 +67,8 @@ namespace api.Controllers
                 {
                     foreach (var u in users)
                     {
+                        if (string.IsNullOrEmpty(u.UserId)) continue;
+
                         var owned = await _client.From<Project>().Where(p => p.OwnerId == u.UserId).Get();
                         projectCounts[u.UserId] = owned.Models.Count;
                     }
@@ -63,6 +77,8 @@ namespace api.Controllers
                 {
                     foreach (var u in users)
                     {
+                        if (string.IsNullOrEmpty(u.UserId)) continue;
+
                         var ratings = await _client.From<ProjectRating>().Where(r => r.UserId == u.UserId).Get();
                         ratingCounts[u.UserId] = ratings.Models.Count;
                     }
@@ -74,11 +90,11 @@ namespace api.Controllers
                     "alphabet" => sortAsc ? users.OrderBy(u => u.Nickname) : users.OrderByDescending(u => u.Nickname),
                     "activity" => sortAsc ? users.OrderBy(u => u.LastOnlineAt) : users.OrderByDescending(u => u.LastOnlineAt),
                     "project_count" => sortAsc
-                        ? users.OrderBy(u => projectCounts.GetValueOrDefault(u.UserId, 0))
-                        : users.OrderByDescending(u => projectCounts.GetValueOrDefault(u.UserId, 0)),
+                        ? users.OrderBy(u => projectCounts.GetValueOrDefault(u.UserId ?? string.Empty, 0))
+                        : users.OrderByDescending(u => projectCounts.GetValueOrDefault(u.UserId ?? string.Empty, 0)),
                     "_count" => sortAsc
-                        ? users.OrderBy(u => ratingCounts.GetValueOrDefault(u.UserId, 0))
-                        : users.OrderByDescending(u => ratingCounts.GetValueOrDefault(u.UserId, 0)),
+                        ? users.OrderBy(u => ratingCounts.GetValueOrDefault(u.UserId ?? string.Empty, 0))
+                        : users.OrderByDescending(u => ratingCounts.GetValueOrDefault(u.UserId ?? string.Empty, 0)),
                     _ => users
                 };
 
@@ -92,6 +108,8 @@ namespace api.Controllers
                     city = u.City,
                     workplace = u.Workplace,
                     profileRole = u.ProfileRole,
+                    systemRole = u.SystemRole,
+                    isBanned = u.IsBanned,
                     hardSkills = SupportManager.ParseSkills(u.HardSkills),
                     lastOnlineAt = u.LastOnlineAt?.ToString("o"),
                     isOnline = SupportManager.IsOnline(u.LastOnlineAt),
@@ -106,6 +124,14 @@ namespace api.Controllers
             }
         }
 
+        // Роль этого пользователя
+        private async Task<string?> GetCurrentUserRole(string userId)
+        {
+            var response = await _client.From<User>().Where(u => u.UserId == userId).Get();
+            return response.Models.FirstOrDefault()?.SystemRole;
+        }
+
+        // Получить профиль пользователя по его идентификатору
         [HttpGet("{userId}")]
         public async Task<IActionResult> GetUserProfile(string userId)
         {
@@ -138,6 +164,9 @@ namespace api.Controllers
                     user.Workplace,
                     user.ProfileRole,
                     user.Description,
+                    systemRole = user.SystemRole,
+                    isBanned = user.IsBanned,
+                    bannedReason = user.BannedReason,
                     hardSkills = SupportManager.ParseSkills(user.HardSkills),
                     softSkills = SupportManager.ParseSkills(user.SoftSkills),
                     lastOnlineAt = user.LastOnlineAt?.ToString("o"),
@@ -153,6 +182,7 @@ namespace api.Controllers
             }
         }
 
+        // Поиск пользователей по никнейму
         [HttpGet("search")]
         public async Task<IActionResult> SearchUsers([FromQuery] string query)
         {

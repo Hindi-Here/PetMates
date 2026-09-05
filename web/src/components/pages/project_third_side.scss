@@ -56,47 +56,81 @@
     }
   }
 
-  .project-actions {
+     .project-actions {
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: rem(8);
+    align-items: flex-start;
+    gap: rem(12);
 
-    .rate-button {
-      width: rem(125);
+    .rate-column {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: rem(4);
+
+      .rate-button {
+        width: rem(125);
+        height: rem(40);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 rem(16);
+        font-weight: bold;
+        font-size: rem(14);
+        background-color: var(--primary-accent);
+        color: var(--neutral-0);
+        border: none;
+        border-radius: var(--border-radius-base);
+        transition: all 0.25s;
+
+        &:disabled { opacity: 0.4; }
+
+        &.rated {
+          background-color: var(--rate-color);
+          &:hover { background-color: color-mix(in srgb, var(--rate-color), black 10%); }
+        }
+      }
+
+      .project-rating {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: rem(4);
+        font-size: rem(14);
+        color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+
+        .star-ico.small {
+          width: rem(14);
+          height: rem(14);
+          color: color-mix(in srgb, var(--neutral-100), transparent 60%);
+        }
+      }
+    }
+
+    .moderation-delete-project-btn {
+      width: rem(36);
       height: rem(40);
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 0 rem(16);
-      font-weight: bold;
-      font-size: rem(14);
-      background-color: var(--primary-accent);
-      color: var(--neutral-0);
       border: none;
       border-radius: var(--border-radius-base);
-      transition: all 0.25s;
+      background-color: color-mix(in srgb, var(--important-color), transparent 85%);
+      color: var(--important-color);
+      transition: 0.25s;
+      flex-shrink: 0;
+      padding: 0;
 
-      &:disabled { opacity: 0.4; }
-
-      &.rated {
-        background-color: var(--rate-color);
-        &:hover { background-color: color-mix(in srgb, var(--rate-color), black 10%); }
+      &:hover:not(:disabled) {
+        background-color: color-mix(in srgb, var(--important-color), transparent 80%);
       }
-    }
 
-    .project-rating {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: rem(4);
-      font-size: rem(14);
-      color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+      &:disabled {
+        opacity: 0.5;
+      }
 
-      .star-ico.small {
-        width: rem(14);
-        height: rem(14);
-        color: color-mix(in srgb, var(--neutral-100), transparent 60%);
+      .ico {
+        width: rem(16);
+        height: rem(16);
       }
     }
   }
@@ -124,7 +158,7 @@
   gap: rem(16);
 
   .preview-section-title {
-    font-size: rem(18);
+    font-size: rem(20);
     font-weight: bold;
     color: var(--neutral-100);
     margin: 0;
@@ -135,7 +169,12 @@
 .team-list-preview, .vacancy-list-preview {
   display: flex;
   flex-direction: column;
-  gap: rem(24);
+}
+
+.team-list-preview .user-card-container.with-moderation {
+  .info-place-container {
+    padding-right: rem(56);
+  }
 }
 
 .user-card-container {
@@ -277,6 +316,8 @@
   align-items: center;
   gap: rem(4);
   margin-left: auto;
+  transition: margin-right 0.25s;
+  
   .owner-icon {
     width: rem(12);
     height: rem(12);
@@ -519,5 +560,51 @@
     display: block;
     overflow-x: auto; 
     white-space: nowrap;
+  }
+}
+
+.banned-gate {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+  background-color: var(--neutral-0);
+
+  .info-container {
+    width: 80%;
+    margin-left: 10%;
+    margin-right: 10%;
+    padding-top: rem(128);
+    padding-bottom: rem(128);
+    padding-left: rem(32);
+    padding-right: rem(32);
+    display: flex;
+    flex-direction: column;
+    gap: rem(12);
+    align-items: center;
+    justify-content: center;
+
+    .info-ico {
+      opacity: 0.5;
+      width: rem(125);
+      height: rem(125);
+      fill: color-mix(in srgb, var(--important-color), transparent 50%);
+      align-self: center; 
+    }
+
+    .info-comment {
+      color: var(--neutral-100);
+      font-size: rem(24);
+      font-weight: bold;
+      margin-top: rem(12);
+      text-align: center;
+    }
+
+    .info-subcomment {
+      color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+      font-size: rem(16);
+      text-align: center;
+      margin-top: rem(8);
+    }
   }
 }

@@ -56,7 +56,7 @@ const Form = ({ projectId, onClose, onSuccess }: DeleteProjectFormProps) => {
             onClick={handleDelete}
             disabled={isDeleting}
           >
-            {isDeleting ? 'Удаление...' : 'Удалить'}
+            Удалить
           </button>
           <button 
             className='form-manage-button cancellation' 

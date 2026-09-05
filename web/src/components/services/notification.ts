@@ -13,6 +13,7 @@ export interface NotificationData {
     nickname?: string;
     status?: string;
     eventType?: string;
+    reason?: string;
   };
   isRead: boolean;
   createdAt: string;
@@ -43,7 +44,7 @@ export const notificationApi = {
     return await response.json();
   },
 
-  // Пометка чтения
+  // Пометить, как прочитанное
   markAsRead: async (notificationId: string): Promise<void> => {
     const { data: { session } } = await supabase.auth.getSession();
     

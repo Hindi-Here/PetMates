@@ -12,6 +12,8 @@ export interface CommentData {
   isDeleted: boolean;
   createdAt: string;
   updatedAt?: string;
+  authorSystemRole?: string | null;
+  deletedByModerator?: boolean;
 }
 
 export const commentApi = {

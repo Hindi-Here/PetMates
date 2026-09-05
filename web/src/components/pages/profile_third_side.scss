@@ -86,7 +86,7 @@
   .profile-actions {
     display: flex;
     gap: rem(8);
-    align-items:end;
+    align-items: center;
     flex-shrink: 0;
     margin-left: auto;
   }
@@ -113,6 +113,71 @@
     &:disabled {
       opacity: 0.5;
       pointer-events: none;
+    }
+  }
+}
+
+.profile-moderation-menu-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.profile-moderation-menu-btn {
+  width: rem(40);
+  height: rem(40);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 70%);
+  border-radius: var(--border-radius-base);
+  transition: 0.25s;
+  flex-shrink: 0;
+  transform: scale(1); 
+
+  .action-ico {
+    width: rem(20);
+    height: rem(20);
+    color: var(--neutral-100);
+  }
+
+  &:hover {
+    background: color-mix(in srgb, var(--neutral-100), transparent 95%);
+  }
+}
+
+.profile-moderation-menu {
+  position: absolute;
+  top: calc(100% + #{rem(8)});
+  right: 0;
+  width: max-content;
+  min-width: rem(150);
+  max-width: rem(300);
+  background: var(--neutral-0);
+  border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 80%);
+  border-radius: var(--border-radius-base);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  z-index: 100;
+
+  button {
+    display: block;
+    width: 100%;
+    padding: rem(10) rem(16);
+    text-align: left;
+    background: none;
+    border: none;
+    font-size: rem(14);
+    color: var(--neutral-100);
+    transition: 0.25s;
+    white-space: nowrap;
+
+    &:hover {
+      background: color-mix(in srgb, var(--neutral-100), transparent 95%);
+    }
+    
+    &.danger {
+      color: var(--important-color);
     }
   }
 }
@@ -362,5 +427,51 @@
 
   .username-main .real-name {
     display: none;
+  }
+}
+
+.banned-gate {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+  background-color: var(--neutral-0);
+
+  .info-container {
+    width: 80%;
+    margin-left: 10%;
+    margin-right: 10%;
+    padding-top: rem(128);
+    padding-bottom: rem(128);
+    padding-left: rem(32);
+    padding-right: rem(32);
+    display: flex;
+    flex-direction: column;
+    gap: rem(12);
+    align-items: center;
+    justify-content: center;
+
+    .info-ico {
+      opacity: 0.5;
+      width: rem(125);
+      height: rem(125);
+      fill: var(--important-color);
+      align-self: center; 
+    }
+
+    .info-comment {
+      color: var(--important-color);
+      font-size: rem(24);
+      font-weight: bold;
+      margin-top: rem(12);
+      text-align: center;
+    }
+
+    .info-subcomment {
+      color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+      font-size: rem(16);
+      text-align: center;
+      margin-top: rem(8);
+    }
   }
 }

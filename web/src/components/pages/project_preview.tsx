@@ -11,6 +11,7 @@ import Delete from '@icons/delete.svg?react'
 import { useState, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import rehypeRaw from 'rehype-raw'
 import type { UserData } from '../services/users'
 import type { VacancyData } from '../services/vacancy'
 import type { CommentData } from '../services/comment'
@@ -205,12 +206,14 @@ export const ProjectPreview = ({
           </div>
         </div>
         <div className='project-actions'>
-          <button className='rate-button' disabled={isOwner} style={isOwner ? { opacity: 0.5, pointerEvents: 'none' } : {}}>
-            Оценить
-          </button>
-          <div className='project-rating'>
-            <StarIcon className='star-ico small' />
-            <span>{ratingCount || 0} оценок</span>
+          <div className='rate-column'>
+            <button className='rate-button' disabled={isOwner} style={isOwner ? { opacity: 0.5, pointerEvents: 'none' } : {}}>
+              Оценить
+            </button>
+            <div className='project-rating'>
+              <StarIcon className='star-ico small' />
+              <span>{ratingCount || 0} оценок</span>
+            </div>
           </div>
         </div>
       </div>
@@ -218,7 +221,9 @@ export const ProjectPreview = ({
       {description && (
         <section className='preview-section'>
           <div className='project-description-preview markdown-content'>
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{description}</ReactMarkdown>
+            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+              {description}
+            </ReactMarkdown>
           </div>
         </section>
       )}
@@ -242,7 +247,7 @@ export const ProjectPreview = ({
                     <div className='info-place-container'>
                       <div className='avatar-container'><div className='member-avatar-placeholder' /></div>
                       <div className='info-container'>
-                        <div className='nickname-row'><p className='nickname-text'>Загрузка...</p></div>
+                        <div className='nickname-row'><p className='nickname-text'>???</p></div>
                         <p className='role-text'>{role}</p>
                       </div>
                     </div>

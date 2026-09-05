@@ -283,21 +283,24 @@
     }
 
     .add-contact-button {
-      width: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: rem(8);
-      font-size: rem(14);
-      padding: rem(12);
-      background: none;
-      border: 1px dashed color-mix(in srgb, var(--neutral-100), transparent 80%);
-      border-radius: rem(12);
+      padding: rem(8) rem(16);
+      border: 1px dashed color-mix(in srgb, var(--neutral-100), transparent 70%);
+      border-radius: var(--border-radius-base);
+      background: transparent;
+      color: color-mix(in srgb, var(--neutral-100), transparent 30%);
+      font-size: rem(13);
+      font-weight: normal;
       transition: 0.25s;
-      outline: none;
+      height: rem(40);
+      width: 100%;
 
       &:hover {
-        background-color: var(--base4-color);
+        border-color: var(--primary-accent);
+        color: var(--primary-accent);
       }
 
       &:active {
@@ -305,9 +308,8 @@
       }
 
       .add-contact-ico {
-        width: rem(15);
-        height: rem(15);
-        color: color-mix(in srgb, var(--neutral-100), transparent 25%);
+        width: rem(14);
+        height: rem(14);
       }
     }
   }

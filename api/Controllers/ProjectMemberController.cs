@@ -2,6 +2,7 @@
 using api.Support;
 using Microsoft.AspNetCore.Mvc;
 using Supabase;
+using System.Text.Json;
 
 namespace api.Controllers
 {
@@ -11,6 +12,8 @@ namespace api.Controllers
     {
         private readonly Client _client = client;
         private readonly SupportManager _SupMan = SupMan;
+
+        // Получить участников проекта (команды)
 
         [HttpGet("project/{projectId}")]
         public async Task<IActionResult> GetProjectMembers(string projectId)
@@ -28,23 +31,55 @@ namespace api.Controllers
                     .Where(pm => pm.ProjectId == projectId)
                     .Get();
 
-                var members = response.Models.Select(m => new
-                {
-                    m.MemberId,
-                    m.ProjectId,
-                    m.UserId,
-                    m.Role, 
-                    JoinedAt = m.JoinedAt?.ToString("o") 
-                }).ToList();
+                var membersWithDetails = new List<object>();
 
-                return Ok(members);
+                foreach (var m in response.Models)
+                {
+                    var rpcResult = await _client.Rpc("get_team_member_card", new Dictionary<string, object>
+                    {
+                        { "p_user_id", m.UserId }
+                    });
+
+                    var rows = JsonSerializer.Deserialize<List<TeamMemberCardRow>>(rpcResult.Content ?? "[]");
+                    var user = rows?.FirstOrDefault();
+
+                    if (user != null)
+                    {
+                        membersWithDetails.Add(new
+                        {
+                            m.MemberId,
+                            m.ProjectId,
+                            m.UserId,
+                            m.Role,
+                            JoinedAt = m.JoinedAt?.ToString("o"),
+
+                            user.Nickname,
+                            user.AvatarUrl,
+                            user.RealName,
+                            user.Age,
+                            user.City,
+                            user.Workplace,
+                            user.ProfileRole,
+                            user.SystemRole,
+                            user.IsBanned,
+                            user.HardSkills,
+                            user.SoftSkills,
+                            LastOnlineAt = user.LastOnlineAt?.ToString("o"),
+                            IsOnline = SupportManager.IsOnline(user.LastOnlineAt),
+                            LastSeen = SupportManager.FormatLastSeen(user.LastOnlineAt)
+                        });
+                    }
+                }
+
+                return Ok(membersWithDetails);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return StatusCode(500);
+                return StatusCode(500, ex.Message);
             }
         }
 
+        // Добавить участника в команду
         [HttpPost]
         public async Task<IActionResult> AddProjectMember([FromBody] AddProjectMemberDto dto)
         {
@@ -99,6 +134,7 @@ namespace api.Controllers
             }
         }
 
+        // Удалить участника проекта
         [HttpDelete("{memberId}")]
         public async Task<IActionResult> RemoveProjectMember(string memberId)
         {
@@ -123,6 +159,7 @@ namespace api.Controllers
             }
         }
 
+        // Найти участника по почте
         [HttpPost("find-by-email")]
         public async Task<IActionResult> FindUserByEmail([FromBody] FindByEmailDto dto)
         {
@@ -201,6 +238,7 @@ namespace api.Controllers
             }
         }
 
+        // Обновить роль участника проекта
         [HttpPut("{memberId}/role")]
         public async Task<IActionResult> UpdateMemberRole(string memberId, [FromBody] UpdateRoleDto dto)
         {
@@ -245,36 +283,5 @@ namespace api.Controllers
                 return StatusCode(500, ex.Message);
             }
         }
-
-        public class UpdateRoleDto
-        {
-            public string Role { get; set; } = string.Empty;
-        }
-    }
-
-    public class FindByEmailDto
-    {
-        public string Email { get; set; } = string.Empty;
-    }
-
-    public class AuthUsersResponse
-    {
-        public List<AuthUserResponse> Users { get; set; } = [];
-    }
-
-    public class AuthUserResponse
-    {
-        public string Id { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
-        public string Phone { get; set; } = string.Empty;
-        public string Aud { get; set; } = string.Empty;
-        public string Role { get; set; } = string.Empty;
-    }
-
-    public class AddProjectMemberDto
-    {
-        public string ProjectId { get; set; } = string.Empty;
-        public string UserId { get; set; } = string.Empty;
-        public string Role { get; set; } = "Участник";
     }
 }

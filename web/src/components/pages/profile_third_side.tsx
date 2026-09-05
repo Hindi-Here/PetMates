@@ -5,25 +5,37 @@ import Contacts from '@icons/contacts.svg?react'
 import UserDescription from '@icons/user_description.svg?react'
 import InviteIcon from '@icons/invite_in_project.svg?react'
 import ChatIcon from '@icons/chat.svg?react'
-import { useState, useMemo } from 'react'
+import MoreIcon from '@icons/more.svg?react'
+import LockIcon from '@icons/lock.svg?react'
+
+import { useState, useMemo, useRef, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
-import type { ThirdProfileData } from '../hooks/useThirdProfile'
-import InviteForm from '../forms/invite_user'
-import { useQuery } from '@tanstack/react-query'
+import { useSystemRole } from '../hooks/useSystemRole'
+import { useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '../scripts/query/queryKeys'
+import type { ThirdProfileData } from '../hooks/useThirdProfile'
 import { usersApi } from '../services/users'
+import { useQuery } from '@tanstack/react-query'
+
+import InviteForm from '../forms/invite_user'
+import BanUserForm from '../forms/ban_user'
 
 export default function ThirdProfile() {
   const [showInviteForm, setShowInviteForm] = useState(false)
+  const [showBanForm, setShowBanForm] = useState(false)
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+  
   const navigate = useNavigate()
   const { profileId } = useParams<{ profileId: string }>()
   const { isAuthenticated, userId } = useAuth()
+  const currentSystemRole = useSystemRole()
+  const queryClient = useQueryClient()
 
-  // Загрузка данных профиля третьего лица
-  const { data: user } = useQuery<ThirdProfileData>({
+  const { data: user, isLoading  } = useQuery<ThirdProfileData>({
     queryKey: queryKeys.profile.byId(profileId!),
     queryFn: () => usersApi.getUserById(profileId!),
     enabled: !!profileId,
@@ -33,7 +45,80 @@ export default function ThirdProfile() {
     refetchOnWindowFocus: true,
   })
 
-  // Парсинг контактов из JSON-строки
+  const targetSystemRole = (user as any)?.systemRole as string | undefined
+  const isModerationTarget = currentSystemRole === 'admin' ||
+    (currentSystemRole === 'moderator' && targetSystemRole !== 'admin' && targetSystemRole !== 'moderator')
+  const canModerate = isAuthenticated && userId !== profileId && isModerationTarget
+
+  const isBanned = (user as any)?.isBanned === true
+  const isStaff = currentSystemRole === 'admin' || currentSystemRole === 'moderator'
+  
+  useEffect(() => {
+    if (!isMenuOpen) return
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setIsMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [isMenuOpen])
+
+  const handleBan = () => {
+    setIsMenuOpen(false)
+    setShowBanForm(true)
+  }
+
+  const handleUnban = async () => {
+    try {
+      queryClient.invalidateQueries({ queryKey: queryKeys.profile.byId(profileId!) })
+      queryClient.invalidateQueries({ queryKey: ['users', 'byId', profileId!] })
+      setIsMenuOpen(false)
+    } catch (error) {
+      console.error('Ошибка разблокировки:', error)
+    }
+  }
+
+  const handlePromote = async () => {
+    try {
+      queryClient.invalidateQueries({ queryKey: queryKeys.profile.byId(profileId!) })
+      queryClient.invalidateQueries({ queryKey: ['users', 'byId', profileId!] })
+      setIsMenuOpen(false)
+    } catch (error) {
+      console.error('Ошибка назначения модератора:', error)
+    }
+  }
+
+  const handleDemote = async () => {
+    try {
+      queryClient.invalidateQueries({ queryKey: queryKeys.profile.byId(profileId!) })
+      queryClient.invalidateQueries({ queryKey: ['users', 'byId', profileId!] })
+      setIsMenuOpen(false)
+    } catch (error) {
+      console.error('Ошибка снятия модератора:', error)
+    }
+  }
+
+  const handlePromoteToAdmin = async () => {
+    try {
+      queryClient.invalidateQueries({ queryKey: queryKeys.profile.byId(profileId!) })
+      queryClient.invalidateQueries({ queryKey: ['users', 'byId', profileId!] })
+      setIsMenuOpen(false)
+    } catch (error) {
+      console.error('Ошибка назначения админа:', error)
+    }
+  }
+
+  const handleDemoteFromAdmin = async () => {
+    try {
+      queryClient.invalidateQueries({ queryKey: queryKeys.profile.byId(profileId!) })
+      queryClient.invalidateQueries({ queryKey: ['users', 'byId', profileId!] })
+      setIsMenuOpen(false)
+    } catch (error) {
+      console.error('Ошибка снятия админа:', error)
+    }
+  }
+
   const contactsList = useMemo(() => {
     try {
       return user?.contacts ? JSON.parse(user.contacts) : []
@@ -42,7 +127,6 @@ export default function ThirdProfile() {
     }
   }, [user?.contacts])
 
-  // Рендер индикатора онлайн-статуса
   const renderOnlineStatus = () => {
     if (!user) return null
     if (user.isOnline) {
@@ -56,8 +140,38 @@ export default function ThirdProfile() {
     return <p className='online-text offline'>Был(а) {user.lastSeen}</p>
   }
 
-  // Проверка: показывать ли кнопки действий (чат, приглашение)
   const shouldShowActions = isAuthenticated && userId !== profileId
+
+  if (!isLoading && !isStaff && (!user || isBanned)) {
+    return (
+        <div className='banned-gate'>
+            <div className='info-container'>
+                <LockIcon className='info-ico' />
+                <p className='info-comment'>Профиль недоступен</p>
+                <p className='info-subcomment'>Пользователь заблокирован администрацией</p>
+            </div>
+        </div>
+    )
+  }
+
+  const parseSkills = (skillsData: any): string[] => {
+    if (Array.isArray(skillsData)) return skillsData;
+    if (typeof skillsData === 'string') {
+      if (skillsData.trim().startsWith('[')) {
+        try {
+          const parsed = JSON.parse(skillsData);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
+      }
+      return skillsData.split(/[\s,]+/).filter(Boolean);
+    }
+    return [];
+  };
+
+  const hardSkillsArray = parseSkills(user?.hardSkills);
+  const softSkillsArray = parseSkills(user?.softSkills);
 
   return (
     <div className='third-profile-content'>
@@ -88,6 +202,51 @@ export default function ThirdProfile() {
                 >
                   <InviteIcon className='action-ico' />
                 </button>
+                
+                {canModerate && (
+                  <div className='profile-moderation-menu-wrapper' ref={menuRef}>
+                    <button 
+                      className='profile-moderation-menu-btn'
+                      onClick={(e) => { e.stopPropagation(); setIsMenuOpen(!isMenuOpen) }}
+                    >
+                      <MoreIcon className='action-ico' />
+                    </button>
+
+                    {isMenuOpen && (
+                      <div className='profile-moderation-menu'>
+                        {(user as any).isBanned ? (
+                          <button onClick={(e) => { e.stopPropagation(); handleUnban() }}>Разблокировать</button>
+                        ) : (
+                          <button className='danger' onClick={(e) => { e.stopPropagation(); handleBan() }}>Заблокировать</button>
+                        )}
+
+                        {currentSystemRole === 'admin' && (
+                          <>
+                            {targetSystemRole === 'admin' ? (
+                              <button className='danger' onClick={(e) => { e.stopPropagation(); handleDemoteFromAdmin() }}>
+                                Снять администратора
+                              </button>
+                            ) : targetSystemRole === 'user' ? (
+                              <button onClick={(e) => { e.stopPropagation(); handlePromoteToAdmin() }}>
+                                Назначить администратором
+                              </button>
+                            ) : null}
+                            
+                            {targetSystemRole === 'moderator' ? (
+                              <button onClick={(e) => { e.stopPropagation(); handleDemote() }}>
+                                Снять модератора
+                              </button>
+                            ) : targetSystemRole === 'user' ? (
+                              <button onClick={(e) => { e.stopPropagation(); handlePromote() }}>
+                                Назначить модератором
+                              </button>
+                            ) : null}
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -127,8 +286,8 @@ export default function ThirdProfile() {
               <p className='profile-area-text'>hard-skills:</p>
             </div>
             <div className='tag-container'>
-              {user?.hardSkills && user.hardSkills.length > 0 ? (
-                user.hardSkills.map((skill, index) => (
+              {hardSkillsArray.length > 0 ? (
+                hardSkillsArray.map((skill, index) => (
                   <div key={index} className='tag-item'>
                     <p className='tag-text'>{skill}</p>
                   </div>
@@ -147,8 +306,8 @@ export default function ThirdProfile() {
               <p className='profile-area-text'>soft-skills:</p>
             </div>
             <div className='tag-container'>
-              {user?.softSkills && user.softSkills.length > 0 ? (
-                user.softSkills.map((skill, index) => (
+              {softSkillsArray.length > 0 ? (
+                softSkillsArray.map((skill, index) => (
                   <div key={index} className='tag-item'>
                     <p className='tag-text'>{skill}</p>
                   </div>
@@ -188,6 +347,18 @@ export default function ThirdProfile() {
         <InviteForm
           onClose={() => setShowInviteForm(false)}
           invitedUser={user as ThirdProfileData}
+        />
+      )}
+
+      {showBanForm && user && (
+        <BanUserForm
+          userId={user.userId}
+          nickname={user.nickname}
+          onClose={() => setShowBanForm(false)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.profile.byId(profileId!) })
+            queryClient.invalidateQueries({ queryKey: ['users', 'byId', profileId!] })
+          }}
         />
       )}
     </div>

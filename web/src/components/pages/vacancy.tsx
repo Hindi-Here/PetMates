@@ -9,6 +9,7 @@ import { queryKeys } from '../scripts/query/queryKeys'
 import { vacanciesApi } from '../services/vacancy'
 import { VacancyCard } from '../common/vacancyCard'
 import Search from '../common/search'
+import { useSystemRole } from '../hooks/useSystemRole'
 
 const FoundCount = ({ count }: { count: number }) => (
   <div className='content-item-count-container'>
@@ -24,13 +25,18 @@ export default function Vacancy() {
   const [sortField, setSortField] = useState('date')
   const [isSortUp, setIsSortUp] = useState(true)
 
+  const currentSystemRole = useSystemRole()
+  const isStaff = currentSystemRole === 'moderator' || currentSystemRole === 'admin'
+  const [showBannedOnly, setShowBannedOnly] = useState(false)
+
   const { data: vacancies = [] } = useQuery({
-    queryKey: [...queryKeys.vacancies.allList(), appliedSearch, searchField, sortField, isSortUp],
+    queryKey: [...queryKeys.vacancies.allList(), appliedSearch, searchField, sortField, isSortUp, showBannedOnly],
     queryFn: () => vacanciesApi.getAll({
       search: appliedSearch,
       searchField,
       sortField,
       sortAsc: isSortUp,
+      showBannedOnly,
     }),
     staleTime: 0,
     refetchOnMount: 'always',
@@ -40,6 +46,12 @@ export default function Vacancy() {
 
   const filteredVacancies = useMemo(() => {
     let result = [...vacancies]
+
+    if (!isStaff) {
+      result = result.filter(v => !(v as any).ownerBanned)
+    } else if (isStaff && showBannedOnly) {
+      result = result.filter(v => (v as any).ownerBanned === true)
+    }
 
     const query = appliedSearch.trim().toLowerCase()
     if (query) {
@@ -75,7 +87,7 @@ export default function Vacancy() {
     })
 
     return result
-  }, [vacancies, appliedSearch, searchField, sortField, isSortUp])
+  }, [vacancies, appliedSearch, searchField, sortField, isSortUp, showBannedOnly, isStaff])
 
   return (
     <>
@@ -90,6 +102,12 @@ export default function Vacancy() {
         onSortFieldSelect={setSortField}
         isSortUp={isSortUp}
         onToggleSortDirection={() => setIsSortUp(prev => !prev)}
+        showBannedFilter={isStaff}
+        showBannedOnly={showBannedOnly}
+        onToggleShowBannedOnly={() => setShowBannedOnly(prev => !prev)}
+        showStaffFilter={false}
+        showStaffOnly={false}
+        onToggleShowStaffOnly={() => {}}
       />
 
       <div className='found-content-container'>

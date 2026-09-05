@@ -9,16 +9,36 @@ import './main.scss'
 import Header from './components/layout/header'
 import Main from './components/layout/body'
 import Footer from './components/layout/footer'
+import BannedPage from './components/pages/ban'
+import { useBanStatus } from './components/hooks/useBanStatus'
 import { ScrollToTop } from './components/scripts/function';
+
+function AppGate() {
+  const { isResolving, isBanned, bannedReason } = useBanStatus()
+
+  if (isResolving) {
+    return <div />
+  }
+
+  if (isBanned) {
+    return <BannedPage reason={bannedReason} />
+  }
+
+  return (
+    <>
+      <Header/>
+      <Main/>
+      <Footer/>
+    </>
+  )
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
         <ScrollToTop />
-        <Header/>
-        <Main/>
-        <Footer/>
+        <AppGate />
       </QueryClientProvider>
     </BrowserRouter>
   </StrictMode>,

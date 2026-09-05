@@ -353,7 +353,6 @@ export const Chat = () => {
 
   // Массовое удаление выбранных сообщений у всех
   const handleBulkDeleteForAll = async () => {
-    if (!window.confirm(`Удалить ${selectedIds.size} сообщений у всех?`)) return
     await Promise.all(Array.from(selectedIds).map(id => deleteMutation.mutateAsync(id)))
     exitSelectionMode()
   }
@@ -426,7 +425,7 @@ export const Chat = () => {
               <button
                 className='danger'
                 onClick={() => {
-                  if (window.confirm('Удалить сообщение у всех?')) deleteMutation.mutate(msg.messageId)
+                  deleteMutation.mutate(msg.messageId)
                   setOpenMenuId(null)
                 }}
               >

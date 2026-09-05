@@ -12,6 +12,7 @@ import Search from '../common/search'
 import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { queryKeys } from '../scripts/query/queryKeys'
 import { usersApi } from '../services/users'
+import { useSystemRole } from '../hooks/useSystemRole'
 
 const FoundCount = ({ count }: { count: number }) => (
   <div className='content-item-count-container'>
@@ -29,13 +30,20 @@ export default function Users() {
   const [sortField, setSortField] = useState('date')
   const [isSortUp, setIsSortUp] = useState(true)
 
+  const currentSystemRole = useSystemRole()
+  const isStaff = currentSystemRole === 'moderator' || currentSystemRole === 'admin'
+  const [showBannedOnly, setShowBannedOnly] = useState(false)
+  const [showStaffOnly, setShowStaffOnly] = useState(false)
+
   const { data: users = [] } = useQuery({
-    queryKey: [...queryKeys.users.allList(), appliedSearch, searchField, sortField, isSortUp],
+    queryKey: [...queryKeys.users.allList(), appliedSearch, searchField, sortField, isSortUp, showBannedOnly, showStaffOnly],
     queryFn: () => usersApi.getAll({
-     search: appliedSearch,
+      search: appliedSearch,
       searchField,
       sortField,
       sortAsc: isSortUp,
+      showBannedOnly,
+      showStaffOnly,
     }),
     staleTime: 0,
     refetchOnMount: 'always',
@@ -93,6 +101,12 @@ export default function Users() {
         onSortFieldSelect={setSortField}
         isSortUp={isSortUp}
         onToggleSortDirection={() => setIsSortUp(prev => !prev)}
+        showBannedFilter={isStaff}
+        showBannedOnly={showBannedOnly}
+        onToggleShowBannedOnly={() => setShowBannedOnly(prev => !prev)}
+        showStaffFilter={true}
+        showStaffOnly={showStaffOnly}
+        onToggleShowStaffOnly={() => setShowStaffOnly(prev => !prev)}
       />
 
       <div className='found-content-container'>

@@ -37,4 +37,22 @@ export const settingApi = {
     }
     return response.json();
   },
+
+  // Удалить аккаунт
+  deleteAccount: async (nickname: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const response = await fetch(`${API_BASE}/api/setting/account`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session?.access_token}`,
+      },
+      body: JSON.stringify({ nickname }), 
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || 'Ошибка удаления аккаунта');
+    }
+    return response.json();
+  },
 };

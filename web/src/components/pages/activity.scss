@@ -98,6 +98,7 @@
   box-shadow: inset 0 0 0 0 var(--primary-accent), 0 4px 4px rgba(0, 0, 0, 0.15);
   border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 75%);
   transition: border-color 0.25s, box-shadow 0.25s;
+  position: relative;
 
   &:hover {
     box-shadow: inset 2px 0 0 0 var(--primary-accent), 0 4px 4px rgba(0, 0, 0, 0.25);
@@ -107,6 +108,31 @@
 
   &:active {
     background-color: color-mix(in srgb, var(--neutral-100), transparent 98%);
+  }
+
+  &.banned-owner-card {
+    border: 1px solid var(--important-color);
+    background-color: color-mix(in srgb, var(--important-color), transparent 95%);
+    opacity: 0.9;
+
+    &:hover {
+      box-shadow: inset 2px 0 0 0 var(--important-color), 0 4px 4px rgba(0, 0, 0, 0.25);
+      border-color: color-mix(in srgb, var(--important-color), transparent 50%);
+      border-left-color: var(--important-color);
+    }
+
+    .project-card-title {
+      color: var(--important-color);
+    }
+
+    .project-card-description {
+      color: color-mix(in srgb, var(--important-color), transparent 40%);
+    }
+
+    .project-moderation-delete-btn {
+      background-color: color-mix(in srgb, var(--important-color), transparent 75%);
+      border: 1px solid color-mix(in srgb, var(--important-color), transparent 50%);
+    }
   }
 
   .project-card-header {
@@ -131,21 +157,14 @@
       border-radius: var(--border-radius-small);
       font-size: rem(12);
       white-space: nowrap;
+    }
+  }
 
-      &.status-in-progress {
-        background: color-mix(in srgb, var(--in-process-color), transparent 85%);
-        color: var(--in-process-color);
-      }
+  &.with-moderation .project-card-header {
+    padding-right: rem(56);
 
-      &.status-completed {
-        background: color-mix(in srgb, var(--success-color), transparent 85%);
-        color: var(--success-color);
-      }
-
-      &.status-paused {
-        background: color-mix(in srgb, var(--important-color), transparent 85%);
-        color: var(--important-color);
-      }
+    .project-card-status {
+      margin-left: auto;
     }
   }
 
@@ -283,6 +302,10 @@
       }
     }
 
+    &.with-moderation .project-card-header {
+      padding-right: rem(48);
+    }
+
     .project-card-description {
       padding-left: rem(12);
       padding-right: rem(12);
@@ -307,5 +330,97 @@
 
   .activity-header .section-title {
     font-size: rem(18);
+  }
+}
+
+.project-moderation-delete-btn {
+  position: absolute;
+  top: rem(12);
+  right: rem(12);
+  z-index: 5;
+  width: rem(28);
+  height: rem(28);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--border-radius-base);
+  background-color: color-mix(in srgb, var(--important-color), transparent 85%);
+  color: var(--important-color);
+  transition: 0.25s;
+  flex-shrink: 0;
+  padding: 0;
+
+  &:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--important-color), transparent 80%);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+  }
+
+  .ico {
+    width: rem(14);
+    height: rem(14);
+  }
+}
+
+@media (max-width: 480px) {
+  .project-moderation-delete-btn {
+    top: rem(10);
+    right: rem(10);
+    width: rem(26);
+    height: rem(26);
+
+    .ico {
+      width: rem(12);
+      height: rem(12);
+    }
+  }
+}
+
+.banned-gate {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+  background-color: var(--neutral-0);
+
+  .info-container {
+    width: 80%;
+    margin-left: 10%;
+    margin-right: 10%;
+    padding-top: rem(128);
+    padding-bottom: rem(128);
+    padding-left: rem(32);
+    padding-right: rem(32);
+    display: flex;
+    flex-direction: column;
+    gap: rem(12);
+    align-items: center;
+    justify-content: center;
+
+    .info-ico {
+      opacity: 0.5;
+      width: rem(125);
+      height: rem(125);
+      fill: var(--important-color);
+      align-self: center; 
+    }
+
+    .info-comment {
+      color: var(--important-color);
+      font-size: rem(24);
+      font-weight: bold;
+      margin-top: rem(12);
+      text-align: center;
+    }
+
+    .info-subcomment {
+      color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+      font-size: rem(16);
+      text-align: center;
+      margin-top: rem(8);
+    }
   }
 }

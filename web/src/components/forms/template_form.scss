@@ -13,26 +13,30 @@
 
 .form-container{
     width: rem(500);
+    max-width: calc(100vw - #{rem(32)});
     height: auto;
-    max-height: 100vh;
+    max-height: 90vh;
     background-color: var(--neutral-0);
     display: flex;
     flex-direction: column;
     font-size: rem(14);
     font-family: var(--font-family-base);
     border-radius: var(--border-radius-base);
-    overflow-y: scroll;
+    overflow: hidden; 
+    box-sizing: border-box;
 }
 
 .form-header-container{
     min-height: rem(75);
-    width: inherit;
+    width: 100%;
+    box-sizing: border-box;
     background-color: var(--primary-accent);
     display: flex;
     align-items: center;
     gap: rem(12);
     padding-left: rem(24);
     padding-right: rem(24);
+    flex-shrink: 0; 
 
     .form-header-ico{
         width: rem(20);
@@ -72,11 +76,19 @@
     padding-bottom: rem(12);
     padding-left: rem(24);
     padding-right: rem(24);
+    width: 100%;
+    box-sizing: border-box;
+    overflow-y: auto; 
+    overflow-x: hidden;
+    flex: 1; 
+    min-height: 0; 
 }
 
 .form-field-container{
     margin-top: rem(6);
     margin-bottom: rem(6);
+    width: 100%;
+    box-sizing: border-box;
 
     .form-field-text{
         padding-top: rem(6);
@@ -101,7 +113,7 @@
         transition: 0.25s;
         border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 75%);
         outline: none;  
-        transition: 0.25s;
+        box-sizing: border-box;
 
         &:focus-within {
             border-color: var(--primary-accent);
@@ -144,6 +156,8 @@
     width: 100%;
     display: flex;
     gap: rem(12);
+    box-sizing: border-box;
+    flex-shrink: 0;
 
     .form-manage-button{
         display: flex;
@@ -158,6 +172,7 @@
         border-radius: var(--border-radius-base);
         border: none;
         transition: 0.25s;
+        box-sizing: border-box;
 
         &:disabled {
             opacity: 0.4;
@@ -171,6 +186,7 @@
         font-weight: normal;
         border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 75%);
         transition: 0.25s;
+        box-sizing: border-box;
     }
 }
 
@@ -183,7 +199,9 @@
 }
 .form-manage-button.red{
     background-color: var(--important-color) !important;
-    width: rem(125);
+}
+.form-manage-button.back{
+    background-color: var(--important-color) !important;
 }
 .form-field-input.red{
     transition: 0.25s;
@@ -220,6 +238,7 @@
     font-size: inherit;
     line-height: 1.5;
     resize: none;
+    box-sizing: border-box;
 }
 
 .form-field-text-wrapper {
@@ -228,6 +247,7 @@
     align-items: center;
     width: 100%;
     padding-right: rem(12);
+    box-sizing: border-box;
 
     .char-counter {
         font-size: rem(10);
@@ -243,6 +263,12 @@
 }
 
 @media (max-width: 480px) {
+  .form-container {
+    width: 100%;
+    margin: 0 rem(16);
+    max-height: 95vh;
+  }
+
   .form-manage {
     flex-wrap: wrap;
     height: auto;
