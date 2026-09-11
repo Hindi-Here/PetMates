@@ -37,6 +37,7 @@
   --message-detele-myself: white;
   --profile-input-bg-color: #f7f7f7;
   --nav-item-hover-color: #e3e3e3;
+  --info-ico-text-color: color-mix(in srgb, var(--neutral-100), transparent 50%);
 
   // Шаги при удалении аккаунта и шапки форм
   --form-step-bg-color: var(--base4-color);
@@ -105,6 +106,7 @@
   --message-detele-myself: transparent;
   --profile-input-bg-color: #2e3136;
   --nav-item-hover-color: #24262A;
+  --info-ico-text-color: color-mix(in srgb, var(--neutral-100), transparent 15%);
 
   --form-step-bg-color: var(--button-neutral-bg-color);
   --form-important-color: var(--header-bg-color);

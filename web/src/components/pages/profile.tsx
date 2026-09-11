@@ -34,7 +34,7 @@ import { queryKeys } from '../scripts/query/queryKeys'
 // Рендер компонента для неавторизованных пользователей
 const UnauthorizedProfile = () => {
   return (
-    <div className='profile-info-container' style={{ backgroundColor: 'white', minHeight: '400px' }}>
+    <div className='profile-info-container'>
         <div className='info-container'>
             <LockIcon className='info-ico'/>
             <p className='info-comment'> Зарегистрируйтесь или войдите в аккаунт, чтобы управлять своим профилем</p>

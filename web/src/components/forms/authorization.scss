@@ -160,7 +160,7 @@
             border-radius: var(--border-radius-base);
             border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 50%);
             height: rem(30); 
-            background-color: var(--button-neutral-bg-color);
+            background-color: var(--card-bg-color);
             transition: 0.25s;
 
             .auth-service-item-ico{

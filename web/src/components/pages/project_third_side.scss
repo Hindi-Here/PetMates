@@ -632,10 +632,9 @@
     justify-content: center;
 
     .info-ico {
-      opacity: 0.5;
       width: rem(125);
       height: rem(125);
-      fill: color-mix(in srgb, var(--important-color), transparent 50%);
+      fill: var(--important-color);
       align-self: center; 
     }
 

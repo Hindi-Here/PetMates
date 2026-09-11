@@ -1,9 +1,10 @@
 .profile-info-container {
-  height: 80vh;
+  min-height: 80vh;
   display: flex;
   flex-direction: column;
   justify-content: center; 
   align-items: center;
+  margin: rem(24) 0;
 }
 
 .info-container {
@@ -21,15 +22,14 @@
   justify-content: center;
 
   .info-ico {
-    opacity: 0.5;
     width: rem(125);
     height: rem(125);
-    fill: color-mix(in srgb, var(--neutral-100), transparent 50%);
+    fill: var(--info-ico-text-color);
     align-self: center; 
   }
 
   .info-comment {
-    color: color-mix(in srgb, var(--neutral-100), transparent 75%);
+    color: color-mix(in srgb, var(--neutral-100), transparent 50%);
     font-size: rem(24);
     margin-top: rem(12);
     text-align: center;
