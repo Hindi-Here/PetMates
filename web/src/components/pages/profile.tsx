@@ -2,10 +2,6 @@ import './profile.scss'
 import { useNavigate, useLocation, useParams, Navigate } from 'react-router-dom'
 
 import LockIcon from '@icons/lock.svg?react'
-import UserDescription from '@icons/user_description.svg?react'
-import HardSkills from '@icons/hard_skills.svg?react'
-import SoftSkills from '@icons/soft_skills.svg?react'
-import Contacts from '@icons/contacts.svg?react'
 import Add from '@icons/plus.svg?react'
 import Reject from '@icons/reject.svg?react'
 import Delete from '@icons/delete.svg?react'
@@ -340,6 +336,19 @@ const AuthorizedProfile = () => {
 
   const isThirdParty = profileId && profileId !== userId
 
+  const protectedTabs = ['Отклики', 'Сообщения', 'Уведомления', 'Настройки']
+  const isBlockedThirdPartyTab = Boolean(isThirdParty) && protectedTabs.includes(activeTab)
+
+  useEffect(() => {
+    if (isBlockedThirdPartyTab && userId) {
+      navigate(`/profile/${userId}/${tabRoutes[activeTab]}`, { replace: true })
+    }
+  }, [isBlockedThirdPartyTab, activeTab, userId])
+
+  if (isBlockedThirdPartyTab) {
+    return null
+  }
+
   return (
     <div className='profile-content-container'>
       <div className='tab-wrapper'>
@@ -481,7 +490,6 @@ const AuthorizedProfile = () => {
             <div className='profile-body-area-container'>
               <div className='profile-area-container'>
                 <div className='profile-area-text-container'>
-                  <UserDescription className='profile-area-ico' />
                   <div className='profile-area-text-wrapper'>
                     <p className='profile-area-text'> Описание: </p>
                     <p className={`char-counter ${(formData.description?.length ?? 0) >= 2000 ? 'limit' : ''}`}>
@@ -500,7 +508,6 @@ const AuthorizedProfile = () => {
 
               <div className='profile-area-container'>
                 <div className='profile-area-text-container'>
-                  <HardSkills className='profile-area-ico' />
                   <p className='profile-area-text'> Hard Skills: </p>
                 </div>
                 <textarea 
@@ -515,7 +522,6 @@ const AuthorizedProfile = () => {
 
               <div className='profile-area-container'>
                 <div className='profile-area-text-container'>
-                  <SoftSkills className='profile-area-ico' />
                   <p className='profile-area-text'> Soft Skills: </p>
                 </div>
                 <textarea 
@@ -530,7 +536,6 @@ const AuthorizedProfile = () => {
 
               <div className='profile-area-container'>
                 <div className='profile-area-text-container'>
-                  <Contacts className='profile-area-ico' />
                   <p className='profile-area-text'> Контакты: </p>
                 </div>
 

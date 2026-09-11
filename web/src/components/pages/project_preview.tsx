@@ -5,8 +5,7 @@ import StarIcon from '@icons/star.svg?react'
 import StatusEndIcon from '@icons/status_end.svg?react'
 import StatusPauseIcon from '@icons/status_pause.svg?react'
 import StatusWorkingIcon from '@icons/status_working.svg?react'
-import Edit from '@icons/edit.svg?react'
-import Delete from '@icons/delete.svg?react'
+import BackIcon from '@icons/back.svg?react'
 
 import { useState, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
@@ -126,7 +125,7 @@ export const ProjectPreview = ({
     }
   }, [])
 
-  // Рендер узла комментария (только чтение)
+  // Рендер узла комментария (только чтение - без кнопок редактирования/удаления)
   const renderReadOnlyCommentNode = (node: CommentNode, depth = 0) => {
     const hasReplies = node.replies.length > 0
     const expanded = isExpanded(node.commentId)
@@ -148,17 +147,7 @@ export const ProjectPreview = ({
                 </span>
                 {node.isEdited && <span className='comment-edited'>• изменено</span>}
               </div>
-
-              {!node.isDeleted && (
-                <div className='comment-actions-right'>
-                  <button className='comment-edit-badge' disabled>
-                    <Edit className='ico' />
-                  </button>
-                  <button className='comment-remove-badge' disabled>
-                    <Delete className='ico' />
-                  </button>
-                </div>
-              )}
+              {/* Убраны кнопки редактирования и удаления */}
             </div>
 
             {node.isDeleted ? (
@@ -197,7 +186,7 @@ export const ProjectPreview = ({
 
   return (
     <>
-      <div className='project-preview-header'>
+      <div className='project-preview-header preview-mode'>
         <div className='project-info'>
           <h2 className='project-title'>О проекте {name}</h2>
           <div className={`project-status ${statusConfig.className}`}>
@@ -215,6 +204,9 @@ export const ProjectPreview = ({
               <span>{ratingCount || 0} оценок</span>
             </div>
           </div>
+          <button className='back-button' disabled>
+            <BackIcon className='ico' />
+          </button>
         </div>
       </div>
 
@@ -274,7 +266,12 @@ export const ProjectPreview = ({
           <h3 className='preview-section-title'>Заявки: <span className='count'>{vacancies.length}</span></h3>
           <div className='vacancy-list-preview'>
             {vacancies.map(vacancy => (
-              <VacancyCard key={vacancy.vacancyId} vacancy={vacancy} />
+              <VacancyCard 
+                key={vacancy.vacancyId} 
+                vacancy={vacancy} 
+                clickable={false}
+                showModerationDelete={false} // Явно отключаем модерацию в превью
+              />
             ))}
           </div>
         </section>

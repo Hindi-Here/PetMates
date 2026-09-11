@@ -1,5 +1,5 @@
 .header {
-    background-color: var(--base1-color);
+    background-color: var(--header-bg-color);
     font-family: var(--font-family-base);
     height: rem(75);
     position: fixed;   
@@ -42,7 +42,7 @@
     }
 
     .name-project-text{
-        color: var(--neutral-0);
+        color: var(--header-text-color);
         font-size: rem(32);
         font-family: var(--font-family-logo);
         user-select: none;
@@ -55,17 +55,17 @@
 
     .login-button{
         border-radius: var(--border-radius-base);
-        color: var(--neutral-0);
+        color: var(--header-text-color);
         background-color: transparent;
         font-size: rem(16);
         font-weight: bold;
-        border: 1px solid var(--neutral-0); 
+        border: 1px solid var(--header-text-color); 
         height: rem(40);
         width: rem(125);
         outline: none;
     }
     .login-button:hover{
-        background-color: var(--base2-color);
+        background-color: var(--header-bg-hover-color);
     }   
 }
 
@@ -117,7 +117,7 @@
 }
 
 .notification-panel-container:hover{
-    background-color: var(--base2-color);
+    background-color: var(--header-bg-hover-color);
 }
 
 .notification-panel-container:hover .notification-ico{
@@ -130,7 +130,7 @@
     right: 0;
     width: rem(500);
     max-height: rem(450);
-    background: var(--base2-color);
+    background: var(--header-bg-hover-color);
     border-bottom-left-radius: var(--border-radius-base);
     border-bottom-right-radius: var(--border-radius-base);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
@@ -153,7 +153,7 @@
         &.text {
             margin: 0;
             font-size: rem(14);
-            color: var(--neutral-0);
+            color: var(--header-text-color);
         }
 
         .header-actions {
@@ -199,13 +199,13 @@
                 transition: 0.25s;
 
                 &:hover {
-                    background: color-mix(in srgb, var(--neutral-100), transparent 90%);
+                    background: color-mix(in srgb, var(--header-text-color), transparent 90%);
                 }
 
                 .close-icon {
                     width: rem(16);
                     height: rem(16);
-                    fill: var(--neutral-0);
+                    fill: var(--header-text-color);
                 }
             }
         }
@@ -226,14 +226,14 @@
         }
 
         &::-webkit-scrollbar-thumb {
-            background: color-mix(in srgb, var(--neutral-100), transparent 70%);
+            background: color-mix(in srgb, var(--header-text-color), transparent 70%);
             border-radius: rem(3);
         }
 
         .empty-notifications {
             padding: rem(30) rem(20);
             text-align: center;
-            color: color-mix(in srgb, var(--neutral-0), transparent 50%);
+            color: var(--header-text-muted-color);
             font-size: rem(14);
         }
 
@@ -246,7 +246,7 @@
             border-left: 3px solid transparent;
 
             &:hover {
-                background: color-mix(in srgb, var(--neutral-100), transparent 95%);
+                background: color-mix(in srgb, var(--header-text-color), transparent 95%);
                 border-left-color: var(--primary-accent);
             }
 
@@ -304,7 +304,7 @@
                 .notification-item-text {
                     margin: 0 0 rem(4);
                     font-size: rem(14);
-                    color: var(--neutral-0);
+                    color: var(--header-text-color);
                     line-height: 1.4;
 
                     strong {
@@ -319,7 +319,7 @@
 
                 .notification-item-time {
                     font-size: rem(11);
-                    color: color-mix(in srgb, var(--neutral-0), transparent 50%);
+                    color: var(--header-text-muted-color);
                 }
             }
 
@@ -337,7 +337,7 @@
 
     .notification-panel-footer {
         padding: rem(12) rem(16);
-        border-top: 1px solid color-mix(in srgb, var(--neutral-100), transparent 90%);
+        border-top: 1px solid color-mix(in srgb, var(--header-text-color), transparent 90%);
         flex-shrink: 0;
 
         .view-all-btn {
@@ -352,7 +352,7 @@
             text-decoration: underline;
 
             &:hover {
-                background: color-mix(in srgb, var(--neutral-100), transparent 95%);
+                background: color-mix(in srgb, var(--header-text-color), transparent 95%);
             }
         }
     }
@@ -398,7 +398,7 @@
 }
 
 .message-panel-container:hover {
-    background-color: var(--base2-color);
+    background-color: var(--header-bg-hover-color);
 }
 
 .message-panel-container:hover .message-ico {
@@ -429,12 +429,12 @@
     .username-container{
 
         .username-text{
-            color: var(--neutral-0);
+            color: var(--header-text-color);
             font-size: rem(16);
             user-select: none;
         }
         .mail-text{
-            color: color-mix(in srgb, var(--neutral-0), transparent 50%);
+            color: var(--header-text-muted-color);
             font-size: rem(10);
             user-select: none;
         }
@@ -457,7 +457,7 @@
 }
 
 .profile-panel-container:hover{
-    background-color: var(--base2-color);
+    background-color: var(--header-bg-hover-color);
 }
 
 .profile-panel-container:hover .dropdown-ico,
@@ -488,12 +488,12 @@
         transition: 0.25s;
         width: rem(20);
         height: rem(20);
-        fill: var(--neutral-0);
+        fill: var(--header-text-color);
     }
 }
 
 .short-menu-container:hover{
-    background-color: var(--base2-color);
+    background-color: var(--header-bg-hover-color);
 }
 
 .short-menu-container:hover .short-menu-ico,

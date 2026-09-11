@@ -41,6 +41,20 @@
     }
 }
 
+[data-theme='dark'],
+.dark-theme {
+    .content-item-container {
+        .content-zero-ico {
+            opacity: 0.8; 
+            filter: brightness(1.2) contrast(1.1);
+        }
+
+        .content-zero-text {
+            color: color-mix(in srgb, var(--neutral-100), transparent 60%);
+        }
+    }
+}
+
 .found-content-container,
 .search-content-container {
   width: 80%;

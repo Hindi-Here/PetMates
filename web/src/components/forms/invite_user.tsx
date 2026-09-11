@@ -1,7 +1,6 @@
 import './invite_user.scss'
 import './template_form.scss'
 import RejectIcon from '@icons/reject.svg?react'
-import InfoIcon from '@icons/info_circle.svg?react'
 import InviteInProjectIcon from '@icons/invite_in_project.svg?react'
 import AcceptIcon from '@icons/accept.svg?react'
 
@@ -104,42 +103,66 @@ const Form = ({ onClose, invitedUser }: any) => {
 
   // Загрузка вакансий выбранного проекта
   useEffect(() => {
+    let isCancelled = false
+    
     const fetchVacancies = async () => {
       if (!selectedProject) {
-        setVacancies([])
-        setSelectedVacancy('')
-        setExistingMembers(new Set<string>())
-        setExistingInvites(new Set<string>()) 
+        if (!isCancelled) {
+          setVacancies([])
+          setSelectedVacancy('')
+          setExistingMembers(new Set<string>())
+          setExistingInvites(new Set<string>())
+        }
         return
       }
     
-      setExistingMembers(new Set<string>()) 
-      setExistingInvites(new Set<string>())
+      if (!isCancelled) {
+        setExistingMembers(new Set<string>()) 
+        setExistingInvites(new Set<string>())
+      }
     
       try {
         const projectVacancies = await vacanciesApi.getByProject(selectedProject)
-        setVacancies(projectVacancies)
-        setSelectedVacancy('')
+        if (isCancelled) return
+        
+        if (!isCancelled) {
+          setVacancies(projectVacancies)
+          setSelectedVacancy('')
+        }
         
         const members = await projectMembersApi.getByProject(selectedProject)
+        if (isCancelled) return
+        
         const memberIds = new Set<string>(members.map((m: any) => m.userId))
-        setExistingMembers(memberIds)
+        if (!isCancelled) {
+          setExistingMembers(memberIds)
+        }
         
         const outgoingInvites = await inviteApi.getOutgoing()
+        if (isCancelled) return
         
         const pendingInvitesForProject = outgoingInvites
           .filter(invite => invite.projectId === selectedProject && invite.status === 'pending')
           .map(invite => invite.userId)
         
-        setExistingInvites(new Set<string>(pendingInvitesForProject))
+        if (!isCancelled) {
+          setExistingInvites(new Set<string>(pendingInvitesForProject))
+        }
       } catch (error) {
-        console.error('Ошибка загрузки вакансий:', error)
-        setVacancies([])
-        setExistingMembers(new Set<string>())
-        setExistingInvites(new Set<string>())
+        if (!isCancelled) {
+          console.error('Ошибка загрузки вакансий:', error)
+          setVacancies([])
+          setExistingMembers(new Set<string>())
+          setExistingInvites(new Set<string>())
+        }
       }
     }
+    
     fetchVacancies()
+    
+    return () => {
+      isCancelled = true
+    }
   }, [selectedProject])
 
   // Проверка: можно ли отправить приглашение
@@ -281,23 +304,14 @@ const Form = ({ onClose, invitedUser }: any) => {
         </div>
 
         {error && (
-          <div className='form-warning error'>
-            <InfoIcon className='warning-icon' />
-            <p>{error}</p>
-          </div>
+          <p className='invite-error-text'>{error}</p>
         )}
 
         {invitedUser && !error && (
           existingMembers.has(invitedUser.userId) ? (
-            <div className='form-warning'>
-              <InfoIcon className='warning-icon' />
-              <p>Этот пользователь уже является участником проекта</p>
-            </div>
+            <p className='invite-error-text'>Этот пользователь уже является участником проекта</p>
           ) : existingInvites.has(invitedUser.userId) ? (
-            <div className='form-warning'>
-              <InfoIcon className='warning-icon' />
-              <p>Приглашение уже отправлено этому пользователю</p>
-            </div>
+            <p className='invite-error-text'>Приглашение уже отправлено этому пользователю</p>
           ) : null
         )}
 

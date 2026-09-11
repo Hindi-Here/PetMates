@@ -72,8 +72,8 @@
   align-items: center;
   gap: rem(12);
   padding: rem(12) rem(16);
-  background: var(--neutral-0);
-  border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 85%);
+  background: var(--card-bg-color);
+  border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 65%);
   border-radius: var(--border-radius-base);
   transition: all 0.25s;
   width: 100%;
@@ -81,12 +81,12 @@
   
   &:hover {
     border-color: color-mix(in srgb, var(--primary-accent), transparent 70%);
-    background: color-mix(in srgb, var(--primary-accent), transparent 97%);
+    background: color-mix(in srgb, var(--card-bg-color), var(--primary-accent) 3%);
   }
   
   &.selected {
     border-color: var(--primary-accent);
-    background: color-mix(in srgb, var(--primary-accent), transparent 95%);
+    background: color-mix(in srgb, var(--card-bg-color), var(--primary-accent) 6%);
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-accent), transparent 90%);
   }
 }
@@ -96,7 +96,7 @@
   height: rem(40);
   border-radius: var(--border-radius-base);
   background: var(--primary-accent);
-  color: var(--neutral-0);
+  color: var(--button-white-text);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -121,7 +121,7 @@
   
   .project-members {
     font-size: rem(12);
-    color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+    color: var(--text-secondary-color);
     margin: rem(2) 0 0 0;
   }
 }
@@ -140,16 +140,16 @@
   .checkmark-icon {
     width: rem(14);
     height: rem(14);
-    fill: var(--neutral-0);
+    fill: var(--button-white-text);
   }
 }
 
 .vacancy-placeholder {
   padding: rem(20);
   text-align: center;
-  color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+  color: var(--text-secondary-color);
   font-size: rem(14);
-  background: color-mix(in srgb, var(--neutral-100), transparent 97%);
+  background: var(--unborder-content-bg-color);
   border-radius: var(--border-radius-base);
   border: 1px dashed color-mix(in srgb, var(--neutral-100), transparent 80%);
   width: 100%;
@@ -191,8 +191,8 @@
   align-items: center;
   gap: rem(12);
   padding: rem(12) rem(16);
-  background: var(--neutral-0);
-  border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 85%);
+  background: var(--card-bg-color);
+  border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 65%);
   border-radius: var(--border-radius-base);
   transition: all 0.25s;
   width: 100%;
@@ -200,18 +200,18 @@
   
   &:hover:not(.disabled) {
     border-color: color-mix(in srgb, var(--primary-accent), transparent 70%);
-    background: color-mix(in srgb, var(--primary-accent), transparent 97%);
+    background: color-mix(in srgb, var(--card-bg-color), var(--primary-accent) 3%);
   }
   
   &.selected {
     border-color: var(--primary-accent);
-    background: color-mix(in srgb, var(--primary-accent), transparent 95%);
+    background: color-mix(in srgb, var(--card-bg-color), var(--primary-accent) 6%);
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-accent), transparent 90%);
   }
   
   &.disabled {
     opacity: 0.5;
-    background: color-mix(in srgb, var(--neutral-100), transparent 97%);
+    background: var(--unborder-content-bg-color);
   }
 }
 
@@ -220,7 +220,7 @@
   height: rem(40);
   border-radius: var(--border-radius-base);
   background: var(--primary-accent);
-  color: var(--neutral-0);
+  color: var(--button-white-text);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -245,7 +245,7 @@
   
   .invite-vacancy-date {
     font-size: rem(12);
-    color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+    color: var(--text-secondary-color);
     margin: rem(2) 0 0 0;
   }
 }
@@ -256,9 +256,9 @@
 .vacancy-placeholder {
   padding: rem(20);
   text-align: center;
-  color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+  color: var(--text-secondary-color);
   font-size: rem(14);
-  background: color-mix(in srgb, var(--neutral-100), transparent 97%);
+  background: var(--unborder-content-bg-color);
   border-radius: var(--border-radius-base);
   border: 1px dashed color-mix(in srgb, var(--neutral-100), transparent 80%);
   width: 100%;
@@ -321,8 +321,8 @@
     gap: rem(6);
     width: rem(175);
     height: inherit;
-    background-color: var(--primary-accent);
-    color: var(--neutral-0);
+    background-color: color-mix(in srgb, var(--primary-accent), var(--neutral-0) 12%);
+    color: var(--button-white-text);
     font-weight: bold;
     border-radius: var(--border-radius-base);
     border: none;
@@ -336,17 +336,30 @@
   }
   .form-manage-button.cancellation {
     width: rem(125);
-    background-color: var(--neutral-0);
+    background-color: var(--card-bg-color);
     color: var(--neutral-100);
     font-weight: normal;
-    border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 75%);
+    border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 65%);
     transition: 0.25s;
     box-sizing: border-box;
+
+    &:not(:disabled):hover {
+      background-color: color-mix(in srgb, var(--card-bg-color), var(--neutral-100) 6%);
+    }
   }
 }
 
 .form-field-text.no-required::after {
   content: none;
+}
+
+.invite-error-text {
+  font-size: rem(12);
+  color: var(--important-color);
+  text-align: center;
+  margin: rem(12) 0;
+  padding-top: rem(12);
+  border-radius: var(--border-radius-base);
 }
 
 @media (max-width: 480px) {

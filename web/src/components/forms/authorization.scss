@@ -27,11 +27,37 @@
     margin-bottom: rem(12);
 
     .form-remember-me-checkbox{
-        accent-color: var(--primary-accent);
+        appearance: none;
+        -webkit-appearance: none;
+        width: rem(16);
+        height: rem(16);
         border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 50%);
-        outline: none;
+        border-radius: rem(4);
+        background-color: var(--input-bg-color);
+        position: relative;
+        transition: 0.25s;
+        flex-shrink: 0;
+        margin: 0;
+        cursor: pointer;
 
-         &:hover{
+        &:checked {
+            background-color: var(--primary-accent);
+            border-color: var(--primary-accent);
+
+            &::after {
+                content: '';
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                width: rem(4);
+                height: rem(8);
+                border: solid var(--button-white-text);
+                border-width: 0 2px 2px 0;
+                transform: translate(-50%, -55%) rotate(45deg);
+            }
+        }
+
+        &:hover{
             filter: brightness(0.975);
         }
         &:active{
@@ -40,7 +66,7 @@
     }
     .form-remember-me-text{
         font-size: rem(12);
-        color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+        color: var(--text-secondary-color);
     }
 }
 
@@ -61,16 +87,27 @@
         gap: rem(6);
         width: rem(350);
         height: rem(40);
-        background-color: var(--primary-accent);
-        color: var(--neutral-0);
+        background-color: color-mix(in srgb, var(--primary-accent), var(--neutral-0) 12%);
+        color: var(--button-white-text);
         font-weight: bold;
         border-radius: var(--border-radius-base);
         border: none;
+        transition: 0.25s;
 
         .form-header-ico{
             width: rem(15);
             height: rem(15);
-            fill: var(--neutral-0);
+            fill: var(--button-white-text);
+        }
+
+        &:hover:not(:disabled) {
+            filter: brightness(0.95);
+            transform: scale(0.99);
+        }
+
+        &:active:not(:disabled) {
+            transform: scale(0.975);
+            filter: brightness(0.975);
         }
 
         &:disabled {
@@ -92,7 +129,7 @@
 
     .auth-service-separator-text {
         font-size: rem(12);
-        color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+        color: var(--text-secondary-color);
         display: flex;       
         align-items: center;
         gap: rem(12);
@@ -123,7 +160,8 @@
             border-radius: var(--border-radius-base);
             border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 50%);
             height: rem(30); 
-            background-color: var(--neutral-0);
+            background-color: var(--button-neutral-bg-color);
+            transition: 0.25s;
 
             .auth-service-item-ico{
                 width: rem(15);
@@ -146,11 +184,12 @@
             }
 
             &:hover{
-                filter: brightness(0.975);
+                filter: brightness(0.95);
+                transform: scale(0.99);
             }
             &:active{
-                filter: brightness(0.95);
-                transform: scale(0.98);
+                transform: scale(0.975);
+                filter: brightness(0.975);
             }
         }
     }
@@ -166,7 +205,7 @@
 
     .auth-change-format-text{
         font-size: rem(12);
-        color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+        color: var(--text-secondary-color);
     }
     .auth-change-format-link{
         font-size: rem(12);

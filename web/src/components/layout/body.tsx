@@ -126,6 +126,18 @@ const RedirectUsersProfile = () => {
 // Рендер контента с маршрутизацией
 const Content = () => {
   const { userId } = useAuth();
+
+  // Переход на свою вкладку при попытке обратиться к защищенным вкладкам другого пользователя
+  const ProtectedProfileTab = ({ children, tabName }: { children: React.ReactNode, tabName: string }) => {
+    const { profileId } = useParams<{ profileId: string }>();
+    const { userId } = useAuth();
+    
+    if (profileId && userId && profileId !== userId) {
+      return <Navigate to={`/profile/${userId}/${tabName}`} replace />;
+    }
+    
+    return <>{children}</>;
+  };
   
   return (
     <div className='content-container'>
@@ -136,11 +148,23 @@ const Content = () => {
           <Route path="info" element={null} />
           <Route path="activity" element={<Activity />} />
           <Route path="activity/project/:projectId" element={<Project />} />
-          <Route path="messages" element={<Messages />} />
-          <Route path="messages/:conversationId" element={<Chat />} />
-          <Route path="responces" element={<Responses />} />
+          <Route
+            path="messages"
+            element={<ProtectedProfileTab tabName="messages"><Messages /></ProtectedProfileTab>}
+          />
+          <Route
+            path="messages/:conversationId"
+            element={<ProtectedProfileTab tabName="messages"><Chat /></ProtectedProfileTab>}
+          />
+          <Route
+            path="responces"
+            element={<ProtectedProfileTab tabName="responces"><Responses /></ProtectedProfileTab>}
+          />
           <Route path="notifications" element={null} />
-          <Route path="settings" element={<Setting />} />
+          <Route
+            path="settings"
+            element={<ProtectedProfileTab tabName="settings"><Setting /></ProtectedProfileTab>}
+          />
         </Route>
         <Route path="/vacancy" element={<Vacancy />} />
         <Route path="/events" element={<Events />} />

@@ -24,14 +24,14 @@
         width: rem(20);
         height: rem(20);
         border-radius: 50%;
-        background-color: var(--base4-color);
+        background-color: var(--form-step-bg-color);
         border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 75%);
         position: relative; 
         z-index: 2; 
         transition: 0.25s;
 
         .form-step-number {
-            color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+            color: var(--text-secondary-color);
             font-size: rem(12);
         }
 

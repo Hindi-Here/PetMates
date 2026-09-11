@@ -27,7 +27,7 @@
   flex-shrink: 0;
   transition: 0.25s;
 
-  .ico { width: rem(18); height: rem(18); }
+  .ico { width: rem(18); height: rem(18); fill: var(--neutral-100); color: var(--neutral-100); }
 
   &:hover { background: color-mix(in srgb, var(--neutral-100), transparent 92%); }
 }
@@ -61,7 +61,7 @@
 
 .chat-header-status {
   font-size: rem(12);
-  color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+  color: var(--text-secondary-color);
 }
 
 .chat-header-nickname,
@@ -82,10 +82,19 @@
   border-radius: var(--border-radius-base);
   flex-shrink: 0;
   transition: 0.25s;
+  color: var(--neutral-100);
 
-  .ico { width: rem(16); height: rem(16); }
+  .ico { width: rem(16); height: rem(16); fill: var(--neutral-100); color: var(--neutral-100); }
 
-  &:hover, &.active { background: color-mix(in srgb, var(--neutral-100), transparent 92%); }
+  &:hover, &.active {
+    background: color-mix(in srgb, var(--neutral-100), transparent 92%);
+  }
+
+  &.active {
+    color: var(--primary-accent);
+
+    .ico { fill: var(--primary-accent); color: var(--primary-accent); }
+  }
 }
 
 .chat-search-bar {
@@ -98,7 +107,7 @@
   border-radius: var(--border-radius-base);
   flex-shrink: 0;
 
-  .ico { width: rem(14); height: rem(14); flex-shrink: 0; }
+  .ico { width: rem(14); height: rem(14); flex-shrink: 0; fill: var(--neutral-100); color: var(--neutral-100); }
 }
 
 .chat-search-input {
@@ -142,7 +151,7 @@
 
 .no-messages-text {
   text-align: center;
-  color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+  color: var(--text-secondary-color);
   margin: auto;
 }
 
@@ -203,9 +212,15 @@
   &.left { order: -1; }
   &.right { order: 1; }
 
-  .check-icon { width: rem(14); height: rem(14); fill: var(--neutral-0); }
+  .check-icon { 
+    width: rem(14);
+    height: rem(14); fill:
+    var(--button-white-text);
+  }
 
-  &:hover { background: color-mix(in srgb, var(--primary-accent), black 10%); }
+  &:hover { 
+    background: color-mix(in srgb, var(--primary-accent), black 10%); 
+  }
 }
 
 .chat-message {
@@ -226,7 +241,7 @@
   position: relative;
   padding: rem(10) rem(14);
   border-radius: var(--border-radius-base);
-  background: color-mix(in srgb, var(--neutral-100), transparent 95%);
+  background: color-mix(in srgb, var(--card-bg-color), var(--neutral-100) 4%);
   transition: 0.25s;
   overflow: visible;
 
@@ -277,7 +292,7 @@
 
   &.deleted {
     font-style: italic;
-    color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+    color: var(--text-secondary-color);
   }
 }
 
@@ -287,7 +302,7 @@
   gap: rem(6);
   margin-top: rem(4);
   font-size: rem(11);
-  color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+  color: var(--text-secondary-color);
 }
 
 .chat-message-status {
@@ -341,14 +356,15 @@
   justify-content: center;
   border: none;
   border-radius: 50%;
-  background: var(--neutral-0);
+  background: var(--card-bg-color);
   box-shadow: 0 1px 4px rgba(0,0,0,0.15);
   transition: 0.25s;
+  color: var(--neutral-100);
 
-  .ico { width: rem(13); height: rem(13); }
+  .ico { width: rem(13); height: rem(13); fill: currentColor; color: currentColor; }
   .ico.copied { color: var(--primary-accent); }
 
-  &:hover { background: color-mix(in srgb, var(--neutral-100), transparent 90%); }
+  &:hover { background: color-mix(in srgb, var(--card-bg-color), var(--neutral-100) 6%); }
 }
 
 .chat-hover-more-wrapper {
@@ -362,7 +378,8 @@
   display: flex;
   flex-direction: column;
   min-width: rem(160);
-  background: var(--neutral-0);
+  background: var(--card-bg-color);
+  border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 80%);
   border-radius: var(--border-radius-base);
   box-shadow: 0 2px 12px rgba(0,0,0,0.15);
   overflow: hidden;
@@ -376,6 +393,7 @@
     background: none;
     border: none;
     font-size: rem(14);
+    color: var(--neutral-100);
     transition: 0.25s;
     width: 100%;
 
@@ -430,8 +448,9 @@
   border: none;
   background: none;
   flex-shrink: 0;
+  color: var(--neutral-100);
 
-  .ico { width: rem(12); height: rem(12); }
+  .ico { width: rem(12); height: rem(12); fill: currentColor; color: currentColor; }
 }
 
 .chat-input-wrapper {
@@ -465,7 +484,7 @@
 
 .chat-btn {
   padding: rem(10) rem(20);
-  border: none;
+  border: 1px solid transparent;
   border-radius: var(--border-radius-base);
   font-size: rem(14);
   font-weight: bold;
@@ -479,44 +498,37 @@
   }
 
   &:hover:not(:disabled) {
-    filter: brightness(0.95);
+    filter: brightness(0.99);
     transform: none;
     box-shadow: none;
+    transform: scale(0.99);
   }
 
   &:active:not(:disabled) { 
-    filter: brightness(0.9);
+    filter: brightness(0.975);
+    transform: scale(0.975);
   }
 
-  &.send, &.confirm {
-    color: var(--neutral-0);
-    background: var(--primary-accent);
-  }
-
-  &.secondary {
-    background: var(--primary-accent);
-    color: var(--neutral-0);
+  &.send, &.confirm, &.secondary {
+    color: var(--button-white-text);
+    background: color-mix(in srgb, var(--primary-accent), var(--neutral-0) 12%);
   }
 
   &.cancel {
-    background: var(--neutral-0);
+    background: var(--card-bg-color);
     color: var(--neutral-100);
-    border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 85%);
-    
-    &:hover:not(:disabled) {
-      background: color-mix(in srgb, var(--neutral-100), transparent 95%);
-      filter: none;
-    }
+    border-color: color-mix(in srgb, var(--neutral-100), transparent 85%);
   }
 
   &.warning {
-    color: var(--neutral-0);
-    background: var(--important-color);
+    background: var(--message-detele-myself);
+    border-color: var(--important-color);
+    color: var(--important-color);
   }
 
   &.danger {
-    color: var(--neutral-0);
-    background: var(--important-color);
+    color: var(--button-white-text);
+    background: color-mix(in srgb, var(--important-color), var(--neutral-0) 12%);
   }
 }
 
@@ -534,7 +546,7 @@
 .chat-forward-modal {
   width: min(rem(360), calc(100vw - #{rem(32)}));
   max-height: rem(420);
-  background: var(--neutral-0);
+  background: var(--card-bg-color);
   border-radius: var(--border-radius-base);
   overflow: hidden;
   display: flex;
@@ -549,11 +561,13 @@
   padding: rem(14);
   border-bottom: 1px solid color-mix(in srgb, var(--neutral-100), transparent 90%);
   font-weight: bold;
+  color: var(--neutral-100);
 
   button { 
     background: none; 
     border: none; 
-    .ico { width: rem(14); height: rem(14); } 
+    color: var(--neutral-100);
+    .ico { width: rem(14); height: rem(14); fill: currentColor; color: currentColor; } 
   }
 }
 
@@ -568,6 +582,7 @@
   gap: rem(10);
   padding: rem(8) rem(10);
   border-radius: var(--border-radius-base);
+  color: var(--neutral-100);
 
   &:hover { background: color-mix(in srgb, var(--neutral-100), transparent 93%); }
 

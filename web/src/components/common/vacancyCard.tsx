@@ -13,6 +13,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '../scripts/query/queryKeys'
 import { canModerateTarget } from '../scripts/moderation'
 import { projectsApi } from '../services/project'
+import { projectMembersApi } from '../services/project_members'
 import { responseApi } from '../services/response'
 import { notificationApi } from '../services/notification'
 import { usersApi } from '../services/users'
@@ -39,13 +40,15 @@ const sendNotification = (
 
 export const VacancyCard = ({ 
   vacancy,
-  showModerationDelete = true
+  showModerationDelete = true,
+  clickable = true
 }: { 
   vacancy: VacancyData
   showModerationDelete?: boolean
+  clickable?: boolean
 }) => {
   const navigate = useNavigate()
-  const { userId } = useAuth()
+  const { userId, isAuthenticated } = useAuth()
   const queryClient = useQueryClient()
   const currentSystemRole = useSystemRole()
   
@@ -62,6 +65,17 @@ export const VacancyCard = ({
   const [projectOwnerRole, setProjectOwnerRole] = useState<string | null>(null)
   const [ownerIsBanned, setOwnerIsBanned] = useState(false)
   const [showDeleteForm, setShowDeleteForm] = useState(false)
+
+  // Загрузка участников проекта для проверки, является ли пользователь участником команды
+  const { data: projectMembers = [] } = useQuery({
+    queryKey: queryKeys.projects.memberProjects(vacancy.projectId!),
+    queryFn: () => projectMembersApi.getByProject(vacancy.projectId!),
+    enabled: !!vacancy.projectId && !!userId,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  // Проверка: является ли текущий пользователь участником команды
+  const isTeamMember = projectMembers.some((member: any) => member.userId === userId)
 
   useEffect(() => {
     const checkOwner = async () => {
@@ -133,18 +147,19 @@ export const VacancyCard = ({
 
   const handleApply = async (e: React.MouseEvent) => {
     e.stopPropagation()
-    if (hasResponded || isOwner || !userId || ownerIsBanned) return
+    if (hasResponded || isOwner || !userId || ownerIsBanned || isTeamMember) return
     applyMutation.mutate()
   }
 
   const handleCardClick = () => {
+    if (!clickable) return
     if (!projectOwnerId) return
     navigate(`/profile/${projectOwnerId}/activity/project/${vacancy.projectId}`)
   }
 
   return (
     <>
-      <div className={`vacancy-card-container ${ownerIsBanned ? 'banned-owner-card' : ''}`} onClick={handleCardClick}>
+      <div className={`vacancy-card-container ${ownerIsBanned ? 'banned-owner-card' : ''} ${!clickable ? 'no-active' : ''}`} onClick={handleCardClick}>
         {canModerate && (
           <button
             className='moderation-delete-btn'
@@ -177,9 +192,9 @@ export const VacancyCard = ({
             <button 
               className='vacancy-apply-button' 
               onClick={handleApply} 
-              disabled={hasResponded || isOwner || applyMutation.isPending || ownerIsBanned}
+              disabled={!isAuthenticated || hasResponded || isOwner || isTeamMember || applyMutation.isPending || ownerIsBanned}
             >
-              {ownerIsBanned ? 'Владелец заблокирован' : 'Откликнуться'}
+              Откликнуться
             </button>
             <span className='vacancy-rating'>
               <StarIcon className='star-ico' />

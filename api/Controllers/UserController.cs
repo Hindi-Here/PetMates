@@ -32,11 +32,15 @@ namespace api.Controllers
                 var response = await _client.From<User>().Get();
                 var users = response.Models;
 
-                if (showStaffOnly)
+                if (showStaffOnly && showBannedOnly)
+                {
+                    users = [.. users.Where(u => (u.SystemRole == "moderator" || u.SystemRole == "admin") && u.IsBanned == true)];
+                }
+                else if (showStaffOnly)
                 {
                     users = [.. users.Where(u => u.SystemRole == "moderator" || u.SystemRole == "admin")];
                 }
-                else if (isStaff && showBannedOnly)
+                else if (showBannedOnly && isStaff)
                 {
                     users = [.. users.Where(u => u.IsBanned == true)];
                 }

@@ -1,8 +1,4 @@
 import './profile_third_side.scss'
-import HardSkills from '@icons/hard_skills.svg?react'
-import SoftSkills from '@icons/soft_skills.svg?react'
-import Contacts from '@icons/contacts.svg?react'
-import UserDescription from '@icons/user_description.svg?react'
 import InviteIcon from '@icons/invite_in_project.svg?react'
 import ChatIcon from '@icons/chat.svg?react'
 import MoreIcon from '@icons/more.svg?react'
@@ -271,7 +267,6 @@ export default function ThirdProfile() {
           {user?.description && (
             <div className='profile-area-container'>
               <div className='profile-area-text-container'>
-                <UserDescription className='profile-area-ico' />
                 <p className='profile-area-text'>Описание:</p>
               </div>
               <div className='description-text markdown-content'>
@@ -282,7 +277,6 @@ export default function ThirdProfile() {
 
           <div className='profile-area-container'>
             <div className='profile-area-text-container'>
-              <HardSkills className='profile-area-ico' />
               <p className='profile-area-text'>hard-skills:</p>
             </div>
             <div className='tag-container'>
@@ -302,7 +296,6 @@ export default function ThirdProfile() {
 
           <div className='profile-area-container'>
             <div className='profile-area-text-container'>
-              <SoftSkills className='profile-area-ico' />
               <p className='profile-area-text'>soft-skills:</p>
             </div>
             <div className='tag-container'>
@@ -322,7 +315,6 @@ export default function ThirdProfile() {
 
           <div className='profile-area-container'>
             <div className='profile-area-text-container'>
-              <Contacts className='profile-area-ico' />
               <p className='profile-area-text'>Контакты:</p>
             </div>
             {contactsList.length > 0 ? (

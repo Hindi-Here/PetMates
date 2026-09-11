@@ -1,7 +1,7 @@
 import './message.scss'
 import UsersIcon from '@icons/users.svg?react'
 import SearchIcon from '@icons/search.svg?react'
-import Delete from '@icons/delete.svg?react'
+import Delete from '@icons/reject.svg?react'
 import PinIcon from '@icons/pin.svg?react'
 import UnpinIcon from '@icons/unpin.svg?react'
 
@@ -23,12 +23,12 @@ const formatDate = (dateString: string | null | undefined) => {
   const thisWeekStart = new Date(today)
   thisWeekStart.setDate(today.getDate() - today.getDay())
   const thisYearStart = new Date(now.getFullYear(), 0, 1)
-  
+
   const isToday = date >= today
   const isYesterday = date >= yesterday && date < today
   const isThisWeek = date >= thisWeekStart && date < today
   const isThisYear = date >= thisYearStart && date < today
-  
+
   if (isToday) return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
   if (isYesterday) return 'Вчера'
   if (isThisWeek) return date.toLocaleDateString('ru-RU', { weekday: 'short' })
@@ -53,11 +53,13 @@ export const Messages = () => {
     refetchOnWindowFocus: true,
   })
 
+  const hasSearched = globalQuery.trim().length >= 2
+
   // Поиск пользователей по глобальному запросу
-  const { data: foundUsers = [] } = useQuery({
+  const { data: foundUsers = [], isFetching: isSearchingUsers } = useQuery({
     queryKey: ['users', 'search', globalQuery],
     queryFn: () => usersApi.searchUsers(globalQuery),
-    enabled: globalQuery.trim().length >= 2,
+    enabled: hasSearched,
     staleTime: 0,
   })
 
@@ -110,24 +112,51 @@ export const Messages = () => {
     })
   }, [filteredConversations])
 
+  const conversationByUserId = useMemo(() => {
+    const map = new Map<string, string>()
+    conversations.forEach(c => map.set(c.otherUserId, c.conversationId))
+    return map
+  }, [conversations])
+
+  const sortedFoundUsers = useMemo(() => {
+    if (!hasSearched) return []
+    return [...foundUsers].sort((a, b) => {
+      const aHasChat = conversationByUserId.has(a.userId)
+      const bHasChat = conversationByUserId.has(b.userId)
+      if (aHasChat !== bHasChat) return aHasChat ? 1 : -1
+      return 0
+    })
+  }, [hasSearched, foundUsers, conversationByUserId])
+
   // Рендер карточки найденного пользователя
-  const renderFoundUserCard = (user: UserSearchResult) => (
-    <div
-      key={user.userId}
-      className='found-user-card'
-      onClick={() => {
-        if (startConversationMutation.isPending) return
-        startConversationMutation.mutate(user.userId)
-      }}
-    >
-      <div className='found-user-info'>
-        <div className='found-user-avatar'>
-          <img src={user.avatarUrl || '/default-avatar.png'} alt={user.nickname} />
+  const renderFoundUserCard = (user: UserSearchResult) => {
+    const existingConversationId = conversationByUserId.get(user.userId)
+
+    return (
+      <div
+        key={user.userId}
+        className='found-user-card'
+        onClick={() => {
+          if (existingConversationId) {
+            handleOpenChat(existingConversationId)
+            return
+          }
+          if (startConversationMutation.isPending) return
+          startConversationMutation.mutate(user.userId)
+        }}
+      >
+        <div className='found-user-info'>
+          <div className='found-user-avatar'>
+            <img src={user.avatarUrl || '/default-avatar.png'} alt={user.nickname} />
+          </div>
+          <p className='found-user-nickname'>@{user.nickname}</p>
         </div>
-        <p className='found-user-nickname'>@{user.nickname}</p>
+        {existingConversationId && (
+          <span className='found-user-existing-badge'>Уже есть переписка</span>
+        )}
       </div>
-    </div>
-  )
+    )
+  }
 
   // Рендер карточки чата
   const renderConversationCard = (conv: any) => (
@@ -172,19 +201,6 @@ export const Messages = () => {
     </div>
   )
 
-  // Вычисление новых пользователей (не в диалогах)
-  const existingConversationUserIds = useMemo(() => 
-    new Set(conversations.map(c => c.otherUserId)), 
-    [conversations]
-  )
-  
-  const newUsersFound = useMemo(() => 
-    globalQuery.trim()
-      ? foundUsers.filter(u => !existingConversationUserIds.has(u.userId))
-      : [],
-    [globalQuery, foundUsers, existingConversationUserIds]
-  )
-
   return (
     <div className='messages-page'>
       <div className='search-content-container messages-search'>
@@ -208,12 +224,26 @@ export const Messages = () => {
         </div>
       </div>
 
-      {globalQuery.trim() && newUsersFound.length > 0 && (
+      {hasSearched && (
         <div className='messages-section'>
-          <h3 className='messages-section-title'>Найденные пользователи</h3>
-          <div className='found-users-list'>
-            {newUsersFound.map(renderFoundUserCard)}
-          </div>
+          <h3 className='messages-section-title'>
+            Найденные пользователи: <span className='messages-count'>{sortedFoundUsers.length}</span>
+          </h3>
+
+          {isSearchingUsers ? (
+            <div className='empty-activity'>
+              <p className='empty-activity-text'>Поиск...</p>
+            </div>
+          ) : sortedFoundUsers.length > 0 ? (
+            <div className='found-users-list'>
+              {sortedFoundUsers.map(renderFoundUserCard)}
+            </div>
+          ) : (
+            <div className='empty-activity'>
+              <UsersIcon className='empty-activity-ico' />
+              <p className='empty-activity-text'>Пользователи не найдены</p>
+            </div>
+          )}
         </div>
       )}
 

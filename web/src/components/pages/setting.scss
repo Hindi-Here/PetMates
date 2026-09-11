@@ -8,11 +8,11 @@
   }
 
   .setting-container {
-    background-color: color-mix(in srgb, var(--base4-color), transparent 50%);
+    background-color: var(--card-bg-color);
     border-radius: var(--border-radius-base);
     padding: rem(24);
     margin-bottom: rem(20);
-    border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 75%);
+    border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 65%);
 
     .setting-title {
       font-size: rem(16);
@@ -41,7 +41,7 @@
         padding: 0 rem(8);
         border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 80%);
         border-radius: var(--border-radius-base);
-        background-color: var(--neutral-0);
+        background-color: var(--input-bg-color);
         font-size: rem(14);
         font-family: var(--font-family-base);
         color: var(--neutral-100);
@@ -66,7 +66,7 @@
 }
 
 .warning-container {
-  background-color: color-mix(in srgb, var(--important-color), transparent 92%);
+  background-color: color-mix(in srgb, var(--card-bg-color), var(--important-color) 10%);
   border: 1px solid color-mix(in srgb, var(--important-color), transparent 70%);
   border-radius: rem(16);
   padding: rem(24);
@@ -98,7 +98,7 @@
 
   .warning-description {
     font-size: rem(14);
-    color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+    color: var(--text-secondary-color);
     margin-bottom: rem(20);
     line-height: 1.5;
 
@@ -147,8 +147,8 @@
     height: rem(40);
     font-size: rem(14);
     margin-top: rem(12);
-    background-color: var(--primary-accent);
-    color: var(--neutral-0);
+    background-color: color-mix(in srgb, var(--primary-accent), var(--neutral-0) 12%);
+    color: var(--button-white-text);
     font-weight: bold;
     border-radius: var(--border-radius-base);
     border: none;
@@ -169,7 +169,7 @@
 
     &.cancellation {
       width: rem(125);
-      background-color: var(--neutral-0);
+      background-color: var(--card-bg-color);
       color: var(--neutral-100);
       border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 85%);
 

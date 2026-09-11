@@ -18,6 +18,7 @@
   margin-left: 0;
   padding-left: 0;
   padding-right: 0;
+  padding-top: 0;
 }
 
 .search-line-container {
@@ -35,7 +36,7 @@
   padding: rem(8) rem(12);
   border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 80%);
   border-radius: var(--border-radius-base);
-  background: var(--neutral-0);
+  background: var(--input-bg-color);
   transition: 0.25s;
 
   &:focus-within {
@@ -70,8 +71,8 @@
 
 .search-button {
   padding: rem(8) rem(24);
-  background: var(--neutral-100);
-  color: var(--neutral-0);
+  background: var(--base3-color);
+  color: var(--header-text-color);
   border: none;
   border-radius: var(--border-radius-base);
   font-size: rem(14);
@@ -100,7 +101,7 @@
 }
 
 .messages-count {
-  color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+  color: var(--text-secondary-color);
 }
 
 .found-users-list {
@@ -116,7 +117,7 @@
   display: flex;
   align-items: center;
   padding: rem(12);
-  background: var(--neutral-0);
+  background: var(--card-bg-color);
   border-bottom: 1px solid color-mix(in srgb, var(--neutral-100), transparent 90%);
   transition: all 0.25s;
 
@@ -126,7 +127,7 @@
 
   &:hover {
     box-shadow: inset 2px 0 0 0 var(--primary-accent), 0 4px 4px rgba(0, 0, 0, 0.05);
-    background-color: color-mix(in srgb, var(--primary-accent), transparent 97%);
+    background-color: color-mix(in srgb, var(--card-bg-color), var(--primary-accent) 2%);
     border-left-color: var(--primary-accent);
   }
 }
@@ -164,7 +165,7 @@
   align-items: center;
   gap: 0;
   padding: rem(12);
-  background: var(--neutral-0);
+  background: var(--card-bg-color);
   transition: all 0.25s;
 
   &:last-child {
@@ -173,7 +174,7 @@
 
   &:hover {
     box-shadow: inset 2px 0 0 0 var(--primary-accent), 0 4px 4px rgba(0, 0, 0, 0.05);
-    background-color: color-mix(in srgb, var(--primary-accent), transparent 97%);
+    background-color: color-mix(in srgb, var(--card-bg-color), var(--primary-accent) 4%);
     border-left-color: var(--primary-accent);
   }
 
@@ -211,7 +212,7 @@
 
 .conversation-date {
   font-size: rem(12);
-  color: color-mix(in srgb, var(--neutral-100), transparent 55%);
+  color: var(--text-secondary-color);
   flex-shrink: 0;
   margin-left: auto;
   padding-right: rem(12); 
@@ -242,15 +243,15 @@
 }
 
 .conversation-pin-btn {
-  width: rem(36);
-  height: rem(36);
+  width: rem(40);
+  height: rem(40);
   display: flex;
   align-items: center;
   justify-content: center;
   border: none;
   border-radius: var(--border-radius-base);
-  background: color-mix(in srgb, var(--neutral-100), transparent 95%);
-  color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+  background: var(--button-neutral-bg-color);
+  color: var(--text-secondary-color);
   transition: all 0.25s;
   flex-shrink: 0;
   padding: 0;
@@ -260,32 +261,52 @@
     height: rem(16); 
   }
 
-  &:hover { 
-    background: color-mix(in srgb, var(--neutral-100), transparent 90%); 
+  &:hover {
+    background: color-mix(in srgb, var(--button-neutral-bg-color), var(--neutral-100) 4%);
+    transform: scale(0.975);
+  }
+
+  &:active{
+    background: color-mix(in srgb, var(--button-neutral-bg-color), var(--neutral-100) 6%);
+    transform: scale(0.95);
   }
 
   &.pinned {
     color: var(--primary-accent);
     background: color-mix(in srgb, var(--primary-accent), transparent 90%);
+    &:hover { 
+      background: color-mix(in srgb, var(--primary-accent), transparent 85%); 
+      transform: scale(0.975);
+    }
+    &:active{
+      background: color-mix(in srgb, var(--primary-accent), transparent 80%); 
+      transform: scale(0.95);
+    }
   }
 }
 
 .conversation-delete-btn {
-  width: rem(36);
-  height: rem(36);
+  width: rem(40);
+  height: rem(40);
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: var(--border-radius-base);
   border: none;
-  background-color: color-mix(in srgb, var(--important-color), transparent 85%);
+  background-color: var(--button-danger-bg-color);
   color: var(--important-color);
   transition: all 0.25s;
   flex-shrink: 0;
   padding: 0;
 
   &:hover {
-    background-color: color-mix(in srgb, var(--important-color), transparent 80%);
+    background: color-mix(in srgb, var(--button-danger-bg-color), var(--important-color) 4%);
+    transform: scale(0.975);
+  }
+
+  &:active{
+    background: color-mix(in srgb, var(--button-danger-bg-color), var(--important-color) 6%);
+    transform: scale(0.95);
   }
 
   &:active {
@@ -313,8 +334,8 @@
 .empty-activity {
   padding: rem(20);
   text-align: center;
-  background: var(--base4-color);
-  border: 2px dashed color-mix(in srgb, var(--neutral-100), transparent 85%);
+  background: var(--empty-state-bg-color);
+  border: 2px dashed var(--empty-state-border-color);
   border-radius: var(--border-radius-base);
 
   .empty-activity-ico {
@@ -322,14 +343,28 @@
     height: rem(80);
     margin-bottom: rem(24);
     opacity: 0.5;
-    fill: color-mix(in srgb, var(--neutral-100), transparent 50%);
+    fill: var(--empty-state-content-color);
   }
 
   .empty-activity-text {
     font-size: rem(16);
-    color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+    color: var(--empty-state-content-color);
     margin: 0;
   }
+}
+
+.found-user-card {
+  justify-content: space-between;
+}
+
+.found-user-existing-badge {
+  font-size: rem(12);
+  color: var(--text-secondary-color);
+  background: color-mix(in srgb, var(--neutral-100), transparent 92%);
+  padding: rem(4) rem(10);
+  border-radius: var(--border-radius-base);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 @media (max-width: 480px) {

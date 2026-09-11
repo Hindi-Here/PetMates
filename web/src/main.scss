@@ -1,5 +1,49 @@
 // Цветовая схема и переменные
 :root {
+  // Header палитра
+  --header-bg-color: #323232;
+  --header-bg-hover-color: #383838;
+  --header-text-color: #FFFFFF;
+  --header-text-muted-color: rgba(255, 255, 255, 0.6);
+
+  // Основные акценты
+  --card-bg-color: var(--neutral-0);
+  --card-active-bg-color: color-mix(in srgb, var(--neutral-100), transparent 98%);
+  --text-secondary-color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+  --input-bg-color: var(--neutral-0);
+  --unborder-content-bg-color: color-mix(in srgb, var(--neutral-100), transparent 95%);
+
+  // Иконки серые/красные внутри карточек и вне карт
+  --button-neutral-bg-color: color-mix(in srgb, var(--neutral-100), transparent 95%);
+  --button-danger-bg-color: color-mix(in srgb, var(--important-color), transparent 85%);
+  --uncard-button-neutral-bg-color: color-mix(in srgb, var(--neutral-100), transparent 95%);
+  --uncard-button-danger-bg-color: color-mix(in srgb, var(--important-color), transparent 85%);
+
+  // Белый текст во всех цветных кнопках
+  --button-white-text: white;
+
+  // Цветовая схема для плашки с отсутствием загружаемого контента (в профиле)
+  --empty-state-bg-color: var(--base4-color);
+  --empty-state-border-color: color-mix(in srgb, var(--neutral-100), transparent 85%);
+  --empty-state-content-color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+
+  // Схема кнопок добавления (медиа, контакты, сущности)
+  --add-card-hover-color: color-mix(in srgb, var(--primary-accent), transparent 97%);
+  --add-card-active-color: color-mix(in srgb, var(--primary-accent), transparent 95%);
+
+  // Уникальные стили для конкретных частей
+  --preview-label-color: color-mix(in srgb, var(--neutral-100), transparent 40%);
+  --team-invite-bg-color: color-mix(in srgb, var(--primary-accent), transparent 95%);
+  --message-detele-myself: white;
+  --profile-input-bg-color: #f7f7f7;
+  --nav-item-hover-color: #e3e3e3;
+
+  // Шаги при удалении аккаунта и шапки форм
+  --form-step-bg-color: var(--base4-color);
+  --form-important-color: #DD5E46;
+  --form-primary-accent: #40B4A4;
+
+  // Базовые цвета
   --neutral-0:  #FFFFFF;
   --neutral-100: #000000; 
 
@@ -33,6 +77,63 @@
 
 // Параметры темной темы
 @mixin dark-theme-values {
+  --header-bg-color: #17181B;
+  --header-bg-hover-color: #202226;
+
+  --card-bg-color: #2e3136;
+  --card-active-bg-color: #32353a;
+  --text-secondary-color: color-mix(in srgb, var(--neutral-100), transparent 30%);
+  --input-bg-color: #2e3136;
+  --unborder-content-bg-color: #2e3136;
+
+  --button-neutral-bg-color: color-mix(in srgb, var(--card-bg-color), var(--neutral-100) 10%);
+  --uncard-button-neutral-bg-color: var(--card-bg-color);
+  --button-danger-bg-color: color-mix(in srgb, var(--card-bg-color), var(--important-color) 25%);
+  --uncard-button-danger-bg-color: color-mix(in srgb, var(--card-bg-color), var(--important-color) 15%);
+
+  --button-white-text: white;
+
+  --empty-state-bg-color: var(--card-bg-color);
+  --empty-state-border-color: color-mix(in srgb, var(--neutral-100), transparent 70%);
+  --empty-state-content-color: color-mix(in srgb, var(--neutral-100), transparent 20%);
+
+  --add-card-hover-color: color-mix(in srgb, var(--card-bg-color), var(--primary-accent) 2%);
+  --add-card-active-color: color-mix(in srgb, var(--card-bg-color), var(--primary-accent) 6%);
+
+  --preview-label-color: var(--neutral-100);
+  --team-invite-bg-color: color-mix(in srgb, var(--primary-accent), transparent 90%);
+  --message-detele-myself: transparent;
+  --profile-input-bg-color: #2e3136;
+  --nav-item-hover-color: #24262A;
+
+  --form-step-bg-color: var(--button-neutral-bg-color);
+  --form-important-color: var(--header-bg-color);
+  --form-primary-accent: var(--header-bg-color);
+  
+  --neutral-0:  #1b1f22;  
+  --neutral-100: #ECECEC;
+
+  --base1-color: #2A2A2E;
+  --base2-color: #313136;
+  --base3-color: #3D3D42;  
+
+  --base4-color: #0B0C0E;  
+  --base5-color: #141518;
+
+  --important-color: #FF6B52;
+  --important-ligth-color: #FF8F78;
+
+  --primary-accent: #4DC4B3;
+  --primary-light-accent: #8AD9CD;
+  --rate-color: #B8D782;
+  --primary-tag-text-color: #6FE0D1;
+
+  --success-color: #52E655;
+  --success-extra-ligth-color: #1E3620; 
+
+  --in-process-color: #E8BE5C;
+
+  --info-color: #5C82E8;
 }
 
 // Системная тема
@@ -75,12 +176,13 @@ button{
     font-size: rem(14);
     font-family: var(--font-family-base);
 
-    &:hover{
-        filter: brightness(0.95);
-    }
+    &:hover {
+        transform: scale(0.99);
+    } 
+
     &:active {
-        transform: scale(0.98);
-    }
+        transform: scale(0.975);
+    } 
 }
 
 p{
@@ -91,16 +193,38 @@ p{
   background-color: color-mix(in srgb, var(--important-color), transparent 75%);
 }
 
-input{
+input, textarea, select {
+    background-color: var(--input-bg-color);
+    color: var(--neutral-100);
+    font-family: inherit;
+
+    &::placeholder {
+        color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+    }
+
     &::selection{
         background-color: color-mix(in srgb, var(--primary-accent), transparent 75%);
     }
 }
 
-textarea{
-    &::selection{
-        background-color: color-mix(in srgb, var(--primary-accent), transparent 75%);
-    }
+// Стиль полей типа password с автовставкой
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 100px var(--input-bg-color) inset !important;
+    box-shadow: 0 0 0 100px var(--input-bg-color) inset !important;
+    -webkit-text-fill-color: var(--neutral-100) !important;
+    caret-color: var(--neutral-100);
+    transition: background-color 500s ease-in-out 0s;
+    
+    border: 1px solid var(--primary-accent) !important;
+    border-radius: var(--border-radius-base) !important;
+}
+
+input:-webkit-autofill::selection {
+  -webkit-text-fill-color: var(--neutral-100) !important;
+  color: var(--neutral-100) !important;
 }
 
 // Скролл
@@ -113,7 +237,7 @@ textarea{
   background: color-mix(in srgb, var(--neutral-0), transparent 95%);
   border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 85%);
   border-radius: rem(5);
-    background-clip: padding-box;
+  background-clip: padding-box;
 }
 
 ::-webkit-scrollbar-thumb {

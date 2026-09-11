@@ -106,8 +106,8 @@
     .action-ico {
       width: rem(20);
       height: rem(20);
-      fill: var(--neutral-0);
-      color: var(--neutral-0);
+      fill: var(--button-white-text);
+      color: var(--button-white-text);
     }
 
     &:disabled {
@@ -290,7 +290,7 @@
     }
 
     .profile-area-text {
-      font-size: rem(18);
+      font-size: rem(20);
       font-weight: bold;
       color: var(--neutral-100);
       margin: 0;
@@ -391,8 +391,8 @@
       gap: rem(6);
       
       .profile-action-btn {
-        width: rem(36);
-        height: rem(36);
+        width: rem(40);
+        height: rem(40);
         
         .action-ico {
           width: rem(18);

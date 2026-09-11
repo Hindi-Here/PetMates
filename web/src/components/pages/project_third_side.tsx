@@ -6,9 +6,9 @@ import StatusEndIcon from '@icons/status_end.svg?react'
 import StatusPauseIcon from '@icons/status_pause.svg?react'
 import StatusWorkingIcon from '@icons/status_working.svg?react'
 import Edit from '@icons/edit.svg?react'
-import Delete from '@icons/delete.svg?react'
 import RejectIcon from '@icons/reject.svg?react'
 import LockIcon from '@icons/lock.svg?react'
+import BackIcon from '@icons/back.svg?react'
 
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -270,7 +270,7 @@ export default function ProjectThirdSide() {
                   )}
                   {canDelete && (
                     <button className='comment-remove-badge' onClick={() => {deleteCommentMutation.mutate(node.commentId)}}>
-                      <Delete className='ico' />
+                      <RejectIcon className='ico' />
                     </button>
                   )}
                 </div>
@@ -380,6 +380,12 @@ export default function ProjectThirdSide() {
     }
   }
 
+  const handleBack = () => {
+  if (project?.ownerId) {
+    navigate(`/profile/${project.ownerId}/activity`, { replace: true })
+  }
+}
+
   return (
     <div className='project-page'>
       <div className='project-preview-header'>
@@ -406,6 +412,9 @@ export default function ProjectThirdSide() {
               <span>{project?.ratingCount || 0} оценок</span>
             </div>
           </div>
+          <button className='back-button' onClick={handleBack}>
+            <BackIcon className='ico' />
+          </button>
           {canModerateDelete && (
             <button
               className='moderation-delete-project-btn'
@@ -459,6 +468,7 @@ export default function ProjectThirdSide() {
                 key={vacancy.vacancyId} 
                 vacancy={vacancy} 
                 showModerationDelete={canModerateDelete}
+                clickable={false}
               />
             ))}
           </div>

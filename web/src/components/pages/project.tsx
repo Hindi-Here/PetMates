@@ -102,30 +102,26 @@ const VacancyCard = ({
   onEdit: (v: LocalVacancy) => void
   onDelete: (id: string) => void
 }) => (
-  <div className='vacancy-card-container'>
-    <div className='vacancy-info-container'>
-      <div className='vacancy-header'>
-        <div className='vacancy-header-left'>
-          <p className='vacancy-title'>{vacancy.title}</p>
-          <p className='vacancy-project-name'>{vacancy.projectTitle || 'PetMates'}</p>
-        </div>
-        <div className='vacancy-actions'>
-          <button className='member-edit-badge' onClick={() => onEdit(vacancy)}>
-            <Edit className='ico' />
-          </button>
-          <button className='member-remove-badge' onClick={() => onDelete(vacancy.vacancyId)}>
-            <Delete className='ico' />
-          </button>
-        </div>
+  <div className='vacancy-card'>
+    <div className='vacancy-card-header'>
+      <div className='vacancy-header-left'>
+        <p className='vacancy-title'>{vacancy.title}</p>
+        <p className='vacancy-project-name'>{vacancy.projectTitle || 'PetMates'}</p>
       </div>
-      <p className='vacancy-description'>{vacancy.description}</p>
+      <div className='vacancy-actions'>
+        <button className='icon-btn' onClick={() => onEdit(vacancy)}>
+          <Edit className='ico' />
+        </button>
+        <button className='icon-btn danger' onClick={() => onDelete(vacancy.vacancyId)}>
+          <Reject className='ico' />
+        </button>
+      </div>
     </div>
+    <p className='vacancy-description'>{vacancy.description}</p>
     {vacancy.requiredTags && vacancy.requiredTags.length > 0 && (
-      <div className='tag-place-container'>
+      <div className='vacancy-tags'>
         {vacancy.requiredTags.map((tag, index) => (
-          <div key={index} className='tag-item'>
-            <p className='tag-text'>{tag}</p>
-          </div>
+          <span key={index} className='vacancy-tag'>{tag}</span>
         ))}
       </div>
     )}
@@ -307,18 +303,46 @@ const TeamMemberProjectCard = ({
               </div>
             )}
             <div className='member-badges'>
-              {onUpdateRole && !isEditingRole && (
-                <button className='member-edit-badge' onClick={handleEditRoleClick}><Edit className='ico' /></button>
+              {onUpdateRole && !isEditingRole && !isBanned && (
+                <button className='member-edit-badge' onClick={handleEditRoleClick}>
+                  <Edit className='ico' />
+                </button>
               )}
-              {onUpdateRole && isEditingRole && (
-                <button className='member-accept-badge' onClick={handleAcceptRoleClick} disabled={!editedRole.trim() || editedRole === member.role}><Accept className='ico' /></button>
+              {onUpdateRole && isEditingRole && !isBanned && (
+                <button 
+                  className='member-accept-badge' 
+                  onClick={handleAcceptRoleClick} 
+                  disabled={!editedRole.trim() || editedRole === member.role}
+                >
+                  <Accept className='ico' />
+                </button>
               )}
-              {onUpdateRole && isEditingRole && (
-                <button className='member-reject-badge' onClick={(e) => { e.stopPropagation(); setIsEditingRole(false); setEditedRole(member.role); setRoleError(null) }}><Reject className='ico' /></button>
+              {onUpdateRole && isEditingRole && !isBanned && (
+                <button 
+                  className='member-reject-badge' 
+                  onClick={(e) => { 
+                    e.stopPropagation(); 
+                    setIsEditingRole(false); 
+                    setEditedRole(member.role); 
+                    setRoleError(null) 
+                  }}
+                >
+                  <Reject className='ico' />
+                </button>
               )}
-              {isOwner && (<span className='owner-badge'><AdminProjectIcon className='owner-icon' />Владелец</span>)}
+              {isOwner && (
+                <span className='owner-badge'>
+                  <AdminProjectIcon className='owner-icon' />
+                  Владелец
+                </span>
+              )}
               {!isOwner && onRemove && !isEditingRole && (
-                <button className='member-remove-badge' onClick={(e) => { e.stopPropagation(); onRemove() }}><Delete className='ico' /></button>
+                <button 
+                  className='member-remove-badge' 
+                  onClick={(e) => { e.stopPropagation(); onRemove() }}
+                >
+                  <Reject className='ico' />
+                </button>
               )}
             </div>
           </div>
@@ -332,6 +356,7 @@ const TeamMemberProjectCard = ({
                 onKeyDown={handleRoleKeyDown}
                 placeholder="Роль"
                 maxLength={50}
+                disabled={isBanned} 
               />
               {roleError && <p className="field-error-text">{roleError}</p>}
             </>
@@ -351,9 +376,13 @@ const TeamMemberProjectCard = ({
       {skills.length > 0 && (
         <div className='tag-place-container' ref={tagRowRef}>
           {skills.map((skill, index) => (
-            <div key={index} className='tag-item' style={index >= visibleTagCount ? { position: 'absolute', visibility: 'hidden', pointerEvents: 'none' } : {}}><p className='tag-text'>{skill}</p></div>
+            <div key={index} className='tag-item' style={index >= visibleTagCount ? { position: 'absolute', visibility: 'hidden', pointerEvents: 'none' } : {}}>
+              <p className='tag-text'>{skill}</p>
+            </div>
           ))}
-          <div className='tag-item more-tag' style={hiddenSkillsCount === 0 ? { position: 'absolute', visibility: 'hidden', pointerEvents: 'none' } : {}}><p className='tag-text'>+{hiddenSkillsCount}</p></div>
+          <div className='tag-item more-tag' style={hiddenSkillsCount === 0 ? { position: 'absolute', visibility: 'hidden', pointerEvents: 'none' } : {}}>
+            <p className='tag-text'>+{hiddenSkillsCount}</p>
+          </div>
         </div>
       )}
     </div>
@@ -434,7 +463,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
   const navigate = useNavigate()
   const { projectId, profileId } = useParams<{ projectId: string; profileId: string }>()
   const profilePath = profileId ? `/profile/${profileId}` : '/profile'
-  const { userId: currentUserId } = useAuth()
+  const { userId: currentUserId, isAuthenticated } = useAuth()
   const queryClient = useQueryClient()
 
   const [isPreview, setIsPreview] = useState(false)
@@ -1697,7 +1726,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
                       className='comment-remove-badge'
                       onClick={() => {deleteCommentMutation.mutate(node.commentId)}}
                     >
-                      <Delete className='ico' />
+                      <Reject className='ico' />
                     </button>
                   )}
                 </div>
@@ -2191,7 +2220,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
               <button
                 className='comment-btn send'
                 onClick={() => createCommentMutation.mutate({ referenceType: 'project', referenceId: projectId!, content: newComment })}
-                disabled={!newComment.trim() || createCommentMutation.isPending}
+                disabled={!newComment.trim() || createCommentMutation.isPending || !isAuthenticated}
               >
                 Отправить
               </button>

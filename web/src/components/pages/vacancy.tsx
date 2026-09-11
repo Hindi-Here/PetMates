@@ -124,7 +124,7 @@ export default function Vacancy() {
             </>
           ) : (
             filteredVacancies.map(vacancy => (
-              <VacancyCard key={vacancy.vacancyId} vacancy={vacancy} />
+              <VacancyCard key={vacancy.vacancyId} vacancy={vacancy} clickable={true}/>
             ))
           )}
         </div>

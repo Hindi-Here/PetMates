@@ -1,7 +1,3 @@
-import HardSkills from '@icons/hard_skills.svg?react'
-import SoftSkills from '@icons/soft_skills.svg?react'
-import Contacts from '@icons/contacts.svg?react'
-import UserDescription from '@icons/user_description.svg?react'
 import InviteIcon from '@icons/invite_in_project.svg?react'
 import ChatIcon from '@icons/chat.svg?react'
 
@@ -22,7 +18,6 @@ export const ProfilePreview = ({ user }: ProfilePreviewProps) => {
     }
   })()
 
-  // Валидация ввода тега
   const StringToTag = (value: string | string[] | undefined): string[] => {
     if (Array.isArray(value)) return value;
     if (typeof value === 'string' && value.trim()) {
@@ -91,7 +86,6 @@ export const ProfilePreview = ({ user }: ProfilePreviewProps) => {
       {user.description && (
         <div className='profile-area-container'>
           <div className='profile-area-text-container'>
-            <UserDescription className='profile-area-ico' />
             <p className='profile-area-text'>Описание:</p>
           </div>
           <div className='description-text markdown-content'>
@@ -102,7 +96,6 @@ export const ProfilePreview = ({ user }: ProfilePreviewProps) => {
 
       <div className='profile-area-container'>
         <div className='profile-area-text-container'>
-          <HardSkills className='profile-area-ico' />
           <p className='profile-area-text'>hard-skills:</p>
         </div>
         <div className='tag-container'>
@@ -122,7 +115,6 @@ export const ProfilePreview = ({ user }: ProfilePreviewProps) => {
 
       <div className='profile-area-container'>
         <div className='profile-area-text-container'>
-          <SoftSkills className='profile-area-ico' />
           <p className='profile-area-text'>soft-skills:</p>
         </div>
         <div className='tag-container'>
@@ -142,7 +134,6 @@ export const ProfilePreview = ({ user }: ProfilePreviewProps) => {
 
       <div className='profile-area-container'>
         <div className='profile-area-text-container'>
-          <Contacts className='profile-area-ico' />
           <p className='profile-area-text'>Контакты:</p>
         </div>
         {contactsList.length > 0 ? (

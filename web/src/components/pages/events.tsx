@@ -13,13 +13,10 @@ const FoundCount = ({ count }: { count: number }) => (
 
 export default function Events() {
   const [searchInput, setSearchInput] = useState('')
-  const [appliedSearch, setAppliedSearch] = useState('')
   const [searchField, setSearchField] = useState('name')
   const [sortField, setSortField] = useState('date')
   const [isSortUp, setIsSortUp] = useState(true)
 
-  // Данных о мероприятиях пока нет — здесь появится useQuery,
-  // как только будут готовы EventData/eventsApi/EventCard
   const count = 0
 
   return (
@@ -28,13 +25,19 @@ export default function Events() {
         activeId='events'
         searchValue={searchInput}
         onSearchValueChange={setSearchInput}
-        onSearchSubmit={() => setAppliedSearch(searchInput)}
+        onSearchSubmit={() => {}}
         selectedSearchId={searchField}
         onSearchFieldSelect={setSearchField}
         selectedSortId={sortField}
         onSortFieldSelect={setSortField}
         isSortUp={isSortUp}
         onToggleSortDirection={() => setIsSortUp(prev => !prev)}
+        showBannedFilter={false}
+        showBannedOnly={false}
+        onToggleShowBannedOnly={() => {}}
+        showStaffFilter={false}
+        showStaffOnly={false}
+        onToggleShowStaffOnly={() => {}}
       />
 
       <div className='found-content-container'>

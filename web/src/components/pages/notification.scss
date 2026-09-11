@@ -14,172 +14,206 @@
   flex-wrap: wrap;
   gap: rem(24);
 }
-  .notifications-title {
-    font-size: rem(20);
-    font-weight: bold;
-    color: var(--neutral-100);
-    margin: 0;
 
-    .notifications-count {
-      color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+.notifications-title {
+  font-size: rem(20);
+  font-weight: bold;
+  color: var(--neutral-100);
+  margin: 0;
+
+  .notifications-count {
+    color: var(--text-secondary-color);
+  }
+}
+
+.notifications-controls {
+  display: flex;
+  align-items: center;
+  gap: rem(24);
+  height: rem(40);
+
+  .sort-group-container {
+    position: relative;
+    height: 100%;
+  }
+  
+  .sort-type-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: rem(12);
+    border: none;
+    border-bottom: 2px solid var(--neutral-100);
+    border-radius: var(--border-radius-base);
+    padding-left: rem(24);
+    padding-right: rem(24);
+    height: inherit;
+    transition: 0.25s;
+    background-color: var(--neutral-0);
+
+    .sort-type-dropdown-ico {
+      width: rem(15);
+      height: rem(15);
+      transition: 0.25s;
+      fill: var(--neutral-100);
+
+      &.rotated {
+        transform: rotate(180deg);
+      }
+    }
+
+    .sort-type-text {
+      transition: 0.25s;
+      color: var(--neutral-100);
+      font-size: rem(14);
+      margin: 0;
+      user-select: none;
+    }
+
+    &:hover {
+      border-color: color-mix(in srgb, var(--neutral-100), transparent 25%);
+    }
+
+    &:hover .sort-type-dropdown-ico {
+      fill: color-mix(in srgb, var(--neutral-100), transparent 25%);
+    }
+
+    &:hover .sort-type-text {
+      color: color-mix(in srgb, var(--neutral-100), transparent 25%);
+    }
+
+    &.active {
+      border-bottom-color: var(--primary-accent);
+    }
+
+    &:active {
+      filter: brightness(0.95);
     }
   }
 
-  .notifications-controls {
+  .dropdown-container {
+    position: absolute;
+    top: calc(100% + rem(8));
+    left: 0;
+    z-index: 10;
+    min-width: 100%;
+    white-space: nowrap;
+  }
+
+  .notifications-actions {
     display: flex;
     align-items: center;
-    gap: rem(24);
-    height: rem(40);
+    gap: rem(12);
+  }
 
-    .sort-group-container {
-      position: relative;
-      height: 100%;
+  .mark-all-read-button {
+    display: flex;
+    align-items: center;
+    gap: rem(8);
+    padding: rem(8) rem(16);
+    background-color: var(--neutral-0);
+    border: 1px solid transparent;
+    border-radius: var(--border-radius-base);
+    color: var(--primary-accent);
+    font-size: rem(14);
+    transition: 0.25s;
+    height: 100%;
+    user-select: none;
+
+    &:hover:not(:disabled) {
+      border-color: color-mix(in srgb, var(--primary-accent), transparent 60%);
+      filter: none !important;
     }
-    
-    .sort-type-container {
-      position: relative;
-      display: flex;
-      align-items: center;
-      gap: rem(12);
-      border: none;
-      border-bottom: 2px solid var(--neutral-100);
-      border-radius: var(--border-radius-base);
-      padding-left: rem(24);
-      padding-right: rem(24);
-      height: inherit;
-      transition: 0.25s;
-      background-color: var(--neutral-0);
 
-      .sort-type-dropdown-ico {
-        width: rem(15);
-        height: rem(15);
-        transition: 0.25s;
-        fill: var(--neutral-100);
+    &:active:not(:disabled) {
+      background-color: color-mix(in srgb, var(--primary-accent), transparent 92%);
+      border-color: var(--primary-accent);
+      filter: none !important;
+    }
 
-        &.rotated {
-          transform: rotate(180deg);
-        }
-      }
+    &:disabled {
+      opacity: 0.5;
+    }
 
-      .sort-type-text {
-        transition: 0.25s;
-        color: var(--neutral-100);
-        font-size: rem(14);
-        margin: 0;
-        user-select: none;
-      }
+    .mark-all-read-icon {
+      width: rem(16);
+      height: rem(16);
+    }
+  }
+
+  .delete-action-button {
+    display: flex;
+    align-items: center;
+    gap: rem(8);
+    font-size: rem(14);
+    padding: rem(8) rem(16);
+    border-radius: var(--border-radius-base);
+    transition: 0.25s;
+    height: 100%;
+    user-select: none;
+
+    background-color: transparent;
+    border: 1px solid transparent;
+    color: var(--neutral-100);
 
       &:hover {
-        border-color: color-mix(in srgb, var(--neutral-100), transparent 25%);
-      }
-
-      &:hover .sort-type-dropdown-ico {
-        fill: color-mix(in srgb, var(--neutral-100), transparent 25%);
-      }
-
-      &:hover .sort-type-text {
-        color: color-mix(in srgb, var(--neutral-100), transparent 25%);
-      }
-
-      &.active {
-        border-bottom-color: var(--primary-accent);
+        filter: brightness(0.95);
+        transform: scale(0.99);
       }
 
       &:active {
+        transform: scale(0.975);
+        filter: brightness(0.975);
+      }
+
+    &.cancel-mode {
+      border-color: var(--important-color);
+      background-color: color-mix(in srgb, var(--important-color), transparent 92%);
+      color: var(--important-color);
+
+      &:hover {
         filter: brightness(0.95);
+        transform: scale(0.99);
+      }
+
+      &:active {
+        transform: scale(0.975);
+        filter: brightness(0.975);
       }
     }
 
-    .dropdown-container {
-      position: absolute;
-      top: calc(100% + rem(8));
-      left: 0;
-      z-index: 10;
-      min-width: 100%;
-      white-space: nowrap;
-    }
-
-    .notifications-actions {
-      display: flex;
-      align-items: center;
-      gap: rem(12);
-    }
-
-    .mark-all-read-button {
-      display: flex;
-      align-items: center;
-      gap: rem(8);
-      padding: rem(8) rem(16);
-      background: transparent;
+    &.active-delete {
+      background-color: color-mix(in srgb, var(--important-color), var(--neutral-0) 12%);
+      color: var(--button-white-text);
       border: none;
-      border-radius: var(--border-radius-base);
-      color: var(--primary-accent);
-      font-size: rem(14);
-      transition: 0.25s;
-      height: 100%;
+      font-weight: bold;
 
-      &:hover:not(:disabled) {
-        background: color-mix(in srgb, var(--primary-accent), transparent 90%);
+      &:hover {
+        filter: brightness(0.95);
+        transform: scale(0.99);
+      }
+
+      &:active {
+        transform: scale(0.975);
+        filter: brightness(0.975);
       }
 
       &:disabled {
         opacity: 0.5;
-      }
 
-      .mark-all-read-icon {
-        width: rem(16);
-        height: rem(16);
+        &:hover {
+          background-color: var(--important-color);
+          filter: none !important;
+        }
       }
     }
 
-    .delete-action-button {
-      display: flex;
-      align-items: center;
-      gap: rem(8);
-      font-size: rem(14);
-      padding: rem(8) rem(16);
-      background: transparent;
-      border: none;
-      border-radius: var(--border-radius-base);
-      color: var(--neutral-100);
-      font-size: rem(14);
-      transition: 0.25s;
-      height: 100%;
-
-      &:hover:not(.cancel-mode):not(.active-delete) {
-        background: color-mix(in srgb, var(--neutral-100), transparent 95%);
-      }
-
-      &.cancel-mode {
-        color: var(--neutral-100);
-        border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 70%);
-        
-        &:hover {
-          background: color-mix(in srgb, var(--neutral-100), transparent 90%);
-        }
-      }
-
-      &.active-delete {
-        background: var(--important-color);
-        color: var(--neutral-0);
-        border: none;
-        
-        &:hover:not(:disabled) {
-          background: var(--important-color);
-          filter: brightness(0.9);
-        }
-        
-        &:disabled {
-          opacity: 0.5;
-        }
-      }
-
-      .delete-icon {
-        width: rem(16);
-        height: rem(16);
-      }
+    .delete-icon {
+      width: rem(16);
+      height: rem(16);
     }
   }
+}
 
 .notifications-selection-header {
   display: flex;
@@ -198,6 +232,35 @@
       width: rem(18);
       height: rem(18);
       accent-color: var(--primary-accent);
+
+      appearance: none;
+        -webkit-appearance: none;
+        width: rem(18);
+        height: rem(18);
+        border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 50%);
+        border-radius: rem(4);
+        background-color: var(--input-bg-color);
+        position: relative;
+        transition: 0.25s;
+        flex-shrink: 0;
+        margin: 0;
+
+        &:checked {
+          background-color: var(--primary-accent);
+          border-color: var(--primary-accent);
+
+          &::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: rem(5);
+            height: rem(9);
+            border: solid var(--button-white-text);
+            border-width: 0 2px 2px 0;
+            transform: translate(-50%, -55%) rotate(45deg);
+          }
+        }
     }
   }
 }
@@ -214,7 +277,7 @@
   flex-direction: column;
   gap: rem(12);
   padding: rem(20);
-  background: var(--neutral-0);
+  background-color: var(--card-bg-color);
   border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 88%);
   border-radius: var(--border-radius-base);
   transition: all 0.25s;
@@ -229,14 +292,14 @@
   }
 
   &.unread {
-    background: color-mix(in srgb, var(--info-color), transparent 97%);
+    background: color-mix(in srgb, var(--info-color), transparent 96%);
     
     &.unread-accept {
-      background: color-mix(in srgb, var(--success-color), transparent 98%);
+      background: color-mix(in srgb, var(--success-color), transparent 97%);
     }
     
     &.unread-reject {
-      background: color-mix(in srgb, var(--important-color), transparent 97%);
+      background: color-mix(in srgb, var(--important-color), transparent 96%);
     }
   }
 
@@ -255,9 +318,34 @@
       align-items: center;
 
       input[type='checkbox'] {
+        appearance: none;
+        -webkit-appearance: none;
         width: rem(18);
         height: rem(18);
-        accent-color: var(--primary-accent);
+        border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 50%);
+        border-radius: rem(4);
+        background-color: var(--input-bg-color);
+        position: relative;
+        transition: 0.25s;
+        flex-shrink: 0;
+        margin: 0;
+
+        &:checked {
+          background-color: var(--primary-accent);
+          border-color: var(--primary-accent);
+
+          &::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: rem(5);
+            height: rem(9);
+            border: solid var(--button-white-text);
+            border-width: 0 2px 2px 0;
+            transform: translate(-50%, -55%) rotate(45deg);
+          }
+        }
       }
     }
 
@@ -336,7 +424,7 @@
 
       .notification-date {
         font-size: rem(12);
-        color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+        color: var(--text-secondary-color);
       }
     }
 
@@ -374,11 +462,17 @@
         background: transparent;
         border: none;
         border-radius: var(--border-radius-base);
-        color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+        color: var(--text-secondary-color);
         transition: 0.25s;
 
-        &:hover {
-          background: color-mix(in srgb, var(--important-color), transparent 90%);
+         &:hover {
+          background: color-mix(in srgb, var(--button-danger-bg-color), var(--important-color) 2%);
+          transform: scale(0.975);
+          color: var(--important-color);
+        } 
+        &:active{
+          background: color-mix(in srgb, var(--button-danger-bg-color), var(--important-color) 6%);
+          transform: scale(0.95);
           color: var(--important-color);
         }
 
@@ -406,9 +500,9 @@
       gap: rem(12);
 
       .sort-group-container,
-        .sort-type-container {
-          height: rem(35); 
-        }
+      .sort-type-container {
+        height: rem(35); 
+      }
 
       .notifications-actions {
         flex-wrap: wrap;

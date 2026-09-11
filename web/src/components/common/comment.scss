@@ -13,7 +13,7 @@
   font-size: rem(14);
   line-height: 1.5;
   color: var(--neutral-100);
-  background: var(--neutral-0);
+  background: var(--input-bg-color);
   border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 80%);
   border-radius: var(--border-radius-base);
   resize: none;
@@ -242,14 +242,20 @@
   justify-content: center;
   border-radius: var(--border-radius-small);
   border: none;
-  background-color: color-mix(in srgb, var(--important-color), transparent 85%);
+  background-color: var(--uncard-button-danger-bg-color);
   color: var(--important-color);
   transition: 0.25s;
   flex-shrink: 0;
   padding: 0;
 
   &:hover {
-    background-color: color-mix(in srgb, var(--important-color), transparent 80%);
+    background: color-mix(in srgb, var(--uncard-button-danger-bg-color), var(--important-color) 4%);
+    transform: scale(0.975);
+  }
+
+  &:active{
+    background: color-mix(in srgb, var(--uncard-button-danger-bg-color), var(--important-color) 6%);
+    transform: scale(0.95);
   }
 
   .ico {
@@ -289,7 +295,7 @@
   }
 
   &.send{
-    color: var(--neutral-0);
+    color: var(--button-white-text);
     background-color: var(--primary-accent);
     height: rem(40);
     font-weight: bold;

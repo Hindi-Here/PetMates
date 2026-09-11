@@ -175,22 +175,32 @@ export default function Bug() {
           Вы можете оставить свое сообщение <em>анонимным</em>, если вы не авторизованы. Если сообщение не является анонимным и оно нас заинтересовало — мы можем связаться с вами.
         </p>
 
-        <div className='report-type-row'>
-          <p className='report-type-label'>Тип обращения:</p>
-          <div className='sort-group-container'>
-            <div
-              ref={typeMenuRef}
-              className={`sort-type-container ${isTypeDropdownOpen ? 'active' : ''}`}
-              onClick={() => setIsTypeDropdownOpen(!isTypeDropdownOpen)}
-            >
-              <p className='sort-type-text'>{selectedType.label}</p>
-              <DropdownIcon className={`sort-type-dropdown-ico ${isTypeDropdownOpen ? 'rotated' : ''}`} />
+        <div className='send-area-header-row'>
+          <div className='report-type-row'>
+            <p className='report-type-label'>Тип обращения:</p>
+            <div className='sort-group-container'>
+              <div
+                ref={typeMenuRef}
+                className={`sort-type-container ${isTypeDropdownOpen ? 'active' : ''}`}
+                onClick={() => setIsTypeDropdownOpen(!isTypeDropdownOpen)}
+              >
+                <p className='sort-type-text'>{selectedType.label}</p>
+                <DropdownIcon className={`sort-type-dropdown-ico ${isTypeDropdownOpen ? 'rotated' : ''}`} />
+              </div>
+              <Dropdown isOpen={isTypeDropdownOpen} items={reportTypeOptions} onSelect={handleTypeSelect} />
             </div>
-            <Dropdown isOpen={isTypeDropdownOpen} items={reportTypeOptions} onSelect={handleTypeSelect} />
           </div>
+          <p className={`char-counter ${(data.report?.length ?? 0) >= 1024 ? 'limit' : ''}`}>
+            {data.report?.length ?? 0} / 1024
+          </p>
         </div>
 
-        <textarea className='send-area' name='report' value={data.report} onChange={handleChange}></textarea>
+        <textarea 
+          className={`send-area ${(data.report?.length ?? 0) >= 1024 ? 'input-error' : ''}`} 
+          name='report' 
+          value={data.report} 
+          onChange={handleChange}
+        ></textarea>
 
         <div className='attachment-section'>
           <input

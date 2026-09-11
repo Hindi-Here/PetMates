@@ -22,6 +22,7 @@
         border-radius: var(--border-radius-base);
         border: 1px solid var(--neutral-100);
         background-color: var(--neutral-0);
+        color: var(--neutral-100);
         width: 80%;
         padding-left: rem(12);
         transition: 0.25s; 
@@ -43,6 +44,7 @@
         .search-ico{
             width: rem(15);
             height: rem(15);
+            fill: var(--neutral-100);
             transition: 0.25s;
             flex-shrink: 0;
         }
@@ -52,6 +54,7 @@
             height: 100%;
             border: none;
             background: transparent;
+            color: inherit;
             outline: none; 
             min-width: 0;
         }
@@ -67,10 +70,14 @@
             border-radius: var(--border-radius-base);
             font-weight: bold;
             font-size: rem(14);
-            color: var(--neutral-0);
+            color: var(--header-text-color);
             background-color: var(--base3-color);
             border: none;
             outline: none;
+        }
+
+        &:active { 
+          transform: scale(0.975); 
         }
     }
 }
@@ -100,11 +107,13 @@
       height: inherit;
       transition: 0.25s;
       background-color: var(--neutral-0);
+      color: var(--neutral-100);
       white-space: nowrap;
 
       .sort-type-dropdown-ico{
         width: rem(15);
         height: rem(15);
+        fill: currentColor;
         transition: 0.25s;
         flex-shrink: 0;
 
@@ -142,6 +151,7 @@
         .sort-vector-ico{
             width: rem(20);
             height: rem(20);
+            fill: var(--neutral-100);
             transition: 0.25s;
         }
         &:hover .sort-vector-ico{
@@ -230,7 +240,7 @@
 .staff-filter-check-ico {
   width: rem(10);
   height: rem(10);
-  fill: var(--neutral-0);
+  fill: var(--header-text-color);
 }
 
 .banned-filter-text,

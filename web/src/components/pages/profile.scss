@@ -55,7 +55,7 @@
       background: none;
       border: none;
       font-size: rem(16);
-      color: color-mix(in srgb, var(--neutral-100), transparent 25%);
+      color: color-mix(in srgb, var(--neutral-100), transparent 15%);
       padding: rem(8) 0;
       transition: color 0.25s;
       border-bottom: 2px solid transparent;
@@ -104,7 +104,7 @@
       font-size: rem(20); 
       font-weight: bold;
       color: var(--neutral-100);
-      background-color: var(--base4-color);
+      background-color: var(--profile-input-bg-color);
       border: 1px solid transparent;
       border-radius: rem(12);
       outline: none;
@@ -159,7 +159,7 @@
       padding: rem(8) rem(16);
       font-size: rem(14); 
       color: var(--neutral-100);
-      background-color: var(--base4-color);
+      background-color: var(--profile-input-bg-color);
       border: 1px solid transparent;
       border-radius: rem(12);
       outline: none;
@@ -249,7 +249,7 @@
       }
 
       .profile-area-text {
-        font-size: rem(18);
+        font-size: rem(20);
         color: var(--neutral-100);
       }
     }
@@ -262,6 +262,7 @@
       font-size: rem(14); 
       line-height: 1.5;
       border: 1px solid var(--neutral-100);
+      background-color: var(--input-bg-color);
       border-radius: rem(12);
       outline: none;
       transition: 0.25s;
@@ -287,29 +288,38 @@
       align-items: center;
       justify-content: center;
       gap: rem(8);
-      padding: rem(8) rem(16);
-      border: 1px dashed color-mix(in srgb, var(--neutral-100), transparent 70%);
+      padding: rem(12) rem(16);
+      border: 2px dashed color-mix(in srgb, var(--primary-accent), transparent 50%);
       border-radius: var(--border-radius-base);
-      background: transparent;
-      color: color-mix(in srgb, var(--neutral-100), transparent 30%);
-      font-size: rem(13);
-      font-weight: normal;
+      background: var(--card-bg-color);
+      color: var(--primary-accent);
+      font-size: rem(14);
+      font-weight: bold;
       transition: 0.25s;
-      height: rem(40);
+      height: auto;
       width: 100%;
 
       &:hover {
         border-color: var(--primary-accent);
+        background-color: var(--add-card-hover-color);
         color: var(--primary-accent);
+        transform: scale(0.995);
       }
 
       &:active {
-        transform: scale(0.98);
+        background-color: var(--add-card-active-color);
+        transform: scale(0.99);
       }
 
       .add-contact-ico {
-        width: rem(14);
-        height: rem(14);
+        width: rem(18);
+        height: rem(18);
+        color: var(--primary-accent);
+        transition: 0.25s;
+      }
+
+      &:hover .add-contact-ico {
+        color: var(--primary-accent);
       }
     }
   }
@@ -328,8 +338,8 @@
     height: rem(40);
     padding: 0 rem(16);
     line-height: 1;
-    background-color: var(--primary-accent);
-    color: var(--neutral-0);
+    background-color: color-mix(in srgb, var(--primary-accent), var(--neutral-0) 12%);
+    color: var(--button-white-text);
     font-size: rem(14);
     font-weight: bold;
     border-radius: rem(12);
@@ -346,12 +356,12 @@
 
     &:disabled {
       opacity: 0.4;
-      pointer-events: none; 
+      pointer-events: none;
     }
 
     &.cancellation {
       width: rem(125);
-      background-color: var(--neutral-0);
+      background-color: var(--card-bg-color);
       color: var(--neutral-100);
       border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 85%);
 
@@ -373,7 +383,7 @@
   .preview-label {
     line-height: 1;
     font-size: rem(14);
-    color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+    color: var(--preview-label-color);
     margin: 0;
   }
 }
@@ -388,7 +398,7 @@
   .char-counter {
     font-size: rem(10);
     color: var(--neutral-80);
-    opacity: 0.5;
+    opacity: 0.75;
     transition: 0.25s;
 
     &.limit {
@@ -435,8 +445,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: rem(36);
-    height: rem(36);
+    width: rem(40);
+    height: rem(40);
     border-radius: var(--border-radius-base);
     border: none;
     background-color: var(--neutral-0);

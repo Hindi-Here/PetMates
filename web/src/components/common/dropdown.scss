@@ -7,6 +7,7 @@
   background-color: var(--neutral-0);
   height: auto;
   border-radius: var(--border-radius-base);
+  border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 85%);
   box-shadow: 0 4px 4px rgba(0, 0, 0, 0.25);
   margin-top: rem(2);
   z-index: 10;
@@ -47,7 +48,7 @@
 }
 
 .dropdown-nav-container {
-  background-color: var(--base2-color);
+  background-color: var(--header-bg-hover-color);
   width: rem(250);
   height: auto;
   position: absolute;
@@ -79,14 +80,14 @@
     .dropdown-nav-item-text {
       transition: 0.25s;
       font-size: rem(15);
-      color: var(--neutral-0);
+      color: var(--header-text-color);
       padding-left: rem(24);
       padding-right: rem(24);
       user-select: none;
     }
 
     &:hover {
-      background-color: var(--base3-color);
+      background-color: color-mix(in srgb, var(--header-text-color), transparent 88%);
 
       .dropdown-nav-item-text {
         color: var(--primary-accent);
@@ -100,7 +101,7 @@
     }
 
     &.logout {
-      background-color: var(--base1-color);
+      background-color: var(--header-bg-color);
 
       .dropdown-nav-item-text {
         color: var(--important-color);
@@ -109,7 +110,7 @@
       }
 
       &:hover {
-        background-color: var(--base3-color);
+        background-color: color-mix(in srgb, var(--header-text-color), transparent 88%);
         
         .dropdown-nav-item-text {
           color: color-mix(in srgb, var(--important-color) 100%, white 10%);
@@ -129,7 +130,7 @@
     top: 0;
     right: 100%;
     width: rem(250);
-    background-color: var(--base2-color);
+    background-color: var(--header-bg-hover-color);
     border-radius: var(--border-radius-base);
     border-top-left-radius: 0;
     border-top-right-radius: 0;
@@ -144,7 +145,7 @@
       height: 1px;
       margin: 0;
       width: 100%;
-      background-color: color-mix(in srgb, var(--neutral-0), transparent 85%);
+      background-color: color-mix(in srgb, var(--header-text-color), transparent 85%);
     }
 
     .submenu-item {
@@ -158,7 +159,7 @@
       padding-top: rem(8);
       padding-bottom: rem(8);
       font-size: rem(15);
-      color: var(--neutral-0);
+      color: var(--header-text-color);
       text-decoration: none;
       transition: 0.25s;
 
@@ -167,12 +168,12 @@
       }
 
       &:hover {
-        background-color: var(--base3-color);
+        background-color: color-mix(in srgb, var(--header-text-color), transparent 88%);
         color: var(--primary-accent);
       }
 
       &.active {
-        background-color: var(--base3-color);
+        background-color: color-mix(in srgb, var(--primary-accent), transparent 90%);
         color: var(--primary-accent);
         font-weight: bold;
       }
@@ -184,7 +185,7 @@
     height: 1px;
     margin: 0;
     width: 100%;
-    background-color: color-mix(in srgb, var(--neutral-0), transparent 85%);
+    background-color: color-mix(in srgb, var(--header-text-color), transparent 85%);
   }
 }
 

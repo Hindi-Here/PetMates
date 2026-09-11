@@ -4,34 +4,46 @@
   width: 100%;
   margin-bottom: rem(24);
   padding-bottom: rem(0);
-  background-color: var(--neutral-0);
+  background-color: var(--card-bg-color);
   border-radius: var(--border-radius-base);
   box-shadow: inset 0 0 0 0 var(--primary-accent), 0 4px 4px rgba(0, 0, 0, 0.15);
-  border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 75%);
+  border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 65%);
   transition: border-color 0.25s, box-shadow 0.25s;
   position: relative;
 
-  &:hover {
-    box-shadow: inset 2px 0 0 0 var(--primary-accent), 0 4px 4px rgba(0, 0, 0, 0.25);
-    border-color: color-mix(in srgb, var(--primary-accent), transparent 75%);
+  &:not(.no-active):hover {
+    box-shadow: inset 2px 0 0 0 var(--primary-accent), 0 4px 4px rgba(0, 0, 0, 0.15);
+    border-left-color: var(--primary-accent);
+    transform: scale(0.995);
+  }
+
+  &:not(.no-active):active {
+    background-color: var(--card-active-bg-color);
+    transform: scale(0.99);
+  }
+
+  &.no-active:hover {
+    box-shadow: inset 2px 0 0 0 var(--primary-accent), 0 4px 4px rgba(0, 0, 0, 0.15);
     border-left-color: var(--primary-accent);
   }
 
-  &:active {
-    background-color: color-mix(in srgb, var(--neutral-100), transparent 98%);
-  }
-
   &.banned-owner-card {
-    border: 1px solid var(--important-color) !important;
-    background-color: color-mix(in srgb, var(--important-color), transparent 95%) !important;
-    opacity: 0.9;
+    border: 1px solid var(--important-color);
+    background-color: color-mix(in srgb, var(--card-bg-color), var(--important-color) 10%);
 
     &:hover {
-      box-shadow: inset 2px 0 0 0 var(--important-color), 0 4px 4px rgba(0, 0, 0, 0.25) !important;
-      border-color: color-mix(in srgb, var(--important-color), transparent 50%) !important;
-      border-left-color: var(--important-color) !important;
+      box-shadow: inset 2px 0 0 0 var(--important-color), 0 4px 4px rgba(0, 0, 0, 0.15);
+      border-left-color: var(--important-color);
     }
 
+    &:active {
+      background-color: color-mix(in srgb, var(--card-bg-color), var(--important-color) 12%) !important;
+    }
+
+    ::selection {
+      background-color: color-mix(in srgb, var(--important-color), transparent 75%);
+    }
+    
     .vacancy-title {
       color: var(--important-color) !important;
     }
@@ -54,7 +66,7 @@
 
         &.more-tag {
           background-color: color-mix(in srgb, var(--important-color), transparent 70%) !important;
-          
+
           .tag-text {
             color: var(--important-color) !important;
           }
@@ -82,12 +94,6 @@
         background-color: color-mix(in srgb, var(--important-color), transparent 70%) !important;
         color: var(--important-color) !important;
       }
-    }
-
-    .moderation-delete-btn {
-      background-color: color-mix(in srgb, var(--important-color), transparent 75%) !important;
-      border: 1px solid color-mix(in srgb, var(--important-color), transparent 50%) !important;
-      color: var(--important-color) !important;
     }
   }
 
@@ -137,7 +143,7 @@
       color: color-mix(in srgb, var(--neutral-100), transparent 30%);
       line-height: 1.5;
       margin: 0;
-      white-space: pre-line; 
+      white-space: pre-line;
     }
   }
 
@@ -162,8 +168,8 @@
       }
 
       &.more-tag {
-        background-color: var(--base2-color);
-        .tag-text { color: var(--neutral-0); }
+        background-color: var(--header-bg-color);
+        .tag-text { color: var(--header-text-color); }
       }
     }
   }
@@ -187,17 +193,27 @@
         outline: none;
         width: rem(175);
         height: rem(40);
-        background-color: var(--primary-accent);
-        color: var(--neutral-0);
+        background-color: color-mix(in srgb, var(--primary-accent), var(--neutral-0) 12%);
+        color: var(--button-white-text);
         font-weight: bold;
         border-radius: var(--border-radius-base);
         border: none;
         transition: 0.25s;
         font-size: rem(14);
 
-        &:hover:not(:disabled) { filter: brightness(0.975); }
-        &:active:not(:disabled) { filter: brightness(0.95); transform: scale(0.98); }
-        &:disabled { opacity: 0.5; pointer-events: none; }
+        &:hover:not(:disabled) { 
+          filter: brightness(0.975); 
+          transform: scale(0.99);
+        }
+        &:active:not(:disabled) { 
+          filter: brightness(0.95); 
+          transform: scale(0.975); 
+        }
+        &:disabled {
+          opacity: 0.5;
+          pointer-events: none;
+          background-color: color-mix(in srgb, var(--primary-accent), var(--neutral-0) 12%);
+        }
       }
 
       .vacancy-rating {
@@ -205,7 +221,7 @@
         align-items: center;
         gap: rem(4);
         font-size: rem(12);
-        color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+        color: var(--text-secondary-color);
 
         .star-ico { width: rem(14); height: rem(14); }
       }
@@ -216,7 +232,7 @@
       align-items: center;
       gap: rem(4);
       font-size: rem(12);
-      color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+      color: var(--text-secondary-color);
       margin-left: auto;
 
       .calendar-ico { width: rem(14); height: rem(14); }
@@ -264,7 +280,7 @@
 
         .vacancy-apply-button {
           width: rem(140);
-          height: rem(36);
+          height: rem(40);
           font-size: rem(12);
         }
 
@@ -295,30 +311,36 @@
   top: rem(12);
   right: rem(12);
   z-index: 5;
-  width: rem(28);
-  height: rem(28);
+  width: rem(40);
+  height: rem(40);
   display: flex;
   align-items: center;
   justify-content: center;
-  border: none;
   border-radius: var(--border-radius-base);
-  background-color: color-mix(in srgb, var(--important-color), transparent 85%);
+  border: none;
+  background-color: var(--button-danger-bg-color);
   color: var(--important-color);
   transition: 0.25s;
   flex-shrink: 0;
   padding: 0;
 
   &:hover:not(:disabled) {
-    background-color: color-mix(in srgb, var(--important-color), transparent 80%);
+    background: color-mix(in srgb, var(--button-danger-bg-color), var(--important-color) 4%);
+    transform: scale(0.975);
   }
+  &:active:not(:disabled){
+    background: color-mix(in srgb, var(--button-danger-bg-color), var(--important-color) 6%);
+    transform: scale(0.95);
+  }
+
 
   &:disabled {
     opacity: 0.5;
   }
 
   .ico {
-    width: rem(14);
-    height: rem(14);
+    width: rem(18);
+    height: rem(18);
   }
 }
 
@@ -326,12 +348,12 @@
   .moderation-delete-btn {
     top: rem(10);
     right: rem(10);
-    width: rem(26);
-    height: rem(26);
+    width: rem(32);
+    height: rem(32);
 
     .ico {
-      width: rem(12);
-      height: rem(12);
+      width: rem(14);
+      height: rem(14);
     }
   }
 }

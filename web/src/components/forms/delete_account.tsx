@@ -4,7 +4,7 @@ import RejectIcon from '@icons/reject.svg?react'
 import ImportantWarningIcon from '@icons/important_warning.svg?react'
 import InfoIcon from '@icons/info_circle.svg?react'
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useBlockScroll, useChangeInput, validatorFormat } from '../scripts/function';
 import { useAuth } from '../hooks/useAuth';
 import { usersApi } from '../services/users';
@@ -20,8 +20,6 @@ const Form = ({ onClose }: any) => {
   const [isLoading, setIsLoading] = useState(false);
   const [nicknameError, setNicknameError] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  
-  const errorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { data, handleChange } = useChangeInput({
     name: '',
@@ -41,12 +39,6 @@ const Form = ({ onClose }: any) => {
     fetchUserNickname();
   }, [currentUserId]);
 
-  useEffect(() => {
-    return () => {
-      if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
-    };
-  }, []);
-
   const isInvalid = useMemo(() => {
     if (step === 1) {
       return !validatorFormat.required(data.name);
@@ -60,15 +52,10 @@ const Form = ({ onClose }: any) => {
   const next = async () => { 
     if (step === 1) {
       if (currentNickname && data.name.trim().toLowerCase() !== currentNickname.trim().toLowerCase()) {
-        if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
-        
         setNicknameError('Введённый никнейм не совпадает с текущим');
-        
-        errorTimerRef.current = setTimeout(() => setNicknameError(null), 3000);
         return;
       }
       
-      if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
       setNicknameError(null);
       setStep(X => X + 1);
     } else if (step < 3) {
@@ -79,7 +66,10 @@ const Form = ({ onClose }: any) => {
       try {
         await settingApi.deleteAccount(data.name);
         await supabase.auth.signOut();
-        navigate('/', { replace: true });
+        
+        localStorage.clear(); 
+        
+        navigate('/vacancy', { replace: true }); 
       } catch (error: any) {
         setErrorMessage(error.message || 'Не удалось удалить аккаунт');
         setIsLoading(false);
@@ -94,7 +84,6 @@ const Form = ({ onClose }: any) => {
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     handleChange(e);
     if (nicknameError) {
-      if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
       setNicknameError(null);
     }
   };
@@ -175,7 +164,7 @@ const Form = ({ onClose }: any) => {
             onClick={next} 
             disabled={isInvalid || isLoading}
           > 
-            Удалить
+            {step === 1 ? 'Далее' : (step === 3 ? 'Удалить' : 'Далее')}
           </button>
           {step > 1 && !isLoading && (
             <button className='form-manage-button back' onClick={back}>
@@ -188,7 +177,9 @@ const Form = ({ onClose }: any) => {
         </div>
 
         {nicknameError && (
-          <p className='save-error-text message-auto-hide'>{nicknameError}</p>
+          <div className='form-complete-container'>
+            <p className='complete-error-type'>{nicknameError}</p>
+          </div>
         )}
       </div>
     </div>

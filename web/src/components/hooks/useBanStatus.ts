@@ -5,10 +5,11 @@ import { usersApi } from '../services/users'
 export const useBanStatus = () => {
   const { userId, isAuthenticated } = useAuth()
 
-  const { data: userData, isLoading, error } = useQuery({
+  const { data: userData, isLoading } = useQuery({
     queryKey: ['users', 'byId', userId],
     queryFn: () => usersApi.getUserById(userId!),
     enabled: Boolean(isAuthenticated && userId),
+    retry: 1
   })
 
   const isBanned = (userData as any)?.isBanned === true
@@ -20,7 +21,7 @@ export const useBanStatus = () => {
 
   return {
     isResolving,
-    isBanned: isBanned || Boolean(error && isAuthenticated),
+    isBanned,
     bannedReason,
   }
 }

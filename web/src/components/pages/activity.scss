@@ -15,7 +15,7 @@
 
     .projects-count {
       font-weight: bold;
-      color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+      color: var(--text-secondary-color);
     }
   }
 }
@@ -29,19 +29,19 @@
   width: 100%;
   padding: rem(24);
   margin-bottom: rem(24);
-  background-color: var(--neutral-0);
+  background-color: var(--card-bg-color);
   border: 2px dashed color-mix(in srgb, var(--primary-accent), transparent 50%);
   border-radius: var(--border-radius-base);
   transition: 0.25s;
 
   &:hover:not(:disabled) {
     border-color: var(--primary-accent);
-    background-color: color-mix(in srgb, var(--primary-accent), transparent 97%);
+    background-color: var(--add-card-hover-color);
   }
 
   &:active:not(:disabled) {
     transform: scale(0.99);
-    background-color: color-mix(in srgb, var(--primary-accent), transparent 95%);
+    background-color: var(--add-card-active-color);
   }
 
   &:disabled {
@@ -93,32 +93,35 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  background-color: var(--neutral-0);
+  background-color: var(--card-bg-color);
   border-radius: var(--border-radius-base);
   box-shadow: inset 0 0 0 0 var(--primary-accent), 0 4px 4px rgba(0, 0, 0, 0.15);
-  border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 75%);
-  transition: border-color 0.25s, box-shadow 0.25s;
+  border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 65%);
+  transition: border-color 0.25s, box-shadow 0.25s, background-color 0.25s;
   position: relative;
 
   &:hover {
-    box-shadow: inset 2px 0 0 0 var(--primary-accent), 0 4px 4px rgba(0, 0, 0, 0.25);
-    border-color: color-mix(in srgb, var(--primary-accent), transparent 75%);
+    box-shadow: inset 2px 0 0 0 var(--primary-accent), 0 4px 4px rgba(0, 0, 0, 0.15);
     border-left-color: var(--primary-accent);
+    transform: scale(0.995);
   }
 
-  &:active {
-    background-color: color-mix(in srgb, var(--neutral-100), transparent 98%);
+  &:not(.no-active):active {
+    background-color: var(--card-active-bg-color);
+    transform: scale(0.99);
   }
 
   &.banned-owner-card {
     border: 1px solid var(--important-color);
-    background-color: color-mix(in srgb, var(--important-color), transparent 95%);
-    opacity: 0.9;
+    background-color: color-mix(in srgb, var(--card-bg-color), var(--important-color) 10%);
 
     &:hover {
-      box-shadow: inset 2px 0 0 0 var(--important-color), 0 4px 4px rgba(0, 0, 0, 0.25);
-      border-color: color-mix(in srgb, var(--important-color), transparent 50%);
+      box-shadow: inset 2px 0 0 0 var(--important-color), 0 4px 4px rgba(0, 0, 0, 0.15);
       border-left-color: var(--important-color);
+    }
+
+    &:active {
+      background-color: color-mix(in srgb, var(--card-bg-color), var(--important-color) 12%) !important;
     }
 
     .project-card-title {
@@ -130,8 +133,17 @@
     }
 
     .project-moderation-delete-btn {
-      background-color: color-mix(in srgb, var(--important-color), transparent 75%);
-      border: 1px solid color-mix(in srgb, var(--important-color), transparent 50%);
+      background-color: var(--button-danger-bg-color);
+
+      &:hover {
+        background: color-mix(in srgb, var(--button-danger-bg-color), var(--important-color) 4%);
+        transform: scale(0.975);
+      }
+
+      &:active{
+        background: color-mix(in srgb, var(--button-danger-bg-color), var(--important-color) 6%);
+        transform: scale(0.95);
+      }
     }
   }
 
@@ -195,7 +207,7 @@
         align-items: center;
         gap: rem(4);
         font-size: rem(12);
-        color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+        color: var(--text-secondary-color);
 
         .meta-icon {
           width: rem(14);
@@ -210,7 +222,7 @@
       align-items: center;
       gap: rem(4);
       font-size: rem(12);
-      color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+      color: var(--text-secondary-color);
 
       .meta-icon {
         width: rem(14);
@@ -224,7 +236,7 @@
 .loading-container {
   text-align: center;
   padding: rem(48);
-  color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+  color: var(--text-secondary-color);
   font-size: rem(16);
 }
 
@@ -262,8 +274,8 @@
 .empty-activity {
   padding: rem(20);
   text-align: center;
-  background: var(--base4-color);
-  border: 2px dashed color-mix(in srgb, var(--neutral-100), transparent 85%);
+  background: var(--card-bg-color);
+  border: 2px dashed color-mix(in srgb, var(--neutral-100), transparent 70%);
   border-radius: var(--border-radius-base);
   
   .empty-activity-ico {
@@ -271,12 +283,12 @@
     height: rem(80);
     margin-bottom: rem(24);
     opacity: 0.5;
-    fill: color-mix(in srgb, var(--neutral-100), transparent 50%);
+    fill: color-mix(in srgb, var(--neutral-100), transparent 20%);
   }
   
   .empty-activity-text {
     font-size: rem(16);
-    color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+    color: color-mix(in srgb, var(--neutral-100), transparent 20%);
     margin: 0;
   }
 }
@@ -345,15 +357,21 @@
   justify-content: center;
   border: none;
   border-radius: var(--border-radius-base);
-  background-color: color-mix(in srgb, var(--important-color), transparent 85%);
+  background-color: var(--button-danger-bg-color);
   color: var(--important-color);
   transition: 0.25s;
   flex-shrink: 0;
   padding: 0;
 
-  &:hover:not(:disabled) {
-    background-color: color-mix(in srgb, var(--important-color), transparent 80%);
-  }
+  &:hover {
+        background: color-mix(in srgb, var(--button-danger-bg-color), var(--neutral-100) 4%);
+        transform: scale(0.975);
+      }
+
+      &:active{
+        background: color-mix(in srgb, var(--button-danger-bg-color), var(--neutral-100) 6%);
+        transform: scale(0.95);
+      }
 
   &:disabled {
     opacity: 0.5;
@@ -417,7 +435,7 @@
     }
 
     .info-subcomment {
-      color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+      color: var(--text-secondary-color);
       font-size: rem(16);
       text-align: center;
       margin-top: rem(8);
