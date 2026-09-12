@@ -27,12 +27,14 @@ import { getNotificationIcon, getNotificationText } from '../common/notification
 
 // Рендер логотипа проекта
 const Logo = () => {
+  const navigate = useNavigate()
+
   return (
-    <div className='logo-container'> 
-      <div className='ico-container'> 
+    <div className='logo-container' onClick={() => navigate('/vacancy')} style={{ cursor: 'pointer' }}>
+      <div className='ico-container'>
         <LogoIcon className='logo-ico'></LogoIcon>
       </div>
-      <div className='name-project-container'> 
+      <div className='name-project-container'>
         <p className='name-project-text'> PetMates </p>
       </div>
     </div>
@@ -49,27 +51,36 @@ const Login = ({ onOpen }: any) => {
 }
 
 // Рендер короткого меню для мобильных устройств
-const ShortMenu = () => {
+const ShortMenu = ({
+  isAuthenticated,
+  onOpenAuth
+}: {
+  isAuthenticated: boolean | null
+  onOpenAuth: () => void
+}) => {
   const { isOpen, setIsOpen, menuRef } = useIsOpen();
   const openMenu = () => setIsOpen(X => !X);
 
-  return(
+  return (
     <div ref={menuRef} className={`short-menu-container ${isOpen ? 'open' : ''}`} onClick={openMenu}>
-      <MenuIcon className='short-menu-ico'/>
+      <MenuIcon className='short-menu-ico' />
       <AnimatedDropdown isOpen={isOpen} className="dropdown-wrapper">
-        <HeaderDropdownNavigation />
+        <HeaderDropdownNavigation
+          isAuthenticated={isAuthenticated}
+          onOpenAuth={onOpenAuth}
+        />
       </AnimatedDropdown>
     </div>
   )
 }
 
 // Рендер выпадающей панели уведомлений
-const NotificationPanel = ({ 
-  isOpen, 
-  onClose 
-}: { 
-  isOpen: boolean; 
-  onClose: () => void 
+const NotificationPanel = ({
+  isOpen,
+  onClose
+}: {
+  isOpen: boolean;
+  onClose: () => void
 }) => {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -129,10 +140,10 @@ const NotificationPanel = ({
     if (!notification.isRead) {
       await markAsReadMutation.mutateAsync(notification.notificationId)
     }
-    
-    if ((notification.referenceType === 'project' || 
-         notification.referenceType === 'response' || 
-         notification.referenceType === 'invite') 
+
+    if ((notification.referenceType === 'project' ||
+         notification.referenceType === 'response' ||
+         notification.referenceType === 'invite')
         && notification.referenceId) {
       navigate(`/profile/${userId}/activity/project/${notification.referenceId}`)
       onClose()
@@ -146,15 +157,15 @@ const NotificationPanel = ({
   }
 
   return (
-    <div 
+    <div
       ref={panelRef}
       className={`notification-panel-dropdown ${isOpen ? 'open' : ''}`}
       onClick={(e) => e.stopPropagation()}>
       <div className='notification-panel-header'>
         <p className='notification-panel-header text'>Уведомления</p>
         <div className='header-actions'>
-          <button 
-            className='mark-all-read-btn' 
+          <button
+            className='mark-all-read-btn'
             onClick={handleMarkAllAsRead}
             disabled={markAllAsReadMutation.isPending}>
             <span>Прочитать все</span>
@@ -177,7 +188,7 @@ const NotificationPanel = ({
             const date = new Date(notification.createdAt)
 
             return (
-              <div 
+              <div
                 key={notification.notificationId}
                 className={`notification-item ${!notification.isRead ? 'unread' : ''}`}
                 onClick={() => handleNotificationClick(notification)}
@@ -199,7 +210,7 @@ const NotificationPanel = ({
       </div>
 
       <div className='notification-panel-footer'>
-        <button 
+        <button
           className='view-all-btn'
           onClick={() => {
             navigate(`/profile/${userId}/notifications`)
@@ -224,7 +235,12 @@ export default function Header() {
       <div className="container">
         <Logo />
         <div className="header-short-container">
-          {isShortVer && <ShortMenu />}
+          {isShortVer && (
+            <ShortMenu
+              isAuthenticated={isAuthenticated}
+              onOpenAuth={() => setIsAuthOpen(true)}
+            />
+          )}
           {!isShortVer && isAuthenticated && <Profile user={user} />}
           {!isShortVer && !isAuthenticated && <Login onOpen={() => setIsAuthOpen(true)} />}
         </div>
@@ -267,22 +283,22 @@ const Profile = ({ user }: { user: ProfileData | null }) => {
   return (
     <div className='profile-container'>
       <div className='notification-panel-wrapper'>
-        <div 
+        <div
           className='notification-panel-container'
           onClick={() => setIsNotificationPanelOpen(!isNotificationPanelOpen)}>
           <NotificationIcon className='notification-ico' fill='white' />
           {unreadCount > 0 && <div className='new-notification' />}
         </div>
-        
+
         {isNotificationPanelOpen && (
-          <NotificationPanel 
+          <NotificationPanel
             isOpen={isNotificationPanelOpen}
             onClose={() => setIsNotificationPanelOpen(false)}/>
         )}
       </div>
 
       <div className='message-panel-wrapper'>
-        <div 
+        <div
           className='message-panel-container'
           onClick={() => navigate(`/profile/${userId}/messages`)}>
           <MessageIcon className='message-ico' fill='white' />
@@ -306,10 +322,10 @@ const Profile = ({ user }: { user: ProfileData | null }) => {
           <DropdownIcon className={`dropdown-ico ${isOpen ? 'rotated' : ''}`} fill='white' />
         </div>
       </div>
-      
+
       <AnimatedDropdown isOpen={isOpen} className="dropdown-wrapper">
-        <HeaderDropdownNavigation />
+        <HeaderDropdownNavigation isAuthenticated={true} onOpenAuth={() => {}} />
       </AnimatedDropdown>
-    </div> 
+    </div>
   )
 }
