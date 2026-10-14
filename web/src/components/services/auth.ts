@@ -54,6 +54,7 @@ export const authApi = {
     return data;
   },
 
+  // OAuth вход через GitHub
   signInWithGitHub: async () => {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'github',
@@ -70,6 +71,7 @@ export const authApi = {
     return data;
   },
 
+  // OAuth вход через Google
   signInWithGoogle: async () => {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -86,6 +88,7 @@ export const authApi = {
     return data;
   },
 
+  // OAuth вход через Twitch
   signInWithTwitch: async () => {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'twitch',

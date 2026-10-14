@@ -7,6 +7,7 @@ interface BannedPageProps {
   reason?: string
 }
 
+// Компонент для отображения страницы заблокированного аккаунта с указанием причины блокировки
 export default function BannedPage({ reason }: BannedPageProps) {
   const navigate = useNavigate()
 

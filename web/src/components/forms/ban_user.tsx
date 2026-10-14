@@ -12,6 +12,7 @@ interface BanUserFormProps {
   onSuccess?: () => void
 }
 
+// Компонент формы блокировки пользователя (модерация)
 const Form = ({ userId, nickname, onClose, onSuccess }: BanUserFormProps) => {
   const [reason, setReason] = useState('')
   const [isBanning, setIsBanning] = useState(false)

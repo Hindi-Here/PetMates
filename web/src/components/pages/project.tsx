@@ -7,7 +7,6 @@ import Edit from '@icons/edit.svg?react'
 import Accept from '@icons/accept.svg?react'
 import Reject from '@icons/reject.svg?react'
 import ImportantIcon from '@icons/important_warning.svg?react'
-import AdminProjectIcon from '@icons/admin_project.svg?react'
 import PrivacyIcon from '@icons/private.svg?react'
 import PublicIcon from '@icons/public.svg?react'
 import InfoCircleIcon from '@icons/info_circle.svg?react'
@@ -16,7 +15,7 @@ import DropdownIcon from '@icons/dropdown.svg?react'
 import CopyIcon from '@icons/copy.svg?react'
 import RejectIcon from '@icons/reject.svg?react'
 
-import { useEffect, useState, useRef, Fragment, useMemo } from 'react'
+import { useEffect, useState, useRef, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Toggle } from '../common/toggle'
 import ReactMarkdown from 'react-markdown'
@@ -25,8 +24,9 @@ import rehypeRaw from 'rehype-raw'
 import { Dropdown } from '../common/dropdown'
 import { validatorFormat, validatorRegex, useChangeInput, useIsOpen } from '../scripts/function'
 import { useAuth } from '../hooks/useAuth'
+import { useDraftAutosave } from '../hooks/useDraftAutosave'
 
-import { ProjectPreview } from './project_preview'
+import { ProjectPublicView } from './project_public_view'
 import { projectsApi, projectDraftApi, type ProjectDraftData } from '../services/project'
 import { projectMembersApi } from '../services/project_members'
 import { usersApi, type UserData } from '../services/users'
@@ -40,6 +40,7 @@ import DeleteProjectForm from '../forms/delete_project'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '../scripts/query/queryKeys'
+import { UserCard } from '../common/userCard'
 
 export interface TeamMemberWithUser {
   memberId: string
@@ -62,8 +63,9 @@ interface CommentNode extends CommentData {
 }
 
 const STATUS_OPTIONS = ['В процессе', 'Завершён', 'Приостановлен']
+const reverseStatusMap: Record<string, string> = { 'В процессе': 'in_progress', 'Завершён': 'completed', 'Приостановлен': 'paused' }
+const MAX_DESCRIPTION = 20000
 
-// Подсчёт визуальных строк текста в элементе
 const getVisualLineCount = (text: string, element: HTMLElement) => {
   const computed = window.getComputedStyle(element)
   const lineHeight = parseFloat(computed.lineHeight)
@@ -140,10 +142,7 @@ const TeamMemberProjectCard = ({
   onUpdateRole?: (memberId: string, newRole: string) => void
   isOwner: boolean
 }) => {
-  const navigate = useNavigate()
   const user = member.userData
-  const rowRef = useRef<HTMLDivElement>(null)
-  const tagRowRef = useRef<HTMLDivElement>(null)
 
   const [isEditingRole, setIsEditingRole] = useState(false)
   const [editedRole, setEditedRole] = useState(member.role)
@@ -169,90 +168,23 @@ const TeamMemberProjectCard = ({
     return error?.[1] ?? null
   }
 
-  const parseSkills = (skillsData: any): string[] => {
-    if (Array.isArray(skillsData)) return skillsData;
-    if (typeof skillsData === 'string') {
-      if (skillsData.trim().startsWith('[')) {
-        try {
-          const parsed = JSON.parse(skillsData);
-          return Array.isArray(parsed) ? parsed : [];
-        } catch {
-          return [];
-        }
-      }
-      return skillsData.split(/[\s,]+/).filter(Boolean);
-    }
-    return [];
-  };
+  if (!user) return null
 
-  const metaInfo = [user?.realName, user?.age && `${user.age} лет`, user?.city, user?.workplace].filter(Boolean)
-  const skills: string[] = parseSkills(user?.hardSkills)
-  const [visibleMetaCount, setVisibleMetaCount] = useState(metaInfo.length)
-  const [visibleTagCount, setVisibleTagCount] = useState(skills.length)
+  const isBanned = (user as any)?.isBanned === true
 
-  useEffect(() => {
-    const row = rowRef.current; if (!row) return
-    requestAnimationFrame(() => {
-      if (!row) return
-      const rowWidth = row.clientWidth
-      const nickEl = row.querySelector('.nickname-text') as HTMLElement
-      if (!nickEl) return
-      let usedWidth = nickEl.offsetWidth + 12
-      let count = 0
-      const items = row.querySelectorAll('.meta-item') as NodeListOf<HTMLElement>
-      const separators = row.querySelectorAll('.meta-separator') as NodeListOf<HTMLElement>
-      items.forEach((item, i) => {
-        const sepWidth = i > 0 ? (separators[i - 1]?.offsetWidth ?? 0) + 8 : 0
-        usedWidth += item.offsetWidth + 8 + sepWidth
-        if (usedWidth <= rowWidth) count++
-      })
-      setVisibleMetaCount(count)
-    })
-  }, [metaInfo])
-
-  useEffect(() => {
-    const row = tagRowRef.current; if (!row) return
-    requestAnimationFrame(() => {
-      if (!row) return
-      const rowWidth = row.clientWidth - 32
-      let usedWidth = 0
-      let count = 0
-      const items = row.querySelectorAll('.tag-item:not(.more-tag)') as NodeListOf<HTMLElement>
-      items.forEach((item) => {
-        usedWidth += item.offsetWidth + 8
-        if (usedWidth <= rowWidth) count++
-      })
-      if (count < skills.length) {
-        const moreTag = row.querySelector('.more-tag') as HTMLElement
-        const moreWidth = moreTag ? moreTag.offsetWidth + 8 : 50
-        let recalc = 0
-        usedWidth = 0
-        items.forEach((item) => {
-          usedWidth += item.offsetWidth + 8
-          if (usedWidth + moreWidth <= rowWidth) recalc++
-        })
-        count = recalc
-      }
-      setVisibleTagCount(Math.max(count, 0))
-    })
-  }, [skills])
-
-  const hiddenSkillsCount = Math.max(0, skills.length - visibleTagCount)
-
-  const handleCardClick = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest('.member-remove, .member-edit, .member-accept, .member-reject, .role-input')) return
-    if (user?.userId) navigate(`/profile/${user.userId}/info`)
-  }
-
-  const handleEditRoleClick = (e: React.MouseEvent) => {
-    e.stopPropagation()
+  const startEdit = () => {
     setIsEditingRole(true)
     setEditedRole(member.role)
     setRoleError(null)
   }
 
-  const handleAcceptRoleClick = (e: React.MouseEvent) => {
-    e.stopPropagation()
+  const cancelEdit = () => {
+    setIsEditingRole(false)
+    setEditedRole(member.role)
+    setRoleError(null)
+  }
+
+  const acceptEdit = () => {
     const error = checkRoleFormat(editedRole)
     if (error) {
       setRoleError(error)
@@ -266,126 +198,67 @@ const TeamMemberProjectCard = ({
   }
 
   const handleRoleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') handleAcceptRoleClick(e as any)
+    if (e.key === 'Enter') acceptEdit()
     else if (e.key === 'Escape') {
-      setIsEditingRole(false)
-      setEditedRole(member.role)
-      setRoleError(null)
+      e.stopPropagation()
+      cancelEdit()
     }
   }
 
-  const handleRoleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setEditedRole(e.target.value)
-    if (roleError) setRoleError(null)
-  }
+  const actions = (
+    <>
+      {onUpdateRole && !isEditingRole && !isBanned && (
+        <button className='member-edit-badge' onClick={startEdit}>
+          <Edit className='ico' />
+        </button>
+      )}
+      {onUpdateRole && isEditingRole && !isBanned && (
+        <>
+          <button
+            className='member-accept-badge'
+            onClick={acceptEdit}
+            disabled={!editedRole.trim() || editedRole === member.role}
+          >
+            <Accept className='ico' />
+          </button>
+          <button className='member-reject-badge' onClick={cancelEdit}>
+            <Reject className='ico' />
+          </button>
+        </>
+      )}
+      {!isOwner && onRemove && !isEditingRole && (
+        <button className='member-remove-badge' onClick={onRemove}>
+          <Reject className='ico' />
+        </button>
+      )}
+    </>
+  )
 
-  if (!user) return null
-
-  const isBanned = (user as any)?.isBanned === true;
+  const roleEditor = (
+    <>
+      <input
+        ref={roleInputRef}
+        className={`role-input ${roleError ? 'input-error' : ''}`}
+        value={editedRole}
+        onChange={e => { setEditedRole(e.target.value); if (roleError) setRoleError(null) }}
+        onKeyDown={handleRoleKeyDown}
+        placeholder='Роль'
+        maxLength={50}
+      />
+      {roleError && <p className='field-error-text'>{roleError}</p>}
+    </>
+  )
 
   return (
-    <div className={`team-member-project-card ${isBanned ? 'banned-member-card' : ''}`} onClick={handleCardClick}>
-      <div className='info-place-container'>
-        <div className='avatar-container'>
-          <img src={user.avatarUrl || '/default-avatar.png'} alt={user.nickname} />
-        </div>
-        <div className='info-container'>
-          <div className='nickname-row' ref={rowRef}>
-            <p className='nickname-text'>{user.nickname}</p>
-            {visibleMetaCount > 0 && (
-              <div className='meta-info'>
-                {metaInfo.slice(0, visibleMetaCount).map((info, index) => (
-                  <Fragment key={index}>
-                    {index > 0 && <div className='meta-separator' />}
-                    <p className='meta-item'>{info}</p>
-                  </Fragment>
-                ))}
-              </div>
-            )}
-            <div className='member-badges'>
-              {onUpdateRole && !isEditingRole && !isBanned && (
-                <button className='member-edit-badge' onClick={handleEditRoleClick}>
-                  <Edit className='ico' />
-                </button>
-              )}
-              {onUpdateRole && isEditingRole && !isBanned && (
-                <button 
-                  className='member-accept-badge' 
-                  onClick={handleAcceptRoleClick} 
-                  disabled={!editedRole.trim() || editedRole === member.role}
-                >
-                  <Accept className='ico' />
-                </button>
-              )}
-              {onUpdateRole && isEditingRole && !isBanned && (
-                <button 
-                  className='member-reject-badge' 
-                  onClick={(e) => { 
-                    e.stopPropagation(); 
-                    setIsEditingRole(false); 
-                    setEditedRole(member.role); 
-                    setRoleError(null) 
-                  }}
-                >
-                  <Reject className='ico' />
-                </button>
-              )}
-              {isOwner && (
-                <span className='owner-badge'>
-                  <AdminProjectIcon className='owner-icon' />
-                  Владелец
-                </span>
-              )}
-              {!isOwner && onRemove && !isEditingRole && (
-                <button 
-                  className='member-remove-badge' 
-                  onClick={(e) => { e.stopPropagation(); onRemove() }}
-                >
-                  <Reject className='ico' />
-                </button>
-              )}
-            </div>
-          </div>
-          {isEditingRole ? (
-            <>
-              <input
-                ref={roleInputRef}
-                className={`role-input ${roleError ? 'input-error' : ''}`}
-                value={editedRole}
-                onChange={handleRoleChange}
-                onKeyDown={handleRoleKeyDown}
-                placeholder="Роль"
-                maxLength={50}
-                disabled={isBanned} 
-              />
-              {roleError && <p className="field-error-text">{roleError}</p>}
-            </>
-          ) : (
-            <p className='role-text'>{member.role || 'Нет указанной роли'}</p>
-          )}
-          {user.isOnline ? (
-            <div className={`online-container ${isBanned ? 'banned-online' : ''}`}>
-              <div className='circle-online' />
-              <p className='online-text'>Онлайн</p>
-            </div>
-          ) : (
-            <p className='online-text offline'>Был(а) {user.lastSeen}</p>
-          )}
-        </div>
-      </div>
-      {skills.length > 0 && (
-        <div className='tag-place-container' ref={tagRowRef}>
-          {skills.map((skill, index) => (
-            <div key={index} className='tag-item' style={index >= visibleTagCount ? { position: 'absolute', visibility: 'hidden', pointerEvents: 'none' } : {}}>
-              <p className='tag-text'>{skill}</p>
-            </div>
-          ))}
-          <div className='tag-item more-tag' style={hiddenSkillsCount === 0 ? { position: 'absolute', visibility: 'hidden', pointerEvents: 'none' } : {}}>
-            <p className='tag-text'>+{hiddenSkillsCount}</p>
-          </div>
-        </div>
-      )}
-    </div>
+    <UserCard
+      user={user}
+      isOwner={isOwner}
+      role={member.role}
+      disabledInvite={true}
+      showModerationMenu={false}
+      actions={actions}
+      roleSlot={isEditingRole ? roleEditor : undefined}
+    />
   )
 }
 
@@ -479,7 +352,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
   const [hasVacanciesDraft, setHasVacanciesDraft] = useState(false)
 
   const [loadedDraft, setLoadedDraft] = useState<ProjectDraftData | null | undefined>(undefined)
-  const draftTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [newComment, setNewComment] = useState('')
   const [replyingTo, setReplyingTo] = useState<string | null>(null)
@@ -926,58 +798,50 @@ export const Project = ({ onCancel }: ProjectProps) => {
     }
   }, [project, projectId])
 
-  useEffect(() => {
-    if (!projectId) return
+  const isBasicInfoChanged =
+    name !== initialState.name ||
+    shortDesc !== initialState.shortDesc ||
+    status !== initialState.status ||
+    isPrivate !== initialState.isPrivate
 
-    const isBasicInfoChanged =
-      name !== initialState.name ||
-      shortDesc !== initialState.shortDesc ||
-      status !== initialState.status ||
-      isPrivate !== initialState.isPrivate
+  const isDescriptionChanged = description !== initialState.description
+  const isTeamChanged = deletedMemberIds.length > 0 || Object.keys(editedRoles).length > 0
+  const isVacanciesChanged = deletedVacancyIds.length > 0 || localVacancies.some(v => v._isNew || v._isModified)
 
-    const isDescriptionChanged = description !== initialState.description
-    const isTeamChanged = deletedMemberIds.length > 0 || Object.keys(editedRoles).length > 0
-    const isVacanciesChanged = deletedVacancyIds.length > 0 || localVacancies.some(v => v._isNew || v._isModified)
+  const hasAnyChanges = isBasicInfoChanged || isDescriptionChanged || isTeamChanged || isVacanciesChanged
 
-    if (draftTimeoutRef.current) clearTimeout(draftTimeoutRef.current)
+  const draftPayload = {
+    title: name,
+    shortDescription: shortDesc,
+    fullDescription: description,
+    status: reverseStatusMap[status] || status,
+    isPrivate,
+    vacancies: localVacancies
+      .filter(v => v._isNew || v._isModified)
+      .map(v => ({
+        vacancyId: v.vacancyId,
+        title: v.title,
+        description: v.description,
+        requiredTags: v.requiredTags || [],
+        isNew: !!v._isNew,
+        isModified: !!v._isModified,
+      })),
+    deletedVacancyIds,
+    deletedMemberIds,
+    editedRoles,
+    deletedMediaFiles: deletedMediaFileNames,
+  }
 
-    if (!isBasicInfoChanged && !isDescriptionChanged && !isTeamChanged && !isVacanciesChanged) return
-
-    draftTimeoutRef.current = setTimeout(async () => {
-      try {
-        await projectDraftApi.saveDraft(projectId, {
-          title: name,
-          shortDescription: shortDesc,
-          fullDescription: description,
-          status: reverseStatusMap[status] || status,
-          isPrivate: isPrivate,
-          vacancies: localVacancies
-            .filter(v => v._isNew || v._isModified)
-            .map(v => ({
-              vacancyId: v.vacancyId,
-              title: v.title,
-              description: v.description,
-              requiredTags: v.requiredTags || [],
-              isNew: !!v._isNew,
-              isModified: !!v._isModified,
-            })),
-          deletedVacancyIds,
-          deletedMemberIds,
-          editedRoles,
-          deletedMediaFiles: deletedMediaFileNames, 
-        })
-
-        if (isBasicInfoChanged) setHasBasicInfoDraft(true)
-        if (isDescriptionChanged) setHasDescriptionDraft(true)
-      } catch (error) {
-        console.error('Ошибка автосохранения черновика:', error)
-      }
-    }, 1000)
-
-    return () => {
-      if (draftTimeoutRef.current) clearTimeout(draftTimeoutRef.current)
-    }
-  }, [name, shortDesc, status, description, isPrivate, localVacancies, deletedVacancyIds, deletedMemberIds, editedRoles, initialState, projectId, vacanciesFromDb, deletedMediaFileNames])
+  useDraftAutosave({
+    enabled: !!projectId,
+    hasChanges: hasAnyChanges,
+    payload: draftPayload,
+    save: payload => projectDraftApi.saveDraft(projectId!, payload),
+    onSaved: () => {
+      if (isBasicInfoChanged) setHasBasicInfoDraft(true)
+      if (isDescriptionChanged) setHasDescriptionDraft(true)
+    },
+  })
 
   useEffect(() => {
     const hasRealChanges =
@@ -1015,13 +879,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
   }, [deletedVacancyIds, localVacancies, vacanciesFromDb])
 
   useEffect(() => {
-    const isBasicInfoChanged =
-      name !== initialState.name ||
-      shortDesc !== initialState.shortDesc ||
-      status !== initialState.status ||
-      isPrivate !== initialState.isPrivate
-
-    if (!isBasicInfoChanged && hasBasicInfoDraft) {
+    if (hasBasicInfoDraft) {
       setHasBasicInfoDraft(false)
     }
   }, [name, shortDesc, status, isPrivate, initialState, hasBasicInfoDraft])
@@ -1091,8 +949,10 @@ export const Project = ({ onCancel }: ProjectProps) => {
         !checkVacancyFormat('vacTags', v.requiredTags?.join(' ') || '')
       )
 
-    return nameValid && shortDescValid && vacanciesValid
-  }, [name, shortDesc, localVacancies, deletedVacancyIds])
+    const descriptionValid = description.length <= MAX_DESCRIPTION
+
+    return nameValid && shortDescValid && vacanciesValid && descriptionValid
+  }, [name, shortDesc, localVacancies, deletedVacancyIds, description])
 
   const handleCancel = async () => {
     if (hasChanges && projectId) {
@@ -1835,13 +1695,25 @@ export const Project = ({ onCancel }: ProjectProps) => {
       </div>
     )
   }
-
-  const reverseStatusMap: Record<string, string> = { 'В процессе': 'in_progress', 'Завершён': 'completed', 'Приостановлен': 'paused' }
     
   return (
     <div className='project-page'>
       {isPreview ? (
-        <ProjectPreview name={name} shortDesc={shortDesc} status={status} description={description} team={localTeamMembers} vacancies={localVacancies} isOwner={true} ratingCount={projectRating} isPrivate={isPrivate} comments={comments} />
+                <ProjectPublicView
+          isPreview
+          data={{
+            projectId: projectId!,
+            ownerId: project?.ownerId ?? '',
+            title: name,
+            status,
+            description,
+            isPrivate,
+            ratingCount: projectRating,
+          }}
+          team={localTeamMembers}
+          vacancies={localVacancies}
+          onBack={() => {}}
+        />
       ) : (
         <>
           <section className='project-section'>
@@ -1913,6 +1785,9 @@ export const Project = ({ onCancel }: ProjectProps) => {
           <div className='section-header-wrapper'>
             <h2 className='project-section-title'>Описание проекта</h2>
             {hasDescriptionDraft && <span className='draft-indicator'>(черновик)</span>}
+            <span className={`description-char-counter ${description.length > MAX_DESCRIPTION ? 'limit' : ''}`}>
+              {description.length} / {MAX_DESCRIPTION}
+            </span>
           </div>
 
           {isPreviewDescription ? (
@@ -1924,15 +1799,13 @@ export const Project = ({ onCancel }: ProjectProps) => {
                   </ReactMarkdown>
                 </div>
               ) : (
-                <div className='empty-state'>
-                  <p className='empty-text'>Описание пока не заполнено</p>
-                </div>
+                <p className='description-preview-empty'>Описание пока не заполнено</p>
               )}
             </div>
           ) : (
             <textarea
               ref={descriptionTextareaRef}
-              className='project-md-editor'
+              className={`project-md-editor ${description.length > MAX_DESCRIPTION ? 'input-error' : ''}`}
               value={description}
               onChange={e => setDescription(e.target.value)}
               placeholder={'### Заголовок проекта\n\nРасскажите о целях и задачах вашего проекта.\n\nИспользуйте **жирный текст** для акцентов и списки для структуры.\n\nПример:\n- Цель проекта\n- Задачи\n- Ожидаемые результаты'}

@@ -29,7 +29,7 @@ interface MenuItem {
   Icon: React.ComponentType<{ className?: string }>;
 }
 
-// Рендер навигационного меню
+// Компонент навигационного меню
 const Navigation = () => {
   const location = useLocation();
   const { userId } = useAuth();
@@ -42,7 +42,7 @@ const Navigation = () => {
     { id: 'bug', label: 'Бета-тестирование', path: '/bug', Icon: BugIcon },
   ];
 
-  // Проверка: активен ли пункт меню
+  // Активен ли пункт меню (по которому был клик)
   const isMenuItemActive = (itemId: string, itemPath: string) => {
     const pathname = location.pathname;
     
@@ -57,7 +57,7 @@ const Navigation = () => {
     return pathname.startsWith(itemPath);
   };
 
-  // Проверка: находится ли пользователь на своём профиле
+  // Находится ли пользователь на своём профиле
   const isOnOwnProfile = () => {
     const pathname = location.pathname;
     if (!userId) return false;
@@ -123,11 +123,10 @@ const RedirectUsersProfile = () => {
   return <Navigate to={`/profile/${userId}/info`} replace />;
 };
 
-// Рендер контента с маршрутизацией
+// Компонент контента страницы
 const Content = () => {
   const { userId } = useAuth();
 
-  // Переход на свою вкладку при попытке обратиться к защищенным вкладкам другого пользователя
   const ProtectedProfileTab = ({ children, tabName }: { children: React.ReactNode, tabName: string }) => {
     const { profileId } = useParams<{ profileId: string }>();
     const { userId } = useAuth();
@@ -148,6 +147,8 @@ const Content = () => {
           <Route path="info" element={null} />
           <Route path="activity" element={<Activity />} />
           <Route path="activity/project/:projectId" element={<Project />} />
+          <Route path="activity/event/:eventId" element={null} />
+          <Route path="activity/event/:eventId/:tab" element={null} />
           <Route
             path="messages"
             element={<ProtectedProfileTab tabName="messages"><Messages /></ProtectedProfileTab>}

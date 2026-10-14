@@ -4,6 +4,7 @@ import OdnoklassnikiIcon from '@icons/odnoklassniki.svg?react'
 
 import './footer.scss'
 
+// Компонент футера сайта с контактной информацией и ссылками на социальные сети
 export default function Footer() {
   return (
     <div className='footer'>

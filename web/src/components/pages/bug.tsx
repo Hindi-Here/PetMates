@@ -34,7 +34,7 @@ const formatFileSize = (bytes: number): string => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
 }
 
-// Страница баг-репортов и информации
+// Компонент страницы баг-репортов с формой обратной связи
 export default function Bug() {
   const { isAuthenticated } = useAuth()
   const { data, handleChange } = useChangeInput({ report: '' }, {})
@@ -45,12 +45,10 @@ export default function Bug() {
   const [isAnonymous, setIsAnonymous] = useState(!isAuthenticated)
   const { data: user } = useProfile(isAuthenticated)
   
-  // Состояние для блокировки кнопки во время отправки
   const [isSending, setIsSending] = useState(false)
 
   const actualIsAnonymous = !isAuthenticated || isAnonymous
 
-  // Тип обращения
   const { isOpen: isTypeDropdownOpen, setIsOpen: setIsTypeDropdownOpen, menuRef: typeMenuRef } = useIsOpen()
   const [selectedTypeId, setSelectedTypeId] = useState<ReportType>('bug')
   const selectedType = reportTypeOptions.find(o => o.id === selectedTypeId) ?? reportTypeOptions[0]
@@ -60,11 +58,9 @@ export default function Bug() {
     setIsTypeDropdownOpen(false)
   }
 
-  // Прикреплённые фото/видео
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [attachments, setAttachments] = useState<File[]>([])
 
-  // Проверка размера файлов
   const handleFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(e.target.files || [])
     
@@ -86,7 +82,6 @@ export default function Bug() {
     setAttachments(prev => prev.filter((_, i) => i !== index))
   }
 
-  // Отправка отчёта с обработкой успеха/ошибки
   const handleSend = async () => {
     setIsSending(true)
     setSendSuccess(false)
@@ -113,7 +108,6 @@ export default function Bug() {
     }
   }
 
-  // Переключение режима анонимности
   const handleAnonymousChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setIsAnonymous(e.target.checked)
   }

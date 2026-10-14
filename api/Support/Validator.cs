@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Globalization;
+using System.Text.RegularExpressions;
 
 namespace api.Support
 {
@@ -284,6 +285,225 @@ namespace api.Support
                 errors.Add("[Теги] теги должны начинаться с # и содержать только буквы, цифры и _");
 
             return errors.Count > 0 ? errors[0] : null;
+        }
+
+        public const int MaxLongTextLength = 20000; // Максимальная длина длинного текста (описание, результаты)
+        private const long MaxEventImageSize = 50 * 1024 * 1024; // 50 МБ размер изображения мероприятия
+
+        public static readonly string[] EventMediaSections = ["description", "results"];
+
+        [GeneratedRegex(@"^[A-Za-z0-9_\-]{1,40}$")]
+        private static partial Regex FormFieldIdRegex();
+
+        [GeneratedRegex(@"^[A-Za-z0-9\-]+\.(png|jpg|webp|gif)$")]
+        private static partial Regex EventMediaFileNameRegex();
+
+        // Валидация создания мероприятия
+        public static string? ValidateEventCreate(Models.CreateEventDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto.Title))
+                return "[Название мероприятия] введите название мероприятия";
+            if (dto.Title.Trim().Length > 50)
+                return "[Название мероприятия] максимум 50 символов";
+            if (dto.ShortDescription != null && dto.ShortDescription.Length > 150)
+                return "[Краткое описание] максимум 150 символов";
+            if (dto.EventStartDate > dto.EventEndDate)
+                return "[Даты мероприятия] дата окончания раньше даты начала";
+
+            return null;
+        }
+
+        // Валидация сохранения подраздела «Общее»
+        public static string? ValidateEventUpdate(Models.UpdateEventDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto.Title))
+                return "[Название мероприятия] введите название мероприятия";
+            if (dto.Title.Trim().Length > 50)
+                return "[Название мероприятия] максимум 50 символов";
+            if (string.IsNullOrWhiteSpace(dto.ShortDescription))
+                return "[Краткое описание] введите краткое описание";
+            if (dto.ShortDescription.Trim().Length > 150)
+                return "[Краткое описание] максимум 150 символов";
+            if (dto.Description != null && dto.Description.Length > MaxLongTextLength)
+                return $"[Описание] максимум {MaxLongTextLength} символов";
+
+            if (dto.EventStartDate == null || dto.EventEndDate == null)
+                return "[Период проведения] укажите даты проведения";
+            if (dto.EventStartDate > dto.EventEndDate)
+                return "[Период проведения] дата окончания раньше даты начала";
+
+            if (dto.ParticipantLimit is < 1 or > 100000)
+                return "[Лимит участников] допустимо от 1 до 100000";
+
+            var stages = dto.Stages ?? [];
+            if (stages.Count > 20)
+                return "[Этапы] максимум 20 этапов";
+
+            foreach (var s in stages)
+            {
+                if (string.IsNullOrWhiteSpace(s.Title) || s.Title.Trim().Length > 50)
+                    return "[Этапы] название этапа от 1 до 50 символов";
+
+                if (!DateTime.TryParseExact(s.StartDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var start)
+                    || !DateTime.TryParseExact(s.EndDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var end))
+                    return "[Этапы] укажите даты этапа";
+
+                if (start > end)
+                    return "[Этапы] дата окончания этапа раньше даты начала";
+                if (start < dto.EventStartDate.Value.Date || end > dto.EventEndDate.Value.Date)
+                    return "[Этапы] этап должен входить в период проведения";
+            }
+
+            return null;
+        }
+
+        // Валидация формы заявки (стандартных полей больше нет)
+        public static string? ValidateEventForm(List<Models.EventFormField> fields)
+        {
+            if (fields.Count > 50)
+                return "[Форма] максимум 50 полей";
+
+            var ids = new HashSet<string>();
+            var labels = new HashSet<string>();
+
+            foreach (var f in fields)
+            {
+                var id = f.Id?.Trim() ?? "";
+                var label = f.Label?.Trim() ?? "";
+
+                if (!FormFieldIdRegex().IsMatch(id))
+                    return "[Форма] некорректный идентификатор поля";
+                if (!ids.Add(id))
+                    return "[Форма] идентификаторы полей должны быть уникальны";
+                if (label.Length == 0 || label.Length > 100)
+                    return "[Форма] название критерия от 1 до 100 символов";
+                if (!labels.Add(label.ToLowerInvariant()))
+                    return "[Форма] названия критериев не должны повторяться";
+            }
+
+            return null;
+        }
+
+        public static readonly string[] EventDraftSections = ["general", "form", "results"]; // Разделы черновика мероприятия
+        private const int MaxEventDraftLength = 100_000; // Максимальный объём данных черновика
+
+        // Валидация раздела черновика
+        public static string? ValidateEventDraftSection(string section)
+        {
+            return EventDraftSections.Contains(section) ? null : "[Черновик] недопустимый раздел";
+        }
+
+        // Валидация объёма данных черновика
+        public static string? ValidateEventDraftPayload(string raw)
+        {
+            return raw.Length > MaxEventDraftLength ? "[Черновик] слишком большой объём данных" : null;
+        }
+
+        // Валидация результатов мероприятия
+        public static string? ValidateEventResults(string? results)
+        {
+            if (results != null && results.Length > MaxLongTextLength)
+                return $"[Результаты] максимум {MaxLongTextLength} символов";
+
+            return null;
+        }
+
+        // Валидация подраздела медиа
+        public static string? ValidateEventMediaSection(string section)
+        {
+            return EventMediaSections.Contains(section) ? null : "[Медиа] недопустимый раздел";
+        }
+
+        // Валидация имени файла медиа
+        public static string? ValidateEventMediaFileName(string fileName)
+        {
+            return EventMediaFileNameRegex().IsMatch(fileName) ? null : "[Медиа] недопустимое имя файла";
+        }
+
+        // Валидация изображения мероприятия (тип определяется по сигнатуре файла)
+        public static (string? Error, string? Extension) ValidateEventImage(IFormFile? file)
+        {
+            if (file == null || file.Length == 0)
+                return ("[Изображение] файл не передан", null);
+
+            if (file.Length > MaxEventImageSize)
+                return ("[Изображение] максимальный размер файла 50 МБ", null);
+
+            using var stream = file.OpenReadStream();
+            var h = new byte[12];
+            var read = stream.Read(h, 0, h.Length);
+
+            string? extension = null;
+            if (read >= 8 && h[0] == 0x89 && h[1] == 0x50 && h[2] == 0x4E && h[3] == 0x47)
+                extension = ".png";
+            else if (read >= 3 && h[0] == 0xFF && h[1] == 0xD8 && h[2] == 0xFF)
+                extension = ".jpg";
+            else if (read >= 12 && h[0] == 'R' && h[1] == 'I' && h[2] == 'F' && h[3] == 'F'
+                     && h[8] == 'W' && h[9] == 'E' && h[10] == 'B' && h[11] == 'P')
+                extension = ".webp";
+            else if (read >= 6 && h[0] == 'G' && h[1] == 'I' && h[2] == 'F' && h[3] == '8')
+                extension = ".gif";
+
+            return extension == null
+                ? ("[Изображение] допустимы только PNG, JPEG, WEBP или GIF", null)
+                : (null, extension);
+        }
+
+        // Валидация длинного описания проекта
+        public static string? ValidateProjectDescription(string? description)
+        {
+            if (description != null && description.Length > MaxLongTextLength)
+                return $"[Описание] максимум {MaxLongTextLength} символов";
+
+            return null;
+        }
+
+        public const int MaxApplicationAnswerLength = 2000; // Максимальная длина в заявке от заявителя
+        public const int MaxDecisionCommentLength = 1000; // Максимальная длина комментария от организатора
+
+        // Валидация ответов в заявке на участие
+        public static string? ValidateEventApplication(
+            List<Models.EventApplicationAnswerInput> inputs,
+            IEnumerable<Models.EventFormField> fields)
+        {
+            var formFields = fields.ToDictionary(f => f.Id);
+            var seen = new HashSet<string>();
+
+            foreach (var input in inputs)
+            {
+                var fieldId = input.FieldId ?? "";
+
+                if (!formFields.ContainsKey(fieldId))
+                    return "[Заявка] неизвестное поле формы";
+                if (!seen.Add(fieldId))
+                    return "[Заявка] поля формы не должны повторяться";
+                if ((input.Value ?? "").Length > MaxApplicationAnswerLength)
+                    return $"[Заявка] ответ: максимум {MaxApplicationAnswerLength} символов";
+            }
+
+            foreach (var field in formFields.Values.Where(f => f.Required))
+            {
+                var value = inputs.FirstOrDefault(i => i.FieldId == field.Id)?.Value;
+                if (string.IsNullOrWhiteSpace(value))
+                    return $"[Заявка] заполните обязательное поле «{field.Label}»";
+            }
+
+            return null;
+        }
+
+        // Валидация решения автора по заявке
+        public static string? ValidateEventApplicationDecision(Models.EventApplicationDecisionDto dto)
+        {
+            if (dto.Decision is not ("accept" or "reject" or "revision"))
+                return "[Решение] недопустимое решение";
+
+            var comment = dto.Comment?.Trim() ?? "";
+            if (comment.Length > MaxDecisionCommentLength)
+                return $"[Комментарий] максимум {MaxDecisionCommentLength} символов";
+            if (dto.Decision == "revision" && comment.Length == 0)
+                return "[Комментарий] опишите, что нужно доработать";
+
+            return null;
         }
     }
 }

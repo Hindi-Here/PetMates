@@ -2,6 +2,7 @@ import { useAuth } from './useAuth'
 import { useQuery } from '@tanstack/react-query'
 import { usersApi } from '../services/users'
 
+// Хук для получения статуса блокировки пользователя
 export const useBanStatus = () => {
   const { userId, isAuthenticated } = useAuth()
 

@@ -17,7 +17,7 @@ import { authApi } from '../services/auth';
 import EyeIcon from '@icons/eye.svg?react'
 import EyeHiddenIcon from '@icons/eye_hidden.svg?react'
 
-// Рендер формы авторизации/регистрации
+// Компонент формы авторизации (регистрация и вход) с поддержкой OAuth
 const Form = ({ onClose }: any) => {
   const [isRegister, setIsRegister] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -198,7 +198,7 @@ const Form = ({ onClose }: any) => {
   )
 }
 
-// Рендер модального окна авторизации с блокировкой скролла
+// Компонент обертки для формы авторизации, блокирующий прокрутку страницы при открытой форме
 export default function AuthorizationForm({ onClose }: any) { 
   useBlockScroll(true); 
   return (

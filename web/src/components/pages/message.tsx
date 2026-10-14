@@ -44,7 +44,6 @@ export const Messages = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [globalQuery, setGlobalQuery] = useState('')
 
-  // Загрузка списка диалогов
   const { data: conversations = [] } = useQuery({
     queryKey: queryKeys.conversations.all,
     queryFn: () => conversationApi.getConversations(),
@@ -55,7 +54,6 @@ export const Messages = () => {
 
   const hasSearched = globalQuery.trim().length >= 2
 
-  // Поиск пользователей по глобальному запросу
   const { data: foundUsers = [], isFetching: isSearchingUsers } = useQuery({
     queryKey: ['users', 'search', globalQuery],
     queryFn: () => usersApi.searchUsers(globalQuery),
@@ -63,19 +61,16 @@ export const Messages = () => {
     staleTime: 0,
   })
 
-  // Мутация закрепления/открепления чата
   const togglePinMutation = useMutation({
     mutationFn: (conversationId: string) => conversationApi.togglePin(conversationId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.conversations.all }),
   })
 
-  // Мутация скрытия чата
   const hideMutation = useMutation({
     mutationFn: (conversationId: string) => conversationApi.hideConversation(conversationId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.conversations.all }),
   })
 
-  // Мутация начала нового диалога
   const startConversationMutation = useMutation({
     mutationFn: (targetUserId: string) => conversationApi.startConversation(targetUserId),
     onSuccess: (data) => {
@@ -84,17 +79,14 @@ export const Messages = () => {
     },
   })
 
-  // Навигация к чату
   const handleOpenChat = (conversationId: string) => {
     navigate(`/profile/${profileId}/messages/${conversationId}`)
   }
 
-  // Обработка поиска по нажатию Enter или кнопки
   const handleSearchClick = () => {
     setGlobalQuery(searchQuery)
   }
 
-  // Фильтрация чатов по локальному поиску
   const filteredConversations = useMemo(() => {
     return conversations.filter(conv =>
       !searchQuery.trim() ||
@@ -102,7 +94,6 @@ export const Messages = () => {
     )
   }, [conversations, searchQuery])
 
-  // Сортировка чатов: закреплённые сверху, затем по дате
   const sortedConversations = useMemo(() => {
     return [...filteredConversations].sort((a, b) => {
       if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1
@@ -128,7 +119,6 @@ export const Messages = () => {
     })
   }, [hasSearched, foundUsers, conversationByUserId])
 
-  // Рендер карточки найденного пользователя
   const renderFoundUserCard = (user: UserSearchResult) => {
     const existingConversationId = conversationByUserId.get(user.userId)
 
@@ -158,7 +148,6 @@ export const Messages = () => {
     )
   }
 
-  // Рендер карточки чата
   const renderConversationCard = (conv: any) => (
     <div
       key={conv.conversationId}

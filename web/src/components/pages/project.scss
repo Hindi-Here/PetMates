@@ -936,6 +936,17 @@
   }
 }
 
+.description-char-counter {
+  margin-left: auto;
+  font-size: rem(11);
+  color: var(--text-secondary-color);
+
+  &.limit {
+    color: var(--important-color);
+    font-weight: bold;
+  }
+}
+
 .owner-badge {
   padding: rem(4) rem(12);
   background: color-mix(in srgb, var(--important-color), transparent 85%);
@@ -1294,13 +1305,6 @@
   border: 1px solid color-mix(in srgb, var(--primary-accent), transparent 70%);
 }
 
-.team-members-list {
-  display: flex;
-  flex-direction: column;
-  gap: rem(16);
-  margin-top: rem(16);
-}
-
 .responses-list,
 .invites-list {
   display: flex;
@@ -1511,6 +1515,16 @@
   border-radius: var(--border-radius-base);
   padding: rem(24);
   background-color: var(--card-bg-color);
+}
+
+.description-preview-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: rem(150);
+  font-size: rem(14);
+  color: var(--text-secondary-color);
+  text-align: center;
 }
 
 .markdown-content {

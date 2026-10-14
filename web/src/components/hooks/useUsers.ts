@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { usersApi } from '../services/users';
 import type { UserData } from '../services/users';
 
+// Хук для получения списка пользователей с возможностью обновления
 export const useUsers = () => {
   const [users, setUsers] = useState<UserData[]>([]);
 

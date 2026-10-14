@@ -14,6 +14,7 @@ import BannedPage from './components/pages/ban'
 import { useBanStatus } from './components/hooks/useBanStatus'
 import { ScrollToTop } from './components/scripts/function';
 
+// Компонент, который проверяет статус бана пользователя и отображает соответствующую страницу
 function AppGate() {
   const { isResolving, isBanned, bannedReason } = useBanStatus()
 
@@ -34,6 +35,7 @@ function AppGate() {
   )
 }
 
+// Основной рендеринг приложения
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>

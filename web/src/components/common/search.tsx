@@ -13,6 +13,7 @@ export interface SearchOption {
   label: string;
 }
 
+// Опции поиска и сортировки для каждой вкладки (заявки, мероприятия, участники)
 export const tabOpt: Record<string, { searchOpt: SearchOption[]; sortOpt: SearchOption[] }> = {
   vacancy: {
     searchOpt: [
@@ -28,14 +29,14 @@ export const tabOpt: Record<string, { searchOpt: SearchOption[]; sortOpt: Search
       { id: 'activity', label: 'Активности' }
     ]
   },
-  events: {
+    events: {
     searchOpt: [
       { id: 'name', label: 'Названию' },
-      { id: 'tag', label: 'Тегу' },
       { id: 'author', label: 'Автору' }
     ],
     sortOpt: [
       { id: 'date', label: 'Дате добавления' },
+      { id: 'event_date', label: 'Дате проведения' },
       { id: 'alphabet', label: 'Алфавиту' },
       { id: 'count', label: 'Количеству оценок' },
       { id: 'count_users', label: 'Количеству участников' }
@@ -76,6 +77,7 @@ interface SearchProps {
   onToggleShowStaffOnly: () => void;
 }
 
+// Компонент поиска и сортировки (заявки, мероприятия, участники)
 export default function Search({
   activeId,
   searchValue,

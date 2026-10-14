@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { projectsApi } from '../services/project';
 import type { ProjectData } from '../services/project';
 
+// Хук для получения избранных проектов пользователя
 export const useFavoriteProjects = (userId?: string | null) => {
   const [favorites, setFavorites] = useState<ProjectData[]>([]);
   const [loading, setLoading] = useState(false);

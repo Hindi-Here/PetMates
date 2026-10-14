@@ -1,0 +1,36 @@
+.event-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: rem(8);
+
+  .event-tab {
+    padding: rem(6) rem(24);
+    border: none;
+    border-radius: rem(999);
+    background-color: var(--unborder-content-bg-color);
+    color: var(--neutral-100);
+    font-size: rem(14);
+    white-space: nowrap;
+    transition: 0.25s;
+
+    &:hover:not(.active) {
+      background-color: color-mix(in srgb, var(--unborder-content-bg-color), var(--neutral-100) 6%);
+    }
+
+    &.active {
+      background-color: var(--primary-accent);
+      color: var(--button-white-text);
+      font-weight: bold;
+    }
+  }
+}
+
+.event-tab-pane {
+  display: flex;
+  flex-direction: column;
+  gap: rem(32);
+
+  &[hidden] {
+    display: none;
+  }
+}

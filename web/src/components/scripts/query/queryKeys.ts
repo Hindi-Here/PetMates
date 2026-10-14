@@ -48,4 +48,18 @@ export const queryKeys = {
     all: ['conversations'] as const,
     messages: (conversationId: string) => ['conversations', 'messages', conversationId] as const,
   },
+
+  events: {
+    all: ['events'] as const,
+    byUser: (userId: string) => [...queryKeys.events.all, 'byUser', userId] as const,
+    memberEvents: (userId: string) => [...queryKeys.events.all, 'member', userId] as const,
+    favorites: (userId: string) => [...queryKeys.events.all, 'favorites', userId] as const,
+    byId: (eventId: string) => [...queryKeys.events.all, 'byId', eventId] as const,
+    members: (eventId: string) => [...queryKeys.events.all, 'members', eventId] as const,
+    myApplication: (eventId: string) => [...queryKeys.events.all, 'myApplication', eventId] as const,
+    applications: (eventId: string) => [...queryKeys.events.all, 'applications', eventId] as const,
+    application: (eventId: string, applicationId: string) => [...queryKeys.events.all, 'application', eventId, applicationId] as const,
+    draft: (eventId: string) => [...queryKeys.events.all, 'draft', eventId] as const,
+    list: () => [...queryKeys.events.all, 'list'] as const,
+  },
 }

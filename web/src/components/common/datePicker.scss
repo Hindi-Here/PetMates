@@ -1,0 +1,176 @@
+.date-picker {
+  position: relative;
+  min-width: 0;
+
+  .date-picker-field {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: rem(8);
+    width: 100%;
+    height: rem(40);
+    padding: rem(8) rem(12);
+    font-size: rem(14);
+    color: var(--neutral-100);
+    background: var(--input-bg-color);
+    border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 80%);
+    border-radius: var(--border-radius-base);
+    text-align: left;
+    transition: 0.25s;
+
+    .placeholder {
+      color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+    }
+
+    .date-picker-ico {
+      width: rem(16);
+      height: rem(16);
+      flex-shrink: 0;
+      fill: color-mix(in srgb, var(--neutral-100), transparent 40%);
+    }
+
+    &:hover:not(:disabled),
+    &.active {
+      border-color: var(--primary-accent);
+    }
+
+    &.input-error {
+      border-color: var(--important-color);
+      box-shadow: 0 0 0 1px var(--important-color);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+    }
+  }
+
+  .date-picker-popup {
+    position: absolute;
+    top: calc(100% + rem(4));
+    z-index: 20;
+    width: rem(280);
+    max-width: calc(100vw - #{rem(32)});
+    padding: rem(12);
+    background: var(--card-bg-color);
+    border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 85%);
+    border-radius: var(--border-radius-base);
+    box-shadow: 0 4px 4px rgba(0, 0, 0, 0.25);
+
+    &.left { left: 0; }
+    &.right { right: 0; }
+  }
+
+  .date-picker-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: rem(8);
+    margin-bottom: rem(8);
+
+    .date-picker-title {
+      font-size: rem(14);
+      font-weight: bold;
+      color: var(--neutral-100);
+    }
+  }
+
+  .date-picker-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: rem(32);
+    height: rem(32);
+    padding: 0;
+    border: none;
+    border-radius: var(--border-radius-base);
+    background-color: var(--button-neutral-bg-color);
+    transition: 0.25s;
+
+    &:hover {
+      background: color-mix(in srgb, var(--button-neutral-bg-color), var(--neutral-100) 4%);
+    }
+
+    &:active {
+      background: color-mix(in srgb, var(--button-neutral-bg-color), var(--neutral-100) 6%);
+    }
+
+    .date-picker-nav-ico {
+      width: rem(14);
+      height: rem(14);
+      fill: color-mix(in srgb, var(--neutral-100), transparent 40%);
+
+      &.prev { transform: rotate(90deg); }
+      &.next { transform: rotate(-90deg); }
+    }
+  }
+
+  .date-picker-weekdays,
+  .date-picker-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: rem(2);
+  }
+
+  .date-picker-weekdays {
+    margin-bottom: rem(4);
+    text-align: center;
+    font-size: rem(12);
+    color: var(--text-secondary-color);
+  }
+
+  .date-picker-day {
+    height: rem(34);
+    padding: 0;
+    border: none;
+    border-radius: var(--border-radius-base);
+    background: transparent;
+    font-size: rem(13);
+    color: var(--neutral-100);
+    transition: 0.25s;
+
+    &:hover:not(:disabled):not(.selected) {
+      background-color: color-mix(in srgb, var(--neutral-100), transparent 95%);
+    }
+
+    &.today:not(.selected) {
+      color: var(--primary-accent);
+      font-weight: bold;
+    }
+
+    &.selected {
+      background-color: var(--primary-accent);
+      color: var(--button-white-text);
+      font-weight: bold;
+    }
+
+    &:disabled {
+      opacity: 0.3;
+      pointer-events: none;
+    }
+  }
+
+  .date-picker-footer {
+    display: flex;
+    margin-top: rem(8);
+  }
+
+  .date-picker-clear {
+    height: rem(32);
+    padding: 0 rem(16);
+    border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 65%);
+    border-radius: var(--border-radius-base);
+    background-color: var(--card-bg-color);
+    color: var(--neutral-100);
+    font-size: rem(13);
+    transition: 0.25s;
+
+    &:hover:not(:disabled) {
+      background-color: var(--base4-color);
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      pointer-events: none;
+    }
+  }
+}

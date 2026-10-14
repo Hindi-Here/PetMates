@@ -12,6 +12,7 @@ import { settingApi } from '../services/setting';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/cfg';
 
+// Компонент формы удаления аккаунта с подтверждением и проверкой никнейма
 const Form = ({ onClose }: any) => {
   const navigate = useNavigate();
   const { userId: currentUserId } = useAuth();

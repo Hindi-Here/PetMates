@@ -12,6 +12,7 @@ interface DeleteVacancyModerationFormProps {
   onSuccess?: () => void
 }
 
+// Компонент формы удаления заявки (модерация)
 const Form = ({ vacancyId, vacancyTitle, onClose, onSuccess }: DeleteVacancyModerationFormProps) => {
   const [reason, setReason] = useState('')
   const [isDeleting, setIsDeleting] = useState(false)

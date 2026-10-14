@@ -3,6 +3,7 @@ import { projectsApi } from '../services/project';
 import type { ProjectData } from '../services/project';
 import { useAuth } from './useAuth'; 
 
+// Хук для получения проектов пользователя с возможностью фильтрации по владельцу
 export const useProjects = (ownerId?: string | null) => {
   const { userId: authUserId } = useAuth();
   const [projects, setProjects] = useState<ProjectData[]>([]);

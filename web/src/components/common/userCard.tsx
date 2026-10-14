@@ -3,7 +3,7 @@ import './userCard.scss'
 import AdminProjectIcon from '@icons/admin_project.svg?react'
 import MoreIcon from '@icons/more.svg?react'
 
-import { useState, useEffect, useRef, Fragment } from 'react'
+import { useState, useEffect, useRef, Fragment, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useUserActivity } from '../hooks/useUserActivity'
@@ -16,6 +16,7 @@ import type { UserData } from '../services/users'
 
 import BanUserForm from '../forms/ban_user'
 
+// Склонения текста в карточке
 const getProjectCountText = (count: number): string => {
   if (count === 0) return 'проектах'
   const lastDigit = count % 10
@@ -28,20 +29,29 @@ const getProjectCountText = (count: number): string => {
   return 'проектах'
 }
 
+// Компонент карточки пользователя (информация, логика, модерация)
 export const UserCard = ({ 
   user, 
   onInvite,
   isOwner = false,
+  ownerLabel = 'Владелец',
   role,
   disabledInvite = false,
-  showModerationDelete = false
+  showModerationDelete = false,
+  showModerationMenu = true,
+  actions,
+  roleSlot
 }: { 
   user: UserData
   onInvite?: (user: UserData) => void
   isOwner?: boolean
+  ownerLabel?: string
   role?: string
   disabledInvite?: boolean
   showModerationDelete?: boolean
+  showModerationMenu?: boolean
+  actions?: ReactNode
+  roleSlot?: ReactNode
 })  => {
   const navigate = useNavigate()
   const isBanned = (user as any).isBanned
@@ -52,7 +62,8 @@ export const UserCard = ({
   const canInvite = isAuthenticated && authUserId !== user.userId && !disabledInvite && !isBanned
 
   const targetSystemRole = (user as any).systemRole as string | undefined
-  const canModerate = isAuthenticated &&
+  const canModerate = showModerationMenu &&
+    isAuthenticated &&
     authUserId !== user.userId &&
     canModerateTarget(currentSystemRole, targetSystemRole)
 
@@ -117,7 +128,7 @@ export const UserCard = ({
   const skills: string[] = parseSkills(user?.hardSkills);
   
   const handleCardClick = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest('.invite-button, .moderation-menu-wrapper')) {
+    if ((e.target as HTMLElement).closest('.invite-button, .moderation-menu-wrapper, .card-actions, .role-edit')) {
       return
     }
     navigate(`/profile/${user.userId}/info`)
@@ -138,6 +149,12 @@ export const UserCard = ({
         if (!nickEl) return
 
         let usedWidth = nickEl.offsetWidth + 12
+
+        const badgeEl = row.querySelector('.owner-badge') as HTMLElement | null
+        const actionsEl = row.querySelector('.card-actions') as HTMLElement | null
+        if (badgeEl) usedWidth += badgeEl.offsetWidth + 12
+        if (actionsEl) usedWidth += actionsEl.offsetWidth + 12
+
         let count = 0
 
         const items = row.querySelectorAll('.meta-item') as NodeListOf<HTMLElement>
@@ -217,6 +234,7 @@ export const UserCard = ({
     <>
       <div className={`user-card-container 
         ${showModerationDelete ? 'with-moderation' : ''} 
+        ${canModerate ? 'has-moderation-menu' : ''} 
         ${isBanned ? 'banned-user-card' : ''}`}
         onClick={handleCardClick}
       > 
@@ -294,11 +312,16 @@ export const UserCard = ({
               {isOwner && (
                 <span className='owner-badge'>
                   <AdminProjectIcon className='owner-icon' />
-                  Владелец
+                  {ownerLabel}
                 </span>
               )}
+              {actions !== undefined && <div className='card-actions'>{actions}</div>}
             </div>
-            <p className='role-text'>{role || user.profileRole || 'Нет указанной роли'}</p>
+            {roleSlot ? (
+              <div className='role-edit'>{roleSlot}</div>
+            ) : (
+              <p className='role-text'>{role || user.profileRole || 'Нет указанной роли'}</p>
+            )}
             {user.isOnline ? (
               <div className='online-container'>
                 <div className='circle-online' />

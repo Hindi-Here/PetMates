@@ -485,3 +485,37 @@
 .user-card-container .tag-place-container .tag-item.more-tag .tag-text {
   color: var(--header-text-color);
 }
+
+.user-card-container.has-moderation-menu .info-place-container {
+  padding-right: rem(68);
+}
+
+.card-actions {
+  display: flex;
+  align-items: center;
+  gap: rem(8);
+  margin-left: auto;
+  flex-shrink: 0;
+
+  &:empty {
+    display: none;
+  }
+}
+
+.owner-badge ~ .card-actions {
+  margin-left: 0;
+}
+
+.role-edit {
+  display: flex;
+  flex-direction: column;
+  gap: rem(4);
+}
+
+.card-titles {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: rem(8);
+  margin-top: rem(4);
+}

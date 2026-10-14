@@ -21,6 +21,7 @@ const FoundCount = ({ count }: { count: number }) => (
   </div>
 )
 
+// Компонент страницы со списком пользователей, включая поиск, фильтрацию и сортировку
 export default function Users() {
   const [showInviteForm, setShowInviteForm] = useState<UserData | null>(null)
 

@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { profileApi } from '../services/profile';
-
+  
 export interface ProfileData {
   userId?: string;
   email?: string;
@@ -30,6 +30,7 @@ const notifyProfileSubscribers = () => {
   profileSubscribers.forEach(callback => callback(sharedProfileData));
 };
 
+// Функция для получения данных профиля пользователя с кэшированием и уведомлением подписчиков
 const fetchSharedProfile = async (isAuth: boolean, force = false) => {
   if (!isAuth) {
     sharedProfileData = null;
@@ -59,6 +60,7 @@ const fetchSharedProfile = async (isAuth: boolean, force = false) => {
   }
 };
 
+// Хук для получения данных профиля пользователя с возможностью обновления
 export const useProfile = (isAuth: boolean | null) => {
   const [data, setData] = useState<ProfileData | null>(
     () => isAuth ? sharedProfileData : null

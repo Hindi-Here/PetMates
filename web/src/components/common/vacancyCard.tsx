@@ -20,6 +20,7 @@ import { usersApi } from '../services/users'
 import type { VacancyData } from '../services/vacancy'
 import DeleteVacancyModerationForm from '../forms/delete_vacancy_moderation'
 
+// Функция для отправки уведомлений пользователю
 const sendNotification = (
   userId: string,
   referenceType: string,
@@ -38,6 +39,7 @@ const sendNotification = (
   }).catch(err => console.error('Ошибка создания уведомления:', err))
 }
 
+// Компонент карточки вакансии (информация, логика, модерация)
 export const VacancyCard = ({ 
   vacancy,
   showModerationDelete = true,
@@ -66,7 +68,6 @@ export const VacancyCard = ({
   const [ownerIsBanned, setOwnerIsBanned] = useState(false)
   const [showDeleteForm, setShowDeleteForm] = useState(false)
 
-  // Загрузка участников проекта для проверки, является ли пользователь участником команды
   const { data: projectMembers = [] } = useQuery({
     queryKey: queryKeys.projects.memberProjects(vacancy.projectId!),
     queryFn: () => projectMembersApi.getByProject(vacancy.projectId!),
@@ -74,7 +75,6 @@ export const VacancyCard = ({
     staleTime: 5 * 60 * 1000,
   })
 
-  // Проверка: является ли текущий пользователь участником команды
   const isTeamMember = projectMembers.some((member: any) => member.userId === userId)
 
   useEffect(() => {

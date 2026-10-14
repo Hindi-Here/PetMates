@@ -1,0 +1,132 @@
+.event-info-rows {
+  display: flex;
+  flex-direction: column;
+  gap: rem(8);
+}
+
+.event-stage-item .event-stage-name {
+  display: flex;
+  align-items: center;
+  gap: rem(8);
+}
+
+.event-stage-badge {
+  padding: rem(2) rem(10);
+  border-radius: rem(20);
+  background: color-mix(in srgb, var(--primary-accent), transparent 85%);
+  color: var(--primary-tag-text-color);
+  font-size: rem(11);
+  font-weight: normal;
+}
+
+// Вопросы формы в публичном виде: без рамок
+.event-questions {
+  display: flex;
+  flex-direction: column;
+  gap: rem(16);
+}
+
+.event-question {
+  display: flex;
+  flex-direction: column;
+  gap: rem(6);
+
+  .event-question-label {
+    font-size: rem(14);
+    font-weight: bold;
+    color: var(--neutral-100);
+  }
+}
+
+.event-form-empty {
+  padding: rem(12) rem(16);
+  background: var(--unborder-content-bg-color);
+  border-radius: var(--border-radius-base);
+  font-size: rem(14);
+  color: var(--text-secondary-color);
+}
+
+.event-info-row {
+  display: grid;
+  grid-template-columns: rem(180) 1fr;
+  gap: rem(16);
+  font-size: rem(14);
+
+  .event-info-label {
+    color: var(--text-secondary-color);
+  }
+
+  .event-info-value {
+    color: var(--neutral-100);
+  }
+}
+
+.event-stages-list {
+  display: flex;
+  flex-direction: column;
+  gap: rem(8);
+}
+
+.event-stage-item {
+  display: flex;
+  justify-content: space-between;
+  gap: rem(12);
+  padding: rem(12) rem(16);
+  background: var(--unborder-content-bg-color);
+  border-radius: var(--border-radius-base);
+  font-size: rem(14);
+
+  .event-stage-name {
+    font-weight: bold;
+    color: var(--neutral-100);
+  }
+
+  .event-stage-dates {
+    color: var(--text-secondary-color);
+    white-space: nowrap;
+  }
+}
+
+.event-submit-row {
+  display: flex;
+  align-items: center;
+  gap: rem(16);
+  flex-wrap: wrap;
+  margin-top: rem(16);
+}
+
+.event-submit-btn {
+  width: rem(175);
+  height: rem(40);
+  border: none;
+  border-radius: var(--border-radius-base);
+  background: color-mix(in srgb, var(--primary-accent), var(--neutral-0) 12%);
+  color: var(--button-white-text);
+  font-size: rem(14);
+  font-weight: bold;
+  transition: 0.25s;
+
+  &:disabled {
+    opacity: 0.4;
+    pointer-events: none;
+  }
+
+  &:hover:not(:disabled) {
+    filter: brightness(0.95);
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+}
+
+@media (max-width: 600px) {
+  .event-info-row {
+    grid-template-columns: 1fr;
+    gap: rem(2);
+  }
+
+  .event-stage-item {
+    flex-direction: column;
+  }
+}

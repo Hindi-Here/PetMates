@@ -552,6 +552,10 @@ namespace api.Controllers
                     .Get();
                 if (ownerCheck.Models.Count == 0) return NotFound();
 
+                var descriptionError = Validator.ValidateProjectDescription(dto.FullDescription);
+                if (descriptionError != null)
+                    return BadRequest(new { message = descriptionError });
+
                 var draft = new ProjectDraft
                 {
                     ProjectId = projectId,
@@ -630,7 +634,12 @@ namespace api.Controllers
                     .Get();
 
                 var project = response.Models.FirstOrDefault();
-                if (project == null) return NotFound();
+                if (project == null)
+                    return NotFound();
+
+                var descriptionError = Validator.ValidateProjectDescription(dto.FullDescription);
+                if (descriptionError != null)
+                    return BadRequest(new { message = descriptionError });
 
                 var draftResponse = await _client.From<ProjectDraft>().Where(d => d.ProjectId == projectId).Get();
                 var draft = draftResponse.Models.FirstOrDefault();
@@ -885,6 +894,7 @@ namespace api.Controllers
             }
         }
 
+        // ВСПОМОГАТЕЛЬНОЕ
 
         // Получить размер файла
         private static long GetFileSize(Supabase.Storage.FileObject file)

@@ -22,6 +22,7 @@ export interface ThirdProfileData {
   lastSeen: string;
 }
 
+// Хук для получения данных профиля пользователя по его идентификатору с возможностью обновления
 export const useUserProfile = (userId: string | undefined) => {
   const [data, setData] = useState<ThirdProfileData | null>(null);
 

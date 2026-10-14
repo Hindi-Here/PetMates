@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { notificationApi, type NotificationData } from '../services/notification';
 
+// Хук для получения уведомлений пользователя с возможностью фильтрации по категории
 export const useNotifications = (category?: string) => {
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
   const [loading, setLoading] = useState(true);

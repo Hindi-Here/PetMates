@@ -12,6 +12,7 @@ interface DeleteProjectModerationFormProps {
   onSuccess?: () => void
 }
 
+// Компонент формы удаления проекта (модерация)
 const Form = ({ projectId, projectTitle, onClose, onSuccess }: DeleteProjectModerationFormProps) => {
   const [reason, setReason] = useState('')
   const [isDeleting, setIsDeleting] = useState(false)

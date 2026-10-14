@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { inviteApi, type InviteData } from '../services/invite';
 
+// Хук для получения входящих и исходящих приглашений пользователя
 export const useInvites = (type: 'incoming' | 'outgoing') => {
   const [invites, setInvites] = useState<InviteData[]>([]);
   const [loading, setLoading] = useState(true);

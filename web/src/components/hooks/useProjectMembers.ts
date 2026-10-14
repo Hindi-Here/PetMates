@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { projectMembersApi } from '../services/project_members';
 import type { ProjectMemberData } from '../services/project_members';
 
+// Хук для получения участников проекта с возможностью обновления
 export const useProjectMembers = (projectId: string | null) => {
   const [members, setMembers] = useState<ProjectMemberData[]>([]);
   const [loading, setLoading] = useState(false);

@@ -215,10 +215,10 @@ export function useChangeInput<T>(initialState: T, rules: Partial<Record<keyof T
 
   // Сброс эффектов
   const reset = () => {
-  setData(initialState);
-  setTouched({});
-  setDirty({});
-};
+    setData(initialState);
+    setTouched({});
+    setDirty({});
+  };
 
   return { data, touched, dirty, handleChange, handleBlur, reset };
 }

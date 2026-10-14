@@ -34,6 +34,7 @@ const categoryOptions = [
   { id: 'system', label: 'Системные' }
 ]
 
+// Компонент для отображения уведомлений пользователя с возможностью фильтрации по категориям, отметки как прочитанных и удаления
 export const Notifications = () => {
   const { userId } = useAuth()
   const navigate = useNavigate()
@@ -44,7 +45,6 @@ export const Notifications = () => {
   
   const { isOpen: isDropdownOpen, setIsOpen: setDropdownOpen, menuRef: dropdownMenuRef } = useIsOpen()
 
-  // Загрузка уведомлений с фильтрацией по категории
   const { data: notifications = [] } = useQuery({
     queryKey: selectedCategory === 'all' 
       ? queryKeys.notifications.all 
@@ -60,7 +60,6 @@ export const Notifications = () => {
     refetchOnWindowFocus: true,
   })
 
-  // Мутация отметки одного уведомления как прочитанного
   const markAsReadMutation = useMutation({
     mutationFn: (notificationId: string) => notificationApi.markAsRead(notificationId),
     onSuccess: () => {
@@ -77,7 +76,6 @@ export const Notifications = () => {
     },
   })
 
-  // Мутация отметки всех уведомлений как прочитанных
   const markAllAsReadMutation = useMutation({
     mutationFn: () => notificationApi.markAllAsRead(),
     onSuccess: () => {
@@ -94,7 +92,6 @@ export const Notifications = () => {
     },
   })
 
-  // Мутация удаления одного уведомления
   const deleteNotificationMutation = useMutation({
     mutationFn: (notificationId: string) => notificationApi.delete(notificationId),
     onSuccess: (_data, notificationId) => {
@@ -116,7 +113,6 @@ export const Notifications = () => {
     },
   })
 
-  // Мутация массового удаления выбранных уведомлений
   const deleteSelectedNotificationsMutation = useMutation({
     mutationFn: async (notificationIds: string[]) => {
       await Promise.all(notificationIds.map(id => notificationApi.delete(id)))
@@ -137,7 +133,6 @@ export const Notifications = () => {
     },
   })
 
-  // Отметка уведомления как прочитанного с обработкой ошибок
   const handleMarkAsRead = async (notificationId: string) => {
     try {
       await markAsReadMutation.mutateAsync(notificationId)
@@ -147,7 +142,6 @@ export const Notifications = () => {
     }
   }
 
-  // Отметка всех уведомлений как прочитанных с обработкой ошибок
   const handleMarkAllAsRead = async () => {
     try {
       await markAllAsReadMutation.mutateAsync()
@@ -157,7 +151,6 @@ export const Notifications = () => {
     }
   }
 
-  // Обработка выбора категории из выпадающего списка
   const handleCategorySelect = (item: { id: string; label: string }) => {
     setSelectedCategory(item.id as CategoryFilter)
     setDropdownOpen(false)
@@ -165,7 +158,6 @@ export const Notifications = () => {
     setIsSelectionMode(false)
   }
 
-  // Переключение выбора отдельного уведомления
   const handleSelectNotification = (notificationId: string) => {
     setSelectedNotifications(prev => {
       const newSet = new Set(prev)
@@ -179,7 +171,6 @@ export const Notifications = () => {
     })
   }
 
-  // Выбор/снятие всех уведомлений сразу
   const handleSelectAll = () => {
     if (selectedNotifications.size === notifications.length) {
       setSelectedNotifications(new Set())
@@ -189,7 +180,6 @@ export const Notifications = () => {
     }
   }
 
-  // Удаление всех выбранных уведомлений с обработкой ошибок
   const handleDeleteSelected = async () => {
     try {
       await deleteSelectedNotificationsMutation.mutateAsync(Array.from(selectedNotifications))
@@ -199,7 +189,6 @@ export const Notifications = () => {
     }
   }
 
-  // Удаление одного уведомления с обработкой ошибок
   const handleDeleteOne = async (notificationId: string) => {
     try {
       await deleteNotificationMutation.mutateAsync(notificationId)
@@ -209,7 +198,6 @@ export const Notifications = () => {
     }
   }
 
-  // Обработка клика по уведомлению: чтение + навигация
   const handleNotificationClick = async (notification: NotificationData) => {
     if (!notification.isRead) {
       await handleMarkAsRead(notification.notificationId)
@@ -223,7 +211,6 @@ export const Notifications = () => {
     }
   }
 
-  // Рендер карточки одного уведомления
   const renderNotificationCard = (notification: NotificationData) => {
     const { icon: Icon, color, borderColor } = getNotificationIcon(notification.referenceType, notification.contextData)
     const text = getNotificationText(notification)
@@ -288,7 +275,6 @@ export const Notifications = () => {
     )
   }
 
-  // Проверка: все ли уведомления выбраны
   const allSelected = useMemo(() => 
     notifications.length > 0 && selectedNotifications.size === notifications.length,
     [notifications.length, selectedNotifications.size]

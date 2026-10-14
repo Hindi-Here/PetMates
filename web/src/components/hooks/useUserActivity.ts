@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { projectsApi } from '../services/project';
 
+// Хук для получения активности пользователя (количество проектов, в которых он участвует или является владельцем)
 export const useUserActivity = (userId?: string) => {
   const [activityCount, setActivityCount] = useState(0);
   const [loading, setLoading] = useState(false);

@@ -97,11 +97,11 @@ const renderEmailField = (
   </div>
 )
 
+// Компонент страницы настроек пользователя
 export const Setting = () => {
   const { isAuthenticated } = useAuth()
   const { data: user } = useProfile(isAuthenticated)
 
-  // Инициализация темы из localStorage или системных настроек
   const [isDarkTheme, setIsDarkTheme] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('theme')
@@ -111,7 +111,6 @@ export const Setting = () => {
     return false
   })
 
-  // Применение темы к documentElement и сохранение в localStorage
   useEffect(() => {
     const root = document.documentElement
     if (isDarkTheme) {
@@ -123,7 +122,6 @@ export const Setting = () => {
     }
   }, [isDarkTheme])
 
-  // Хук для управления полями смены пароля
   const { data: passData, touched: passTouched, dirty: passDirty, handleChange: handlePassChange, handleBlur: handlePassBlur } = useChangeInput(
     { oldPassword: '', newPassword: '', confirmPassword: '' },
     {
@@ -133,13 +131,11 @@ export const Setting = () => {
     }
   )
 
-  // Хук для управления полями смены email
   const { data: emailData, touched: emailTouched, dirty: emailDirty, handleChange: handleEmailChange, handleBlur: handleEmailBlur } = useChangeInput(
     { newEmail: '', confirmCode: '' },
     { newEmail: validatorRegex.email }
   )
 
-  // Проверка валидности всех полей пароля
   const isPasswordValid = useMemo(() => {
     return (
       validatorFormat.required(passData.oldPassword) &&
@@ -152,7 +148,6 @@ export const Setting = () => {
     )
   }, [passData])
 
-  // Проверка валидности всех полей email
   const isEmailValid = useMemo(() => {
     return (
       validatorFormat.required(emailData.newEmail) &&
@@ -167,7 +162,6 @@ export const Setting = () => {
   const [emailSuccess, setEmailSuccess] = useState(false)
   const [showDeleteForm, setShowDeleteForm] = useState(false)
 
-  // Смена email с обработкой успеха/ошибки
   const handleChangeEmail = useCallback(async () => {
     setEmailError(null)
     setEmailSuccess(false)
@@ -181,7 +175,6 @@ export const Setting = () => {
     }
   }, [emailData])
 
-  // Смена пароля с обработкой успеха/ошибки
   const handleChangePassword = useCallback(async () => {
     setPassError(null)
     setPassSuccess(false)

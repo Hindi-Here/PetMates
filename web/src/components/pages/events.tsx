@@ -1,8 +1,14 @@
 import './template_search.scss'
 
 import NotFoundContentIcon from '@icons/not_found_content.svg?react'
+
 import { useState } from 'react'
+import { useQuery, keepPreviousData } from '@tanstack/react-query'
+import { queryKeys } from '../scripts/query/queryKeys'
+import { eventApi } from '../services/event'
+import { EventCard } from '../common/eventCard'
 import Search from '../common/search'
+import { useSystemRole } from '../hooks/useSystemRole'
 
 const FoundCount = ({ count }: { count: number }) => (
   <div className='content-item-count-container'>
@@ -11,13 +17,32 @@ const FoundCount = ({ count }: { count: number }) => (
   </div>
 )
 
+// Компонент страницы со списком мероприятий, включая поиск, фильтрацию и сортировку
 export default function Events() {
   const [searchInput, setSearchInput] = useState('')
+  const [appliedSearch, setAppliedSearch] = useState('')
   const [searchField, setSearchField] = useState('name')
   const [sortField, setSortField] = useState('date')
-  const [isSortUp, setIsSortUp] = useState(true)
+  const [isSortUp, setIsSortUp] = useState(false)
 
-  const count = 0
+  const currentSystemRole = useSystemRole()
+  const isStaff = currentSystemRole === 'moderator' || currentSystemRole === 'admin'
+  const [showBannedOnly, setShowBannedOnly] = useState(false)
+
+  const { data: events = [] } = useQuery({
+    queryKey: [...queryKeys.events.list(), appliedSearch, searchField, sortField, isSortUp, showBannedOnly],
+    queryFn: () => eventApi.getAll({
+      search: appliedSearch,
+      searchField,
+      sortField,
+      sortAsc: isSortUp,
+      showBannedOnly,
+    }),
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    placeholderData: keepPreviousData,
+  })
 
   return (
     <>
@@ -25,29 +50,37 @@ export default function Events() {
         activeId='events'
         searchValue={searchInput}
         onSearchValueChange={setSearchInput}
-        onSearchSubmit={() => {}}
+        onSearchSubmit={() => setAppliedSearch(searchInput)}
         selectedSearchId={searchField}
         onSearchFieldSelect={setSearchField}
         selectedSortId={sortField}
         onSortFieldSelect={setSortField}
         isSortUp={isSortUp}
         onToggleSortDirection={() => setIsSortUp(prev => !prev)}
-        showBannedFilter={false}
-        showBannedOnly={false}
-        onToggleShowBannedOnly={() => {}}
+        showBannedFilter={isStaff}
+        showBannedOnly={showBannedOnly}
+        onToggleShowBannedOnly={() => setShowBannedOnly(prev => !prev)}
         showStaffFilter={false}
         showStaffOnly={false}
         onToggleShowStaffOnly={() => {}}
       />
 
       <div className='found-content-container'>
-        <FoundCount count={count} />
+        <FoundCount count={events.length} />
+
         <div className='content-item-container'>
-          {count === 0 && (
+          {events.length === 0 ? (
             <>
               <NotFoundContentIcon className='content-zero-ico' />
-              <p className='content-zero-text'> Упс! Кажется, здесь пока пусто. <br /> Попробуй другой запрос </p>
+              <p className='content-zero-text'>
+                Упс! Кажется, здесь пока пусто.<br />
+                Попробуй другой запрос
+              </p>
             </>
+          ) : (
+            events.map(event => (
+              <EventCard key={event.eventId} event={event} showModerationDelete />
+            ))
           )}
         </div>
       </div>

@@ -10,8 +10,10 @@ import { Activity } from './activity'
 import { Notifications } from './notification'
 import { Setting } from './setting'
 import { Project } from './project'
-import ProjectThirdSide from './project_third_side'
-import ThirdProfile from './profile_third_side'
+import ProjectViewer from './project_viewer'
+
+import ProfileViewer from './profile_viewer'
+import { ProfilePublicView, type ProfilePublicData } from './profile_public_view'
 
 import { useEffect, useMemo, useState, useRef } from 'react'
 import { projectsApi } from '../services/project'
@@ -22,11 +24,10 @@ import { profileApi } from '../services/profile'
 
 import { Toggle } from '../common/toggle'
 
-import { ProfilePreview } from './profile_preview'
-import type { ThirdProfileData } from '../hooks/useThirdProfile'
 import { Responses } from './response'
 import { Messages } from './message'
 import { Chat } from './chat'
+import { EventPage } from './events/event_page'
 
 import { useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '../scripts/query/queryKeys'
@@ -67,6 +68,7 @@ const AuthorizedProfile = () => {
   const currentPath = location.pathname
   const prefix = profileKey ? `/profile/${profileKey}` : '/profile'
   const isProjectRoute = currentPath === `${prefix}/activity/project` || currentPath.startsWith(`${prefix}/activity/project/`)
+  const isEventRoute = currentPath === `${prefix}/activity/event` || currentPath.startsWith(`${prefix}/activity/event/`)
   const isActivityRoute = currentPath === `${prefix}/activity` || currentPath.startsWith(`${prefix}/activity/`)
   const isResponsesRoute = currentPath === `${prefix}/responces` || currentPath.startsWith(`${prefix}/responces/`)
   const isNotificationsRoute = currentPath.startsWith(`${prefix}/notifications`)
@@ -116,13 +118,11 @@ const AuthorizedProfile = () => {
 
   const [formData, setFormData] = useState<Record<string, any>>({})
 
-  // Нормализация значения поля по правилам валидации
   const normalizeValue = (name: string, value: string) => {
     const rule = validationRules[name as keyof typeof validationRules]
     return rule ? rule(value) : value
   }
 
-  // Синхронизация formData с данными пользователя
   useEffect(() => {
     if (user) {
       setFormData({
@@ -158,7 +158,6 @@ const AuthorizedProfile = () => {
     }
   }, [user])
 
-  // Проверка: есть ли изменения в форме
   const hasChanges = useMemo(() => {
     if (!user) return false
     
@@ -170,7 +169,6 @@ const AuthorizedProfile = () => {
     )
   }, [formData, user])
 
-  // Обработка изменения поля формы
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     const normalizedValue = normalizeValue(name, value)
@@ -182,7 +180,6 @@ const AuthorizedProfile = () => {
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess] = useState(false)
 
-  // Сохранение изменений профиля
   const handleSave = async () => {
     if (!hasChanges || !user) return
     setIsLoading(true)
@@ -229,7 +226,6 @@ const AuthorizedProfile = () => {
     }
   }
 
-  // Отмена изменений и сброс формы
   const handleCancel = () => {
     if (user) {
       setPendingAvatarFile(null)
@@ -273,22 +269,18 @@ const AuthorizedProfile = () => {
 
   const [contacts, setContacts] = useState<ContactItem[]>([])
 
-  // Добавление нового контакта
   const addContact = () => {
     setContacts(prev => [...prev, { id: Date.now(), label: '', url: '', isNew: true }])
   }
 
-  // Удаление контакта по id
   const removeContact = (id: number) => {
     setContacts(prev => prev.filter(c => c.id !== id))
   }
 
-  // Обновление поля контакта
   const updateContact = (id: number, field: 'label' | 'url', value: string) => {
     setContacts(prev => prev.map(c => c.id === id ? { ...c, [field]: value } : c))
   }
 
-  // Сериализация контактов в JSON при изменении
   useEffect(() => {
     try {
       const serialized = JSON.stringify(contacts.map(c => ({ name: c.label, link: c.url })))
@@ -296,7 +288,6 @@ const AuthorizedProfile = () => {
     } catch {}
   }, [contacts])
 
-  // Проверка валидности формы
   const isFormValid = useMemo(() => {
     const fields = ['nickname', 'realName', 'age', 'country', 'city',
       'workplace', 'profileRole', 'description', 'hardSkills', 'softSkills']
@@ -311,10 +302,8 @@ const AuthorizedProfile = () => {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null)
 
-  // Клик по аватару для выбора файла
   const handleAvatarClick = () => fileInputRef.current?.click()
 
-  // Обработка выбора файла аватара
   const MAX_AVATAR_SIZE = 5 * 1024 * 1024
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -369,9 +358,9 @@ const AuthorizedProfile = () => {
 
       {activeTab === 'Информация' && !isProjectRoute && (
         isThirdParty ? (
-          <ThirdProfile />
+          <ProfileViewer />
         ) : isPreview && user ? (
-          <ProfilePreview user={user as ThirdProfileData} />
+          <ProfilePublicView user={user as unknown as ProfilePublicData} isPreview />
         ) : (
           <>
             <div className='profile-header-container'>
@@ -571,6 +560,8 @@ const AuthorizedProfile = () => {
       {activeTab === 'Активность' && (
         isProjectRoute ? (
           <ProjectOrThirdSide />
+        ) : isEventRoute ? (
+          <EventPage />
         ) : (
           <Activity />
         )
@@ -641,7 +632,7 @@ const ProjectOrThirdSide = () => {
     return <div className='project-page' />
   }
 
-  return ownerId === userId && ownerId !== null ? <Project /> : <ProjectThirdSide />
+  return ownerId === userId && ownerId !== null ? <Project /> : <ProjectViewer />
 }
 
 // Главный компонент с логикой маршрутизации профиля

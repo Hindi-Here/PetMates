@@ -1,0 +1,61 @@
+.event-form-list {
+  display: flex;
+  flex-direction: column;
+  gap: rem(12);
+}
+
+.event-form-item {
+  display: flex;
+  flex-direction: column;
+  gap: rem(8);
+  padding: rem(16);
+  background: var(--card-bg-color);
+  border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 65%);
+  border-radius: var(--border-radius-base);
+
+  &.locked {
+    background: var(--unborder-content-bg-color);
+    border-style: dashed;
+  }
+
+  .event-form-item-head {
+    display: flex;
+    align-items: center;
+    gap: rem(12);
+
+    .project-field-input {
+      flex: 1;
+    }
+  }
+
+  .event-form-fixed-label {
+    flex: 1;
+    min-width: 0;
+    font-size: rem(14);
+    font-weight: bold;
+    color: var(--neutral-100);
+  }
+
+  .event-form-answer {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.event-form-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: rem(4);
+  flex-shrink: 0;
+  padding: rem(2) rem(10);
+  border-radius: rem(20);
+  background: color-mix(in srgb, var(--primary-accent), transparent 85%);
+  color: var(--primary-tag-text-color);
+  font-size: rem(11);
+
+  .event-form-badge-ico {
+    width: rem(10);
+    height: rem(10);
+    fill: currentColor;
+  }
+}

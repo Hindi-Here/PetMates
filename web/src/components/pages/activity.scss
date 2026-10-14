@@ -441,3 +441,53 @@
     }
   }
 }
+
+.activity-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: rem(8);
+
+  .activity-tab {
+    padding: rem(6) rem(24);
+    border: none;
+    border-radius: rem(999);
+    background-color: var(--unborder-content-bg-color);
+    color: var(--neutral-100);
+    font-size: rem(14);
+    white-space: nowrap;
+    transition: 0.25s;
+
+    &:hover:not(.active) {
+      background-color: color-mix(in srgb, var(--unborder-content-bg-color), var(--neutral-100) 6%);
+    }
+
+    &.active {
+      background-color: var(--primary-accent);
+      color: var(--button-white-text);
+      font-weight: bold;
+    }
+  }
+}
+
+.project-card .project-card-dates {
+  display: flex;
+  align-items: center;
+  gap: rem(6);
+  margin: 0;
+  padding: 0 rem(16) rem(12);
+  font-size: rem(13);
+  color: var(--text-secondary-color);
+
+  .meta-icon {
+    width: rem(14);
+    height: rem(14);
+    flex-shrink: 0;
+    color: color-mix(in srgb, var(--neutral-100), transparent 40%);
+  }
+}
+
+@media (max-width: 480px) {
+  .project-card .project-card-dates {
+    padding: 0 rem(12) rem(8);
+  }
+}

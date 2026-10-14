@@ -186,7 +186,6 @@ export const Responses = () => {
 
   const [currentUserNickname, setCurrentUserNickname] = useState<string | null>(null)
 
-  // Получение никнейма текущего пользователя
   useEffect(() => {
     const fetchNickname = async () => {
       if (!userId) return
@@ -200,7 +199,6 @@ export const Responses = () => {
     fetchNickname()
   }, [userId])
 
-  // Загрузка всех приглашений (входящие + исходящие)
   const { data: allInvites = [] } = useQuery({
     queryKey: queryKeys.invites.all,
     queryFn: async () => {
@@ -215,7 +213,6 @@ export const Responses = () => {
     refetchOnWindowFocus: true,
   })
 
-  // Загрузка входящих откликов на проекты пользователя
   const { data: incomingResponses = [] } = useQuery({
     queryKey: ['responses', 'incoming', userId],
     queryFn: async () => {
@@ -235,7 +232,6 @@ export const Responses = () => {
     refetchOnWindowFocus: true,
   })
 
-  // Загрузка исходящих откликов пользователя
   const { data: outgoingResponses = [] } = useQuery({
     queryKey: ['responses', 'outgoing', userId],
     queryFn: () => responseApi.getOutgoing(userId!),
@@ -245,19 +241,16 @@ export const Responses = () => {
     refetchOnWindowFocus: true,
   })
 
-  // Фильтрация входящих приглашений
   const incomingInvites = useMemo(() =>
     allInvites.filter((i: InviteData) => i.userId === userId),
     [allInvites, userId]
   )
 
-  // Фильтрация исходящих приглашений
   const outgoingInvites = useMemo(() =>
     allInvites.filter((i: InviteData) => i.userId !== userId),
     [allInvites, userId]
   )
 
-  // Мутация удаления отклика
   const deleteResponseMutation = useMutation({
     mutationFn: (responseId: string) => responseApi.delete(responseId),
     onSuccess: () => {
@@ -266,7 +259,6 @@ export const Responses = () => {
     },
   })
 
-  // Мутация удаления приглашения
   const deleteInviteMutation = useMutation({
     mutationFn: (inviteId: string) => inviteApi.delete(inviteId),
     onSuccess: () => {
@@ -274,7 +266,6 @@ export const Responses = () => {
     },
   })
 
-  // Обработка принятия/отклонения отклика
   const handleResponseAction = async (responseId: string, action: 'accept' | 'decline', response: ResponseData) => {
     try {
       await deleteResponseMutation.mutateAsync(responseId)
@@ -296,7 +287,6 @@ export const Responses = () => {
     }
   }
 
-  // Обработка принятия/отклонения приглашения
   const handleInviteAction = async (inviteId: string, action: 'accept' | 'decline', invite: InviteData) => {
     try {
       await deleteInviteMutation.mutateAsync(inviteId)
@@ -323,7 +313,6 @@ export const Responses = () => {
     }
   }
 
-  // Отмена исходящего отклика
   const handleCancelResponse = async (response: ResponseData) => {
     try {
       await deleteResponseMutation.mutateAsync(response.responseId)
@@ -347,7 +336,6 @@ export const Responses = () => {
     }
   }
 
-  // Отмена исходящего приглашения
   const handleCancelInvite = async (invite: InviteData) => {
     try {
       await deleteInviteMutation.mutateAsync(invite.inviteId)
@@ -367,7 +355,6 @@ export const Responses = () => {
     }
   }
 
-  // Навигация к странице проекта
   const navigateToProject = async (projectId: string) => {
     try {
       const project = await projectsApi.getProject(projectId)
@@ -377,7 +364,6 @@ export const Responses = () => {
     }
   }
 
-  // Проверка: есть ли какие-либо отклики или приглашения
   const hasAnyItems = allInvites.length > 0 || incomingResponses.length > 0 || outgoingResponses.length > 0
 
   return (

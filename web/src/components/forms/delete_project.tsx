@@ -11,6 +11,7 @@ interface DeleteProjectFormProps {
   onSuccess?: () => void
 }
 
+// Компонент формы удаления проекта (для владельца проекта)
 const Form = ({ projectId, onClose, onSuccess }: DeleteProjectFormProps) => {
   const [isDeleting, setIsDeleting] = useState(false)
 

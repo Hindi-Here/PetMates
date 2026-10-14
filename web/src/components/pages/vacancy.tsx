@@ -18,6 +18,7 @@ const FoundCount = ({ count }: { count: number }) => (
   </div>
 )
 
+// Компонент страницы со списком вакансий, включая поиск, фильтрацию и сортировку
 export default function Vacancy() {
   const [searchInput, setSearchInput] = useState('')
   const [appliedSearch, setAppliedSearch] = useState('')

@@ -283,6 +283,19 @@ namespace api.Controllers
                 return membership.Models.Count > 0;
             }
 
+            if (referenceType == "event")
+            {
+                var evResponse = await _client.From<Event>().Where(e => e.EventId == referenceId).Get();
+                var ev = evResponse.Models.FirstOrDefault();
+                if (ev == null) return false;
+                if (!ev.IsPrivate || ev.OwnerId == userId) return true;
+
+                var membership = await _client.From<EventMember>()
+                    .Where(m => m.EventId == referenceId && m.UserId == userId)
+                    .Get();
+                return membership.Models.Count > 0;
+            }
+
             return true;
         }
 
@@ -295,6 +308,19 @@ namespace api.Controllers
                     .Where(p => p.ProjectId == referenceId && p.OwnerId == userId)
                     .Get();
                 return project.Models.Count > 0;
+            }
+
+            if (referenceType == "event")
+            {
+                var evResponse = await _client.From<Event>().Where(e => e.EventId == referenceId).Get();
+                var ev = evResponse.Models.FirstOrDefault();
+                if (ev == null) return false;
+                if (!ev.IsPrivate || ev.OwnerId == userId) return true;
+
+                var membership = await _client.From<EventMember>()
+                    .Where(m => m.EventId == referenceId && m.UserId == userId)
+                    .Get();
+                return membership.Models.Count > 0;
             }
 
             return false;
