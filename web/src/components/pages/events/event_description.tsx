@@ -24,9 +24,9 @@ import { EventMarkdownEditor } from './event_markdown_editor'
 import { EventFooter } from './event_footer'
 import { useDraftAutosave } from '../../hooks/useDraftAutosave'
 
+import { LIMITS, TIMING } from '../../scripts/limits'
+
 const STATUS_OPTIONS = ['В процессе', 'Завершён', 'Приостановлен']
-const MAX_STAGES = 20
-const MAX_DESCRIPTION = 20000
 const STAGE_OUT_OF_RANGE = 'Этап должен входить в период проведения'
 
 interface StageForm {
@@ -99,12 +99,14 @@ const toPayload = (f: FormState): UpdateEventDto => ({
 // Валидация формы мероприятия, проверка обязательных полей, длины текста и корректности дат
 const validate = (f: FormState): Record<string, string> => {
   const errors: Record<string, string> = {}
-
   if (!f.title.trim()) errors.title = 'Введите название мероприятия'
-  else if (f.title.trim().length > 50) errors.title = 'Максимум 50 символов'
+  else if (f.title.trim().length > LIMITS.event.titleMax) errors.title = `Максимум ${LIMITS.event.titleMax} символов`
 
   if (!f.shortDescription.trim()) errors.shortDescription = 'Введите краткое описание'
-  else if (f.shortDescription.trim().length > 150) errors.shortDescription = 'Максимум 150 символов'
+  else if (f.shortDescription.trim().length > LIMITS.event.shortDescriptionMax) errors.shortDescription = `Максимум ${LIMITS.event.shortDescriptionMax} символов`
+
+  if (!f.shortDescription.trim()) errors.shortDescription = 'Введите краткое описание'
+  else if (f.shortDescription.trim().length > LIMITS.event.shortDescriptionMax) errors.shortDescription = `Максимум ${LIMITS.event.shortDescriptionMax} символов`
 
   const eventOk = !!f.eventStart && !!f.eventEnd && f.eventStart <= f.eventEnd
   if (!f.eventStart || !f.eventEnd) errors.event = 'Укажите даты проведения'
@@ -112,20 +114,19 @@ const validate = (f: FormState): Record<string, string> => {
 
   if (!f.noLimit) {
     const n = Number(f.limit)
-    if (!f.limit || !Number.isInteger(n) || n < 1 || n > 100000) errors.limit = 'Укажите число от 1 до 100000'
+    if (!f.limit || !Number.isInteger(n) || n < 1 || n > LIMITS.event.participantLimitMax) errors.limit = `Укажите число от 1 до ${LIMITS.event.participantLimitMax}`
   }
 
   f.stages.forEach(s => {
     const key = `stage:${s.id}`
     if (!s.title.trim()) errors[key] = 'Введите название этапа'
-    else if (s.title.trim().length > 50) errors[key] = 'Название: максимум 50 символов'
+    else if (s.title.trim().length > LIMITS.event.stageTitleMax) errors[key] = `Название: максимум ${LIMITS.event.stageTitleMax} символов`
     else if (!s.startDate || !s.endDate) errors[key] = 'Укажите даты этапа'
     else if (s.startDate > s.endDate) errors[key] = 'Дата окончания раньше даты начала'
     else if (eventOk && (s.startDate < f.eventStart || s.endDate > f.eventEnd)) errors[key] = STAGE_OUT_OF_RANGE
   })
 
-  if (f.description.length > MAX_DESCRIPTION) errors.description = `Максимум ${MAX_DESCRIPTION} символов`
-
+  if (f.description.length > LIMITS.longTextMax) errors.description = `Максимум ${LIMITS.longTextMax} символов`
   return errors
 }
 
@@ -197,10 +198,10 @@ export const EventDescription = ({ event, profileId, draft, onDraftChange }: Eve
       setForm(next)
       queryClient.invalidateQueries({ queryKey: queryKeys.events.all })
       setSaveSuccess(true)
-      setTimeout(() => setSaveSuccess(false), 3000)
+      setTimeout(() => setSaveSuccess(false), TIMING.toastMs)
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Не удалось сохранить мероприятие')
-      setTimeout(() => setSaveError(null), 4000)
+      setTimeout(() => setSaveError(null), TIMING.toastMs)
     } finally {
       setIsSaving(false)
     }
@@ -214,7 +215,7 @@ export const EventDescription = ({ event, profileId, draft, onDraftChange }: Eve
   const handleBack = () => navigate(eventsListPath, { replace: true })
 
   const addStage = () => {
-    if (form.stages.length >= MAX_STAGES) return
+    if (form.stages.length >= LIMITS.event.stagesMax) return
     update({
       stages: [...form.stages, { id: newStageId(), title: '', startDate: '', endDate: '', acceptsApplications: false }],
     })
@@ -235,7 +236,7 @@ export const EventDescription = ({ event, profileId, draft, onDraftChange }: Eve
   const renderError = (key: string) =>
     error(key) ? <p className='event-field-error'>{error(key)}</p> : null
 
-  const descriptionTooLong = form.description.length > MAX_DESCRIPTION
+  const descriptionTooLong = form.description.length > LIMITS.longTextMax
 
   return (
     <>
@@ -251,7 +252,7 @@ export const EventDescription = ({ event, profileId, draft, onDraftChange }: Eve
               <input
                 className={`project-field-input ${error('title') ? 'input-error' : ''}`}
                 value={form.title}
-                maxLength={50}
+                maxLength={LIMITS.event.titleMax}
                 onChange={e => update({ title: e.target.value })}
                 onBlur={() => touch('title')}
               />
@@ -265,7 +266,7 @@ export const EventDescription = ({ event, profileId, draft, onDraftChange }: Eve
               <textarea
                 className={`project-short-desc-editor ${error('shortDescription') ? 'input-error' : ''}`}
                 value={form.shortDescription}
-                maxLength={150}
+                maxLength={LIMITS.event.shortDescriptionMax}
                 placeholder='Кратко опишите суть мероприятия в 1-2 предложениях'
                 onChange={e => update({ shortDescription: e.target.value })}
                 onBlur={() => touch('shortDescription')}
@@ -336,7 +337,7 @@ export const EventDescription = ({ event, profileId, draft, onDraftChange }: Eve
                         className={`project-field-input event-stage-title ${message ? 'input-error' : ''}`}
                         placeholder='Название этапа'
                         value={stage.title}
-                        maxLength={50}
+                        maxLength={LIMITS.event.stageTitleMax}
                         onChange={e => updateStage(stage.id, { title: e.target.value })}
                       />
                       <DatePicker
@@ -375,7 +376,7 @@ export const EventDescription = ({ event, profileId, draft, onDraftChange }: Eve
                 type='button'
                 className='event-add-stage-btn'
                 onClick={addStage}
-                disabled={form.stages.length >= MAX_STAGES}
+                disabled={form.stages.length >= LIMITS.event.stagesMax}
               >
                 <Add className='event-add-stage-ico' />
                 <span>Добавить этап</span>
@@ -415,7 +416,7 @@ export const EventDescription = ({ event, profileId, draft, onDraftChange }: Eve
           <h2 className='project-section-title'>Описание мероприятия</h2>
           {descriptionChanged && <span className='draft-indicator'>(черновик)</span>}
           <span className={`event-char-counter ${descriptionTooLong ? 'limit' : ''}`}>
-            {form.description.length} / {MAX_DESCRIPTION}
+            {form.description.length} / {LIMITS.longTextMax}
           </span>
         </div>
 

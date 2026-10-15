@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { TIMING } from '../scripts/limits'
 
 interface DraftAutosaveOptions<T> {
   enabled?: boolean
@@ -20,7 +21,7 @@ export const useDraftAutosave = <T,>({
   discard,
   hasServerDraft = false,
   onSaved,
-  delay = 1000,
+  delay = TIMING.draftAutosaveMs,
 }: DraftAutosaveOptions<T>) => {
   const latest = useRef({ save, discard, onSaved, payload })
   latest.current = { save, discard, onSaved, payload }

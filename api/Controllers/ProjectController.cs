@@ -14,28 +14,6 @@ namespace api.Controllers
         private readonly Supabase.Client _client = client;
         private readonly SupportManager _SupMan = SupMan;
 
-        private static readonly Dictionary<string, string> StatusToEnum = new()
-        {
-            { "В процессе", "in_progress" },
-            { "Завершён", "completed" },
-            { "Приостановлен", "paused" }
-        };
-
-        private static readonly Dictionary<string, string> EnumToStatus = new()
-        {
-            { "in_progress", "В процессе" },
-            { "completed", "Завершён" },
-            { "paused", "Приостановлен" }
-        };
-
-        private static string ToEnumStatus(string status) => StatusToEnum.TryGetValue(status, out var enumStatus)
-                ? enumStatus
-                : "in_progress";
-
-        private static string ToRuStatus(string enumStatus) => EnumToStatus.TryGetValue(enumStatus, out var ruStatus)
-                ? ruStatus
-                : "В процессе";
-
         // Получить список проектов текущего пользователя
         [HttpGet("my")]
         public async Task<IActionResult> GetMyProjects()
@@ -43,7 +21,7 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = _SupMan.GetUserId(authHeader);
+                var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 
@@ -66,7 +44,7 @@ namespace api.Controllers
                         p.Title,
                         p.ShortDescription,
                         p.FullDescription,
-                        Status = ToRuStatus(p.Status),
+                        Status = SupportManager.ToRuStatus(p.Status),
                         StatusChangedAt = p.StatusChangedAt?.ToString("o"),
                         p.RatingCount,
                         CreatedAt = p.CreatedAt?.ToString("o"),
@@ -90,7 +68,7 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = _SupMan.GetUserId(authHeader);
+                var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (!string.IsNullOrEmpty(userId))
                 {
                     await _SupMan.UpdateLastOnlineAsync(userId);
@@ -104,8 +82,8 @@ namespace api.Controllers
                 if (project == null)
                     return NotFound();
 
-                bool isStaff = await IsUserStaff(userId!);
-                if (!await CanViewProject(project, userId, isStaff))
+                bool isStaff = await _SupMan.IsStaffAsync(userId!);
+                if (!await _SupMan.CanViewProject(project, userId, isStaff))
                     return NotFound();
 
                 return Ok(new
@@ -114,7 +92,7 @@ namespace api.Controllers
                     project.Title,
                     project.ShortDescription,
                     project.FullDescription,
-                    Status = ToRuStatus(project.Status),
+                    Status = SupportManager.ToRuStatus(project.Status),
                     StatusChangedAt = project.StatusChangedAt?.ToString("o"),
                     project.RatingCount,
                     project.IsPrivate,
@@ -135,13 +113,13 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var currentUserId = _SupMan.GetUserId(authHeader);
+                var currentUserId = await _SupMan.GetUserIdAsync(authHeader);
                 if (!string.IsNullOrEmpty(currentUserId))
                 {
                     await _SupMan.UpdateLastOnlineAsync(currentUserId);
                 }
 
-                bool isStaff = await IsUserStaff(currentUserId!);
+                bool isStaff = await _SupMan.IsStaffAsync(currentUserId!);
                 var projectsResponse = await _client.From<Project>()
                     .Where(p => p.OwnerId == userId)
                     .Get();
@@ -149,7 +127,7 @@ namespace api.Controllers
                 var projects = new List<object>();
                 foreach (var p in projectsResponse.Models)
                 {
-                    if (!await CanViewProject(p, currentUserId, isStaff))
+                    if (!await _SupMan.CanViewProject(p, currentUserId, isStaff))
                         continue;
 
                     var membersResponse = await _client.From<ProjectMember>()
@@ -162,7 +140,7 @@ namespace api.Controllers
                         p.Title,
                         p.ShortDescription,
                         p.FullDescription,
-                        Status = ToRuStatus(p.Status),
+                        Status = SupportManager.ToRuStatus(p.Status),
                         StatusChangedAt = p.StatusChangedAt?.ToString("o"),
                         p.RatingCount,
                         p.IsPrivate,
@@ -187,7 +165,7 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = _SupMan.GetUserId(authHeader);
+                var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 
@@ -200,7 +178,7 @@ namespace api.Controllers
                     Title = dto.Title,
                     ShortDescription = dto.ShortDescription,
                     FullDescription = dto.FullDescription,
-                    Status = ToEnumStatus(dto.Status ?? "В процессе"),
+                    Status = SupportManager.ToEnumStatus(dto.Status ?? "В процессе"),
                     StatusChangedAt = DateTime.UtcNow,
                     RatingCount = 0,
                     IsPrivate = dto.IsPrivate,
@@ -228,7 +206,7 @@ namespace api.Controllers
                     created.Title,
                     created.ShortDescription,
                     created.FullDescription,
-                    Status = ToRuStatus(created.Status),
+                    Status = SupportManager.ToRuStatus(created.Status),
                     StatusChangedAt = created.StatusChangedAt?.ToString("o"),
                     created.RatingCount,
                     CreatedAt = created.CreatedAt?.ToString("o"),
@@ -249,7 +227,7 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = _SupMan.GetUserId(authHeader);
+                var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 
@@ -279,7 +257,7 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = _SupMan.GetUserId(authHeader);
+                var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
                 var rating = await _client.From<ProjectRating>()
@@ -301,7 +279,7 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = _SupMan.GetUserId(authHeader);
+                var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
                 var existingRating = await _client.From<ProjectRating>()
@@ -343,7 +321,7 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = _SupMan.GetUserId(authHeader);
+                var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
                 var rating = await _client.From<ProjectRating>()
@@ -382,13 +360,13 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var currentUserId = _SupMan.GetUserId(authHeader);
+                var currentUserId = await _SupMan.GetUserIdAsync(authHeader);
                 if (!string.IsNullOrEmpty(currentUserId))
                     await _SupMan.UpdateLastOnlineAsync(currentUserId);
 
                 var ratings = await _client.From<ProjectRating>().Where(r => r.UserId == userId).Get();
                 var favoriteProjects = new List<object>();
-                bool isStaff = await IsUserStaff(currentUserId!);
+                bool isStaff = await _SupMan.IsStaffAsync(currentUserId!);
 
                 foreach (var rating in ratings.Models)
                 {
@@ -402,7 +380,7 @@ namespace api.Controllers
                     if (owner == null || (owner.IsBanned == true && !isStaff))
                         continue;
 
-                    if (!await CanViewProject(p, currentUserId, isStaff))
+                    if (!await _SupMan.CanViewProject(p, currentUserId, isStaff))
                         continue;
 
                     var membersResponse = await _client.From<ProjectMember>().Where(pm => pm.ProjectId == p.ProjectId).Get();
@@ -413,7 +391,7 @@ namespace api.Controllers
                         p.Title,
                         p.ShortDescription,
                         p.FullDescription,
-                        Status = ToRuStatus(p.Status),
+                        Status = SupportManager.ToRuStatus(p.Status),
                         StatusChangedAt = p.StatusChangedAt?.ToString("o"),
                         p.RatingCount,
                         CreatedAt = p.CreatedAt?.ToString("o"),
@@ -439,13 +417,13 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var currentUserId = _SupMan.GetUserId(authHeader);
+                var currentUserId = await _SupMan.GetUserIdAsync(authHeader);
                 if (!string.IsNullOrEmpty(currentUserId))
                     await _SupMan.UpdateLastOnlineAsync(currentUserId);
 
                 var memberProjects = await _client.From<ProjectMember>().Where(pm => pm.UserId == userId).Get();
                 var projects = new List<object>();
-                bool isStaff = await IsUserStaff(currentUserId!);
+                bool isStaff = await _SupMan.IsStaffAsync(currentUserId!);
 
                 foreach (var member in memberProjects.Models)
                 {
@@ -456,7 +434,7 @@ namespace api.Controllers
                     if (projectResponse.Models.Count == 0) continue;
 
                     var p = projectResponse.Models.First();
-                    if (!await CanViewProject(p, currentUserId, isStaff)) continue;
+                    if (!await _SupMan.CanViewProject(p, currentUserId, isStaff)) continue;
 
                     var membersResponse = await _client.From<ProjectMember>().Where(pm => pm.ProjectId == p.ProjectId).Get();
 
@@ -466,7 +444,7 @@ namespace api.Controllers
                         p.Title,
                         p.ShortDescription,
                         p.FullDescription,
-                        Status = ToRuStatus(p.Status),
+                        Status = SupportManager.ToRuStatus(p.Status),
                         StatusChangedAt = p.StatusChangedAt?.ToString("o"),
                         p.RatingCount,
                         CreatedAt = p.CreatedAt?.ToString("o"),
@@ -494,7 +472,7 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = _SupMan.GetUserId(authHeader);
+                var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
                 var ownerCheck = await _client.From<Project>()
@@ -544,7 +522,7 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = _SupMan.GetUserId(authHeader);
+                var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
                 var ownerCheck = await _client.From<Project>()
@@ -562,7 +540,7 @@ namespace api.Controllers
                     Title = dto.Title,
                     ShortDescription = dto.ShortDescription,
                     FullDescription = dto.FullDescription,
-                    Status = !string.IsNullOrEmpty(dto.Status) ? ToEnumStatus(dto.Status) : null,
+                    Status = !string.IsNullOrEmpty(dto.Status) ? SupportManager.ToEnumStatus(dto.Status) : null,
                     IsPrivate = dto.IsPrivate,
                     VacanciesDraft = dto.Vacancies != null ? JsonSerializer.Serialize(dto.Vacancies) : null,
                     DeletedVacancyIds = dto.DeletedVacancyIds != null ? JsonSerializer.Serialize(dto.DeletedVacancyIds) : null,
@@ -588,7 +566,7 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = _SupMan.GetUserId(authHeader);
+                var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
                 var ownerCheck = await _client.From<Project>()
@@ -626,7 +604,7 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = _SupMan.GetUserId(authHeader);
+                var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
                 var response = await _client.From<Project>()
@@ -686,7 +664,7 @@ namespace api.Controllers
 
                 var newTitle = dto.Title ?? project.Title;
                 var newShort = dto.ShortDescription ?? project.ShortDescription;
-                var newStatus = !string.IsNullOrEmpty(dto.Status) ? ToEnumStatus(dto.Status) : project.Status;
+                var newStatus = !string.IsNullOrEmpty(dto.Status) ? SupportManager.ToEnumStatus(dto.Status) : project.Status;
                 var newIsPrivate = dto.IsPrivate ?? project.IsPrivate;
                 var statusChanged = newStatus != project.Status;
 
@@ -719,14 +697,14 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = _SupMan.GetUserId(authHeader);
+                var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
                 var project = await _client.From<Project>().Where(p => p.ProjectId == projectId).Get();
                 if (project.Models.Count == 0) return NotFound();
 
-                bool isStaff = await IsUserStaff(userId);
-                if (!await CanViewProject(project.Models.First(), userId, isStaff)) return Forbid();
+                bool isStaff = await _SupMan.IsStaffAsync(userId);
+                if (!await _SupMan.CanViewProject(project.Models.First(), userId, isStaff)) return Forbid();
 
                 var draftResponse = await _client.From<ProjectDraft>().Where(d => d.ProjectId == projectId).Get();
                 var draft = draftResponse.Models.FirstOrDefault();
@@ -750,7 +728,7 @@ namespace api.Controllers
                         {
                             name = file.Name,
                             url = publicUrl,
-                            size = GetFileSize(file),
+                            size = SupportManager.GetFileSize(file),
                             uploadedAt = file.CreatedAt ?? DateTime.UtcNow,
                             isDraft = false
                         });
@@ -786,13 +764,13 @@ namespace api.Controllers
 
         // Загрузка медиа
         [HttpPost("{projectId}/media/draft")]
-        [RequestSizeLimit(52_000_000)]
+        [RequestSizeLimit(Limits.Upload.MediaRequestBytes)]
         public async Task<IActionResult> UploadDraftMedia(string projectId, [FromForm] IFormFile file)
         {
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = _SupMan.GetUserId(authHeader);
+                var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
                 var project = await _client.From<Project>()
@@ -807,10 +785,9 @@ namespace api.Controllers
                 if (!allowedTypes.Contains(file.ContentType))
                     return BadRequest(new { message = "Недопустимый формат файла" });
 
-                const long maxTotalSize = 50 * 1024 * 1024;
-                var currentTotal = await GetTotalProjectMediaSize(projectId);
-                if (currentTotal + file.Length > maxTotalSize)
-                    return BadRequest(new { message = "Общий размер вложений не должен превышать 50 МБ" });
+                var currentTotal = await _SupMan.GetTotalProjectMediaSize(projectId);
+                if (currentTotal + file.Length > Limits.Upload.MediaTotalMaxBytes)
+                    return BadRequest(new { message = $"Общий размер вложений не должен превышать {Limits.Upload.MediaTotalMaxBytes / Limits.MB} МБ" });
 
                 using var stream = new MemoryStream();
                 await file.CopyToAsync(stream);
@@ -839,7 +816,7 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = _SupMan.GetUserId(authHeader);
+                var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
                 var project = await _client.From<Project>()
@@ -892,89 +869,6 @@ namespace api.Controllers
             {
                 return StatusCode(500, ex.Message);
             }
-        }
-
-        // ВСПОМОГАТЕЛЬНОЕ
-
-        // Получить размер файла
-        private static long GetFileSize(Supabase.Storage.FileObject file)
-        {
-            if (file.MetaData != null && file.MetaData.TryGetValue("size", out var sizeObj))
-            {
-                if (sizeObj is JsonElement je && je.TryGetInt64(out var size))
-                    return size;
-                if (long.TryParse(sizeObj.ToString(), out var parsed))
-                    return parsed;
-            }
-            return 0;
-        }
-
-        // Получить общий размер медиа проекта
-        private async Task<long> GetTotalProjectMediaSize(string projectId)
-        {
-            long total = 0;
-
-            var draftResponse = await _client.From<ProjectDraft>().Where(d => d.ProjectId == projectId).Get();
-            var draft = draftResponse.Models.FirstOrDefault();
-            var deletedFileNames = string.IsNullOrEmpty(draft?.DeletedMediaFiles)
-                ? []
-                : JsonSerializer.Deserialize<List<string>>(draft!.DeletedMediaFiles!) ?? [];
-
-            var cleanFiles = await _client.Storage.From("ProjectMedia").List(projectId);
-            if (cleanFiles != null)
-            {
-                foreach (var f in cleanFiles)
-                {
-                    if (string.IsNullOrEmpty(f.Name) || deletedFileNames.Contains(f.Name)) continue;
-                    total += GetFileSize(f);
-                }
-            }
-
-            var draftFiles = await _client.Storage.From("ProjectMediaDraft").List(projectId);
-            if (draftFiles != null)
-            {
-                foreach (var f in draftFiles)
-                {
-                    if (string.IsNullOrEmpty(f.Name)) continue;
-                    total += GetFileSize(f);
-                }
-            }
-
-            return total;
-        }
-
-        // Проверка прав на просмотр проекта
-        private async Task<bool> CanViewProject(Project project, string? currentUserId, bool isStaff)
-        {
-            var ownerResponse = await _client.From<User>().Where(u => u.UserId == project.OwnerId).Get();
-            var owner = ownerResponse.Models.FirstOrDefault();
-
-            if (owner != null && owner.IsBanned && !isStaff)
-                return false;
-
-            if (!project.IsPrivate)
-                return true;
-
-            if (string.IsNullOrEmpty(currentUserId))
-                return false;
-
-            if (project.OwnerId == currentUserId)
-                return true;
-
-            var membership = await _client.From<ProjectMember>()
-                .Where(pm => pm.ProjectId == project.ProjectId && pm.UserId == currentUserId)
-                .Get();
-
-            return membership.Models.Count > 0;
-        }
-
-        // Является ли пользователь стафом
-        private async Task<bool> IsUserStaff(string userId)
-        {
-            if (string.IsNullOrEmpty(userId)) return false;
-            var user = await _client.From<User>().Where(u => u.UserId == userId).Get();
-            var role = user.Models.FirstOrDefault()?.SystemRole;
-            return role == "admin" || role == "moderator";
         }
     }
 }

@@ -19,7 +19,7 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = _SupMan.GetUserId(authHeader);
+                var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (!string.IsNullOrEmpty(userId))
                 {
                     await _SupMan.UpdateLastOnlineAsync(userId);
@@ -84,7 +84,7 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var currentUserId = _SupMan.GetUserId(authHeader);
+                var currentUserId = await _SupMan.GetUserIdAsync(authHeader);
 
                 if (string.IsNullOrEmpty(currentUserId))
                     return Unauthorized();
@@ -137,7 +137,7 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = _SupMan.GetUserId(authHeader);
+                var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 
@@ -160,7 +160,7 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = _SupMan.GetUserId(authHeader);
+                var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 
@@ -231,7 +231,7 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = _SupMan.GetUserId(authHeader);
+                var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 

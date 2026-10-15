@@ -48,7 +48,7 @@ namespace api.Controllers
                     });
                 }
 
-                return Ok(ModelFromResponse(data, userAuth.Email));
+                return Ok(Mappers.ProfileResponse(data, userAuth.Email));
             }
             catch (Exception)
             {
@@ -134,10 +134,10 @@ namespace api.Controllers
                 if (updated.Models == null || updated.Models.Count == 0)
                 {
                     var current = await _client.From<User>().Where(x => x.UserId == userAuth.Id).Get();
-                    return Ok(ModelFromResponse(current.Models.First(), userAuth.Email));
+                    return Ok(Mappers.ProfileResponse(current.Models.First(), userAuth.Email));
                 }
 
-                return Ok(ModelFromResponse(updated.Models.First(), userAuth.Email));
+                return Ok(Mappers.ProfileResponse(updated.Models.First(), userAuth.Email));
             }
             catch (Exception)
             {
@@ -145,35 +145,9 @@ namespace api.Controllers
             }
         }
 
-        // Преобразовать профиль пользователя в объект
-        private static object ModelFromResponse(User profile, string? email = null)
-        {
-            return new
-            {
-                email,
-                userId = profile.UserId,
-                nickname = profile.Nickname,
-                avatarUrl = profile.AvatarUrl,
-                realName = profile.RealName,
-                age = profile.Age,
-                gender = profile.Gender,
-                country = profile.Country,
-                city = profile.City,
-                workplace = profile.Workplace,
-                profileRole = profile.ProfileRole,
-                systemRole = profile.SystemRole,
-                description = profile.Description,
-                hardSkills = profile.HardSkills,
-                softSkills = profile.SoftSkills,
-                contacts = profile.Contacts,
-                lastOnlineAt = profile.LastOnlineAt,
-                createdAt = profile.CreatedAt,
-            };
-        }
-
         // Обновить аватар
         [HttpPost("me/avatar")]
-        [RequestSizeLimit(5_500_000)] 
+        [RequestSizeLimit(Limits.Upload.AvatarRequestBytes)]
         public async Task<IActionResult> UploadAvatar(IFormFile file)
         {
             var authHeader = Request.Headers.Authorization.ToString();

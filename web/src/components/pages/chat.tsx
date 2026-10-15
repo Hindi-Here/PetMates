@@ -17,11 +17,19 @@ import { useState, useEffect, useRef, useMemo, Fragment } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '../scripts/query/queryKeys'
-import { conversationApi, type MessageData } from '../services/conversation'
+import { conversationApi, type MessageData, type ConversationData } from '../services/conversation'
 import { usersApi } from '../services/users'
 import { useAuth } from '../hooks/useAuth'
 
+import { TIMING } from '../scripts/limits'
+
 type MessageStatus = 'wait' | 'sent' | 'read'
+
+interface MessagesResponse {
+  messages: MessageData[];
+  otherLastReadAt: string | null;
+  previousLastReadAt?: string | null;
+}
 
 // Определение статуса доставки сообщения
 const getMessageStatus = (msg: MessageData, otherLastReadAt: string | null): MessageStatus => {
@@ -101,7 +109,7 @@ export const Chat = () => {
 
   useEffect(() => {
     if (messagesResponse && !hasCapturedUnreadRef.current) {
-      setUnreadDividerTimestamp((messagesResponse as any)?.previousLastReadAt ?? null)
+      setUnreadDividerTimestamp((messagesResponse as MessagesResponse)?.previousLastReadAt ?? null)
       hasCapturedUnreadRef.current = true
     }
   }, [messagesResponse])
@@ -177,14 +185,14 @@ export const Chat = () => {
     if (!el) return
     el.scrollIntoView({ behavior: 'smooth', block: 'center' })
     el.classList.add('chat-message-highlight')
-    setTimeout(() => el.classList.remove('chat-message-highlight'), 1200)
+    setTimeout(() => el.classList.remove('chat-message-highlight'), TIMING.messageHighlightMs)
   }
 
   const sendMutation = useMutation({
     mutationFn: (content: string) => conversationApi.sendMessage(conversationId!, content, replyingTo?.messageId),
     onMutate: async (content: string) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.conversations.messages(conversationId!) })
-      const previous = queryClient.getQueryData<any>(queryKeys.conversations.messages(conversationId!))
+      const previous = queryClient.getQueryData<MessagesResponse>(queryKeys.conversations.messages(conversationId!))
 
       const optimisticMessage: MessageData = {
         messageId: `temp-${Date.now()}`,
@@ -202,7 +210,7 @@ export const Chat = () => {
         createdAt: new Date().toISOString(),
       }
 
-      queryClient.setQueryData(queryKeys.conversations.messages(conversationId!), (old: any) => ({
+      queryClient.setQueryData(queryKeys.conversations.messages(conversationId!), (old: MessagesResponse | undefined) => ({
         ...old,
         messages: [...(old?.messages || []), optimisticMessage],
       }))
@@ -294,7 +302,7 @@ export const Chat = () => {
     try {
       await navigator.clipboard.writeText(msg.content)
       setCopiedMessageId(msg.messageId)
-      setTimeout(() => setCopiedMessageId(null), 1500)
+      setTimeout(() => setCopiedMessageId(null), TIMING.copiedMarkMs)
     } catch (err) {
       console.error('Не удалось скопировать:', err)
     }
@@ -340,7 +348,7 @@ export const Chat = () => {
     return messages.filter(m => !m.isDeleted && (m.content || '').toLowerCase().includes(q))
   }, [messages, searchQuery])
 
-  const renderForwardItem = (c: any) => (
+  const renderForwardItem = (c: ConversationData) => (
     <div
       key={c.conversationId}
       className='chat-forward-item'

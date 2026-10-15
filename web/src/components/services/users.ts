@@ -10,10 +10,14 @@ export interface UserData {
   city?: string;
   workplace?: string;
   profileRole?: string;
+  systemRole?: string;
+  isBanned?: boolean;
+  bannedReason?: string;
   hardSkills?: string[];
   lastOnlineAt?: string;
   isOnline: boolean;
   lastSeen: string;
+  createdAt?: string;
 }
 
 export interface UserSearchResult {

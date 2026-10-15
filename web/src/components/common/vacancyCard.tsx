@@ -18,7 +18,11 @@ import { responseApi } from '../services/response'
 import { notificationApi } from '../services/notification'
 import { usersApi } from '../services/users'
 import type { VacancyData } from '../services/vacancy'
+import type { UserData } from '../services/users'
+import type { ProjectMemberData } from '../services/project_members' // <-- Убедитесь, что этот тип экспортируется
 import DeleteVacancyModerationForm from '../forms/delete_vacancy_moderation'
+
+type NotificationContextData = Record<string, string | number | boolean | null | undefined>;
 
 // Функция для отправки уведомлений пользователю
 const sendNotification = (
@@ -26,7 +30,7 @@ const sendNotification = (
   referenceType: string,
   referenceId: string,
   eventType: string,
-  contextData: Record<string, any>
+  contextData: NotificationContextData
 ) => {
   notificationApi.create({
     userId,
@@ -64,18 +68,18 @@ export const VacancyCard = ({
   const hasResponded = responseStatus?.hasResponded || false
   const [projectOwnerId, setProjectOwnerId] = useState<string | null>(null)
   const [currentUserNickname, setCurrentUserNickname] = useState<string | null>(null)
-  const [projectOwnerRole, setProjectOwnerRole] = useState<string | null>(null)
+  const [projectOwnerRole, setProjectOwnerRole] = useState<string>('user')
   const [ownerIsBanned, setOwnerIsBanned] = useState(false)
   const [showDeleteForm, setShowDeleteForm] = useState(false)
 
-  const { data: projectMembers = [] } = useQuery({
+  const { data: projectMembers = [] } = useQuery<ProjectMemberData[]>({
     queryKey: queryKeys.projects.memberProjects(vacancy.projectId!),
     queryFn: () => projectMembersApi.getByProject(vacancy.projectId!),
     enabled: !!vacancy.projectId && !!userId,
     staleTime: 5 * 60 * 1000,
   })
 
-  const isTeamMember = projectMembers.some((member: any) => member.userId === userId)
+  const isTeamMember = projectMembers.some((member: ProjectMemberData) => member.userId === userId)
 
   useEffect(() => {
     const checkOwner = async () => {
@@ -85,13 +89,16 @@ export const VacancyCard = ({
         const project = await projectsApi.getProject(vacancy.projectId)
         setProjectOwnerId(project.ownerId)
         
-        const ownerUser = await usersApi.getUserById(project.ownerId)
-        setProjectOwnerRole((ownerUser as any).systemRole || 'user')
-        setOwnerIsBanned((ownerUser as any).isBanned || false)
+        // Явное приведение к UserData, если API не типизирован идеально, 
+        // но лучше, чтобы usersApi.getUserById возвращал UserData
+        const ownerUser = await usersApi.getUserById(project.ownerId) as UserData | null
+        
+        setProjectOwnerRole(ownerUser?.systemRole ?? 'user')
+        setOwnerIsBanned(ownerUser?.isBanned ?? false)
         
         if (userId) {
-          const currentUser = await usersApi.getUserById(userId)
-          setCurrentUserNickname(currentUser?.nickname || null)
+          const currentUser = await usersApi.getUserById(userId) as UserData | null
+          setCurrentUserNickname(currentUser?.nickname ?? null)
         }
       } catch (error) {
         console.error('Ошибка проверки владельца:', error)

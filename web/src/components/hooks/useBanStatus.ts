@@ -1,20 +1,20 @@
 import { useAuth } from './useAuth'
 import { useQuery } from '@tanstack/react-query'
-import { usersApi } from '../services/users'
+import { usersApi, type UserData } from '../services/users'
 
 // Хук для получения статуса блокировки пользователя
 export const useBanStatus = () => {
   const { userId, isAuthenticated } = useAuth()
 
-  const { data: userData, isLoading } = useQuery({
+  const { data: userData, isLoading } = useQuery<UserData | undefined>({
     queryKey: ['users', 'byId', userId],
     queryFn: () => usersApi.getUserById(userId!),
     enabled: Boolean(isAuthenticated && userId),
     retry: 1
   })
 
-  const isBanned = (userData as any)?.isBanned === true
-  const bannedReason = (userData as any)?.bannedReason as string | undefined
+  const isBanned = userData?.isBanned === true
+  const bannedReason = userData?.bannedReason
 
   const isResolving =
     isAuthenticated === null ||

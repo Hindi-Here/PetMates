@@ -1,6 +1,5 @@
 import './project.scss'
 import '../common/comment.scss'
-
 import Add from '@icons/plus.svg?react'
 import Delete from '@icons/delete.svg?react'
 import Edit from '@icons/edit.svg?react'
@@ -14,7 +13,6 @@ import InfoIcon from '@icons/info.svg?react'
 import DropdownIcon from '@icons/dropdown.svg?react'
 import CopyIcon from '@icons/copy.svg?react'
 import RejectIcon from '@icons/reject.svg?react'
-
 import { useEffect, useState, useRef, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Toggle } from '../common/toggle'
@@ -25,7 +23,6 @@ import { Dropdown } from '../common/dropdown'
 import { validatorFormat, validatorRegex, useChangeInput, useIsOpen } from '../scripts/function'
 import { useAuth } from '../hooks/useAuth'
 import { useDraftAutosave } from '../hooks/useDraftAutosave'
-
 import { ProjectPublicView } from './project_public_view'
 import { projectsApi, projectDraftApi, type ProjectDraftData } from '../services/project'
 import { projectMembersApi } from '../services/project_members'
@@ -35,12 +32,11 @@ import { commentApi, type CommentData } from '../services/comment'
 import { responseApi, type ResponseData } from '../services/response'
 import { inviteApi, type InviteData } from '../services/invite'
 import { notificationApi } from '../services/notification'
-
 import DeleteProjectForm from '../forms/delete_project'
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '../scripts/query/queryKeys'
 import { UserCard } from '../common/userCard'
+import { LIMITS, TIMING } from '../scripts/limits'
 
 export interface TeamMemberWithUser {
   memberId: string
@@ -64,33 +60,17 @@ interface CommentNode extends CommentData {
 
 const STATUS_OPTIONS = ['В процессе', 'Завершён', 'Приостановлен']
 const reverseStatusMap: Record<string, string> = { 'В процессе': 'in_progress', 'Завершён': 'completed', 'Приостановлен': 'paused' }
-const MAX_DESCRIPTION = 20000
 
 const getVisualLineCount = (text: string, element: HTMLElement) => {
   const computed = window.getComputedStyle(element)
   const lineHeight = parseFloat(computed.lineHeight)
   if (isNaN(lineHeight)) return text.split('\n').length
-
   const mirror = document.createElement('div')
-  mirror.style.cssText = `
-    position: absolute;
-    visibility: hidden;
-    height: auto;
-    width: ${element.clientWidth}px;
-    font-family: ${computed.fontFamily};
-    font-size: ${computed.fontSize};
-    font-weight: ${computed.fontWeight};
-    line-height: ${computed.lineHeight};
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    padding: 0;
-    box-sizing: border-box;
-  `
+  mirror.style.cssText = `position: absolute; visibility: hidden; height: auto; width: ${element.clientWidth}px; font-family: ${computed.fontFamily}; font-size: ${computed.fontSize}; font-weight: ${computed.fontWeight}; line-height: ${computed.lineHeight}; white-space: pre-wrap; word-wrap: break-word; padding: 0; box-sizing: border-box;`
   mirror.textContent = text || '.'
   document.body.appendChild(mirror)
   const height = mirror.offsetHeight
   document.body.removeChild(mirror)
-
   return Math.ceil(height / lineHeight)
 }
 
@@ -143,14 +123,12 @@ const TeamMemberProjectCard = ({
   isOwner: boolean
 }) => {
   const user = member.userData
-
   const [isEditingRole, setIsEditingRole] = useState(false)
   const [editedRole, setEditedRole] = useState(member.role)
   const [roleError, setRoleError] = useState<string | null>(null)
   const roleInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => { setEditedRole(member.role) }, [member.role])
-
   useEffect(() => {
     if (isEditingRole && roleInputRef.current) {
       roleInputRef.current.focus()
@@ -161,8 +139,8 @@ const TeamMemberProjectCard = ({
   const checkRoleFormat = (value: string): string | null => {
     const rules: Array<[boolean, string]> = [
       [!validatorFormat.required(value), 'Введите роль'],
-      [!validatorFormat.maxLength(value, 50), 'Максимум 50 символов'],
-      [value.length > 0 && value.length < 2, 'Минимум 2 символа'],
+      [!validatorFormat.maxLength(value, LIMITS.member.roleMax), 'Максимум 50 символов'],
+      [value.length > 0 && value.length < LIMITS.member.roleMin, 'Минимум 2 символа'],
     ]
     const error = rules.find(([isInvalid]) => isInvalid)
     return error?.[1] ?? null
@@ -170,7 +148,7 @@ const TeamMemberProjectCard = ({
 
   if (!user) return null
 
-  const isBanned = (user as any)?.isBanned === true
+  const isBanned = user?.isBanned === true
 
   const startEdit = () => {
     setIsEditingRole(true)
@@ -243,7 +221,7 @@ const TeamMemberProjectCard = ({
         onChange={e => { setEditedRole(e.target.value); if (roleError) setRoleError(null) }}
         onKeyDown={handleRoleKeyDown}
         placeholder='Роль'
-        maxLength={50}
+        maxLength={LIMITS.member.roleMax}
       />
       {roleError && <p className='field-error-text'>{roleError}</p>}
     </>
@@ -267,7 +245,7 @@ const sendNotification = (
   referenceType: string,
   referenceId: string,
   eventType: string,
-  contextData: Record<string, any>,
+  contextData: Record<string, string | number | boolean | null | undefined>,
   projectName: string
 ) => {
   const notificationData = {
@@ -280,7 +258,6 @@ const sendNotification = (
       projectName,
     }
   }
-
   notificationApi.create(notificationData)
     .then(() => { })
     .catch(err => {
@@ -295,7 +272,7 @@ const notifyAllMembersExceptOwner = (
   referenceType: string,
   referenceId: string,
   eventType: string,
-  contextData: Record<string, any>,
+  contextData: Record<string, string | number | boolean | null | undefined>,
   projectName: string,
   excludeUserIds: string[] = []
 ) => {
@@ -304,7 +281,6 @@ const notifyAllMembersExceptOwner = (
     m.userId !== ownerId &&
     !excludeUserIds.includes(m.userId)
   )
-
   membersToNotify.forEach(member => {
     sendNotification(member.userId, referenceType, referenceId, eventType, contextData, projectName)
   })
@@ -313,11 +289,9 @@ const notifyAllMembersExceptOwner = (
 const buildCommentTree = (commentsList: CommentData[]): CommentNode[] => {
   const map = new Map<string, CommentNode>()
   const roots: CommentNode[] = []
-
   commentsList.forEach(c => {
     map.set(c.commentId, { ...c, replies: [] })
   })
-
   commentsList.forEach(c => {
     const node = map.get(c.commentId)!
     if (c.parentCommentId && map.has(c.parentCommentId)) {
@@ -326,7 +300,6 @@ const buildCommentTree = (commentsList: CommentData[]): CommentNode[] => {
       roots.push(node)
     }
   })
-
   return roots
 }
 
@@ -345,66 +318,52 @@ export const Project = ({ onCancel }: ProjectProps) => {
   const [isSaving, setIsSaving] = useState(false)
   const [projectRating, setProjectRating] = useState(0)
   const [isPrivate, setIsPrivate] = useState(false)
-
   const [hasBasicInfoDraft, setHasBasicInfoDraft] = useState(false)
   const [hasDescriptionDraft, setHasDescriptionDraft] = useState(false)
   const [hasTeamDraft, setHasTeamDraft] = useState(false)
   const [hasVacanciesDraft, setHasVacanciesDraft] = useState(false)
-
   const [loadedDraft, setLoadedDraft] = useState<ProjectDraftData | null | undefined>(undefined)
-
   const [newComment, setNewComment] = useState('')
   const [replyingTo, setReplyingTo] = useState<string | null>(null)
   const [replyContent, setReplyContent] = useState('')
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
   const [editContent, setEditContent] = useState('')
-
   const [name, setName] = useState('Unnamed')
   const [shortDesc, setShortDesc] = useState('')
   const [status, setStatus] = useState(STATUS_OPTIONS[0])
   const { isOpen: isStatusOpen, setIsOpen: setStatusOpen, menuRef: statusMenuRef } = useIsOpen()
   const statusOptions = STATUS_OPTIONS.map(s => ({ id: s, label: s }))
   const [description, setDescription] = useState('')
-
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole] = useState('')
   const [inviteRoleError, setInviteRoleError] = useState<string | null>(null)
   const [inviteMessage, setInviteMessage] = useState('На указанный email будет отправлено приглашение на участие в проекте')
   const [inviteMessageType, setInviteMessageType] = useState<'info' | 'error' | 'success'>('info')
-
   const [showVacancyForm, setShowVacancyForm] = useState(false)
   const [editingVacancy, setEditingVacancy] = useState<LocalVacancy | null>(null)
   const [vacTitle, setVacTitle] = useState('')
   const [vacDesc, setVacDesc] = useState('')
   const [vacTags, setVacTags] = useState('')
-
   const [vacancyTouched, setVacancyTouched] = useState({
     vacTitle: false,
     vacDesc: false,
     vacTags: false,
   })
-
   const [localVacancies, setLocalVacancies] = useState<LocalVacancy[]>([])
   const [deletedVacancyIds, setDeletedVacancyIds] = useState<string[]>([])
   const vacanciesSyncedRef = useRef(false)
-
   const [localTeamMembers, setLocalTeamMembers] = useState<TeamMemberWithUser[]>([])
   const [deletedMemberIds, setDeletedMemberIds] = useState<string[]>([])
   const [editedRoles, setEditedRoles] = useState<Record<string, string>>({})
   const [initialTeamState, setInitialTeamState] = useState<TeamMemberWithUser[]>([])
   const teamInitializedRef = useRef(false)
-
   const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set())
   const [currentUserNickname, setCurrentUserNickname] = useState<string | null>(null)
   const [showDeleteForm, setShowDeleteForm] = useState(false)
-
   const [isPreviewDescription, setIsPreviewDescription] = useState(false)
-
   const [initialState, setInitialState] = useState(() => ({
     name: 'Unnamed', shortDesc: '', status: STATUS_OPTIONS[0], description: '', isPrivate: false,
   }))
-
-  const MAX_TOTAL_MEDIA_SIZE = 50 * 1024 * 1024 
   const descriptionTextareaRef = useRef<HTMLTextAreaElement>(null)
   const mediaInputRef = useRef<HTMLInputElement>(null)
   const [isUploadingMedia, setIsUploadingMedia] = useState(false)
@@ -437,13 +396,10 @@ export const Project = ({ onCancel }: ProjectProps) => {
   const insertAtCursor = (textToInsert: string) => {
     const textarea = descriptionTextareaRef.current
     if (!textarea) return
-
     const start = textarea.selectionStart
     const end = textarea.selectionEnd
     const newValue = description.slice(0, start) + textToInsert + description.slice(end)
-
     setDescription(newValue)
-
     requestAnimationFrame(() => {
       textarea.focus()
       const newPos = start + textToInsert.length
@@ -457,24 +413,22 @@ export const Project = ({ onCancel }: ProjectProps) => {
     if (!file || !projectId) return
 
     const currentTotalSize = getTotalMediaSize()
-    if (currentTotalSize + file.size > MAX_TOTAL_MEDIA_SIZE) {
-      setMediaError('Общий размер вложений не должен превышать 50 МБ')
-      setTimeout(() => setMediaError(null), 4000)
+    if (currentTotalSize + file.size > LIMITS.upload.mediaTotalMaxBytes) {
+      setMediaError(`Общий размер вложений не должен превышать ${LIMITS.upload.mediaTotalMaxBytes / 1024 / 1024} МБ`)
+      setTimeout(() => setMediaError(null), TIMING.toastMs)
       return
     }
 
     setIsUploadingMedia(true)
     try {
       const { url } = await projectDraftApi.uploadDraftMedia(projectId, file)
-      
       insertAtCursor(`\n<img src="${url}" width="400" alt="${file.name}" />\n`)
-      
       const media = await projectsApi.getMedia(projectId)
       setProjectMedia(media)
     } catch (error) {
       console.error('Ошибка загрузки изображения:', error)
       setMediaError('Не удалось загрузить изображение')
-      setTimeout(() => setMediaError(null), 4000)
+      setTimeout(() => setMediaError(null), TIMING.toastMs)
     } finally {
       setIsUploadingMedia(false)
     }
@@ -485,20 +439,15 @@ export const Project = ({ onCancel }: ProjectProps) => {
   }
 
   const handleDeleteMedia = async (fileName: string, fileUrl: string, isDraft: boolean) => {
-    if (!projectId)
-      return
-
+    if (!projectId) return
     try {
       await projectDraftApi.deleteMedia(projectId, fileName)
-      
       const escapedUrl = fileUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
       const imgTagRegex = new RegExp(`<img\\s+[^>]*src=["']${escapedUrl}["'][^>]*>\\s*`, 'gi')
       setDescription(prev => prev.replace(imgTagRegex, ''))
-      
       if (!isDraft) {
         setDeletedMediaFileNames(prev => [...prev, fileName])
       }
-      
       const media = await projectsApi.getMedia(projectId)
       setProjectMedia(media)
     } catch (error) {
@@ -538,10 +487,10 @@ export const Project = ({ onCancel }: ProjectProps) => {
     const rules: Record<string, Array<[boolean, string]>> = {
       name: [
         [!validatorFormat.required(value), 'Введите название проекта'],
-        [!validatorFormat.maxLength(value, 50), 'Максимум 50 символов']
+        [!validatorFormat.maxLength(value, LIMITS.project.titleMax), 'Максимум 50 символов']
       ],
       shortDesc: [
-        [!validatorFormat.maxLength(value, 150), 'Максимум 150 символов']
+        [!validatorFormat.maxLength(value, LIMITS.project.shortDescriptionMax), 'Максимум 150 символов']
       ],
     }
     const fieldRules = rules[fieldName as keyof typeof rules]
@@ -553,8 +502,8 @@ export const Project = ({ onCancel }: ProjectProps) => {
   const checkRoleFormat = (value: string): string | null => {
     const rules: Array<[boolean, string]> = [
       [!validatorFormat.required(value), 'Введите роль'],
-      [!validatorFormat.maxLength(value, 50), 'Максимум 50 символов'],
-      [value.length > 0 && value.length < 2, 'Минимум 2 символа'],
+      [!validatorFormat.maxLength(value, LIMITS.member.roleMax), 'Максимум 50 символов'],
+      [value.length > 0 && value.length < LIMITS.member.roleMin, 'Минимум 2 символа'],
     ]
     const error = rules.find(([isInvalid]) => isInvalid)
     return error?.[1] ?? null
@@ -564,11 +513,11 @@ export const Project = ({ onCancel }: ProjectProps) => {
     const rules: Record<string, Array<[boolean, string]>> = {
       vacTitle: [
         [!validatorFormat.required(value), 'Введите название роли'],
-        [!validatorFormat.maxLength(value, 50), 'Максимум 50 символов']
+        [!validatorFormat.maxLength(value, LIMITS.vacancy.titleMax), 'Максимум 50 символов']
       ],
       vacDesc: [
         [!validatorFormat.required(value), 'Введите описание'],
-        [!validatorFormat.maxLength(value, 500), 'Максимум 500 символов']
+        [!validatorFormat.maxLength(value, LIMITS.vacancy.descriptionMax), 'Максимум 500 символов']
       ],
       vacTags: [
         [!validatorFormat.required(value), 'Введите теги'],
@@ -594,11 +543,9 @@ export const Project = ({ onCancel }: ProjectProps) => {
     queryKey: queryKeys.projects.memberProjects(projectId!),
     queryFn: async () => {
       if (!projectId) return []
-      
       const members = await projectMembersApi.getByProject(projectId)
       const proj = await projectsApi.getProject(projectId)
-
-      const membersWithUsers: TeamMemberWithUser[] = members.map((member: any) => ({
+      const membersWithUsers: TeamMemberWithUser[] = members.map((member) => ({
         memberId: member.memberId,
         projectId: member.projectId,
         userId: member.userId,
@@ -623,7 +570,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
           lastSeen: member.lastSeen
         } as UserData
       }))
-
       return membersWithUsers.sort((a: TeamMemberWithUser, b: TeamMemberWithUser) => {
         if (!a.joinedAt || !b.joinedAt) return 0
         return new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime()
@@ -699,9 +645,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
           vacancies.push({ ...dv, projectId: projectId!, role: dv.title, projectTitle: name, ratingCount: 0, _isNew: true } as LocalVacancy)
         }
       })
-
       vacancies = vacancies.filter(v => !draftDeletedVacancyIds.includes(v.vacancyId))
-
       setLocalVacancies(vacancies)
       setDeletedVacancyIds(draftDeletedVacancyIds)
       vacanciesSyncedRef.current = true
@@ -712,13 +656,10 @@ export const Project = ({ onCancel }: ProjectProps) => {
     if (teamMembers.length > 0 && !teamInitializedRef.current && loadedDraft !== undefined) {
       const membersCopy = teamMembers.map(m => ({ ...m }))
       setInitialTeamState(membersCopy)
-
       const draftDeletedMemberIds = loadedDraft?.deletedMemberIds || []
       const draftEditedRoles = loadedDraft?.editedRoles || {}
-
       let restored = membersCopy.filter(m => !draftDeletedMemberIds.includes(m.memberId))
       restored = restored.map(m => draftEditedRoles[m.memberId] ? { ...m, role: draftEditedRoles[m.memberId] } : m)
-
       setLocalTeamMembers(restored)
       setDeletedMemberIds(draftDeletedMemberIds)
       setEditedRoles(draftEditedRoles)
@@ -735,14 +676,12 @@ export const Project = ({ onCancel }: ProjectProps) => {
         description: project.fullDescription || '',
         isPrivate: project.isPrivate || false,
       }
-
       setInitialState(cleanState)
       setProjectRating(project.ratingCount || 0)
-
-      handleProjectChange({ target: { name: 'name', value: project.title } } as any)
-      handleProjectChange({ target: { name: 'shortDesc', value: project.shortDescription || '' } } as any)
-      handleProjectChange({ target: { name: 'status', value: project.status } } as any)
-      handleProjectChange({ target: { name: 'description', value: project.fullDescription || '' } } as any)
+      handleProjectChange({ target: { name: 'name', value: project.title } } as unknown as React.ChangeEvent<HTMLInputElement>)
+      handleProjectChange({ target: { name: 'shortDesc', value: project.shortDescription || '' } } as unknown as React.ChangeEvent<HTMLInputElement>)
+      handleProjectChange({ target: { name: 'status', value: project.status } } as unknown as React.ChangeEvent<HTMLInputElement>)
+      handleProjectChange({ target: { name: 'description', value: project.fullDescription || '' } } as unknown as React.ChangeEvent<HTMLInputElement>)
 
       const statusMap: Record<string, string> = { 'in_progress': 'В процессе', 'completed': 'Завершён', 'paused': 'Приостановлен' }
 
@@ -750,33 +689,28 @@ export const Project = ({ onCancel }: ProjectProps) => {
         try {
           const draft = await projectDraftApi.getDraft(projectId)
           setLoadedDraft(draft)
-
           if (draft) {
             const draftStatus = draft.status ? (statusMap[draft.status] || draft.status) : cleanState.status
-
             setName(draft.title ?? cleanState.name)
             setShortDesc(draft.shortDescription ?? cleanState.shortDesc)
             setStatus(draftStatus)
             setDescription(draft.fullDescription ?? cleanState.description)
             setIsPrivate(draft.isPrivate ?? cleanState.isPrivate)
-
             setHasBasicInfoDraft(
               (draft.title && draft.title !== cleanState.name) ||
               (draft.shortDescription !== undefined && draft.shortDescription !== cleanState.shortDesc) ||
               (draft.status && draft.status !== cleanState.status) ||
               (draft.isPrivate !== undefined && draft.isPrivate !== cleanState.isPrivate)
             )
-            setHasDescriptionDraft(!!(draft.fullDescription && draft.fullDescription !== cleanState.description))    
+            setHasDescriptionDraft(!!(draft.fullDescription && draft.fullDescription !== cleanState.description))
             setDeletedMediaFileNames(draft.deletedMediaFiles || [])
           } else {
             const projectStatus = project.status ? (statusMap[project.status] || project.status) : STATUS_OPTIONS[0]
-
             setName(cleanState.name)
             setShortDesc(cleanState.shortDesc)
             setStatus(projectStatus)
             setDescription(cleanState.description)
             setIsPrivate(cleanState.isPrivate)
-
             setHasBasicInfoDraft(false)
             setHasDescriptionDraft(false)
             setDeletedMediaFileNames([])
@@ -807,7 +741,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
   const isDescriptionChanged = description !== initialState.description
   const isTeamChanged = deletedMemberIds.length > 0 || Object.keys(editedRoles).length > 0
   const isVacanciesChanged = deletedVacancyIds.length > 0 || localVacancies.some(v => v._isNew || v._isModified)
-
   const hasAnyChanges = isBasicInfoChanged || isDescriptionChanged || isTeamChanged || isVacanciesChanged
 
   const draftPayload = {
@@ -850,7 +783,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
         const originalMember = initialTeamState.find(m => m.memberId === memberId)
         return originalMember && originalMember.role !== editedRoles[memberId]
       })
-
     setHasTeamDraft(hasRealChanges)
   }, [deletedMemberIds, editedRoles, initialTeamState])
 
@@ -859,11 +791,8 @@ export const Project = ({ onCancel }: ProjectProps) => {
       deletedVacancyIds.length > 0 ||
       localVacancies.some(v => {
         if (v._isNew) return true
-
         const originalVacancy = vacanciesFromDb.find(orig => orig.vacancyId === v.vacancyId)
-
         if (!originalVacancy && !v._isNew) return true
-
         if (originalVacancy) {
           return (
             v.title !== originalVacancy.title ||
@@ -871,10 +800,8 @@ export const Project = ({ onCancel }: ProjectProps) => {
             JSON.stringify(v.requiredTags || []) !== JSON.stringify(originalVacancy.requiredTags || [])
           )
         }
-
         return false
       })
-
     setHasVacanciesDraft(hasRealChanges)
   }, [deletedVacancyIds, localVacancies, vacanciesFromDb])
 
@@ -894,11 +821,8 @@ export const Project = ({ onCancel }: ProjectProps) => {
     deletedVacancyIds.length > 0 ||
     localVacancies.some(v => {
       if (v._isNew) return true
-
       const originalVacancy = vacanciesFromDb.find(orig => orig.vacancyId === v.vacancyId)
-
       if (!originalVacancy && !v._isNew) return true
-
       if (originalVacancy) {
         return (
           v.title !== originalVacancy.title ||
@@ -906,12 +830,11 @@ export const Project = ({ onCancel }: ProjectProps) => {
           JSON.stringify(v.requiredTags || []) !== JSON.stringify(originalVacancy.requiredTags || [])
         )
       }
-
       return false
     }),
     [deletedVacancyIds, localVacancies, vacanciesFromDb]
   )
-  
+
   const hasTeamChanges = useMemo(() =>
     deletedMemberIds.length > 0 ||
     Object.keys(editedRoles).some(memberId => {
@@ -931,7 +854,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
     hasTeamChanges ||
     hasMediaChanges,
     [
-      name, shortDesc, status, description, isPrivate, initialState, 
+      name, shortDesc, status, description, isPrivate, initialState,
       hasVacancyChanges, hasTeamChanges, hasMediaChanges
     ]
   )
@@ -939,7 +862,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
   const isProjectFormValid = useMemo(() => {
     const nameValid = !checkProjectFormat('name', name)
     const shortDescValid = !checkProjectFormat('shortDesc', shortDesc)
-
     const vacanciesValid = localVacancies
       .filter(v => !deletedVacancyIds.includes(v.vacancyId))
       .filter(v => v._isNew || v._isModified)
@@ -948,9 +870,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
         !checkVacancyFormat('vacDesc', v.description) &&
         !checkVacancyFormat('vacTags', v.requiredTags?.join(' ') || '')
       )
-
-    const descriptionValid = description.length <= MAX_DESCRIPTION
-
+    const descriptionValid = description.length <= LIMITS.longTextMax
     return nameValid && shortDescValid && vacanciesValid && descriptionValid
   }, [name, shortDesc, localVacancies, deletedVacancyIds, description])
 
@@ -962,7 +882,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
         console.error('Ошибка сброса черновика:', error)
       }
     }
-    
     setName(initialState.name)
     setShortDesc(initialState.shortDesc)
     setStatus(initialState.status)
@@ -977,7 +896,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
     setEditedRoles({})
     setLocalVacancies(vacanciesFromDb.map(v => ({ ...v })))
     setDeletedVacancyIds([])
-    
     setDeletedMediaFileNames([])
     if (projectId) {
       const media = await projectsApi.getMedia(projectId)
@@ -993,7 +911,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
         console.error('Ошибка сброса черновика:', error)
       }
     }
-
     if (onCancel) { onCancel(); return }
     navigate(`${profilePath}/activity`, { replace: true })
   }
@@ -1004,9 +921,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
         handleBack()
       }
     }
-
     window.addEventListener('keydown', handleEscKey)
-
     return () => {
       window.removeEventListener('keydown', handleEscKey)
     }
@@ -1016,7 +931,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
     if (!projectId || !hasChanges || !isProjectFormValid) return
     setIsSaving(true)
     setSaveError(null)
-
     try {
       const commitResponse = await projectDraftApi.commitDraft(projectId, {
         title: name,
@@ -1025,16 +939,13 @@ export const Project = ({ onCancel }: ProjectProps) => {
         status: reverseStatusMap[status] || status,
         isPrivate: isPrivate
       })
-
       if (commitResponse?.fullDescription !== undefined) {
         setDescription(commitResponse.fullDescription)
       }
-
       setDeletedMediaFileNames([])
-
       const media = await projectsApi.getMedia(projectId)
       setProjectMedia(media)
-      
+
       if (deletedVacancyIds.length > 0) {
         deletedVacancyIds.forEach(vacancyId => {
           if (vacancyId.startsWith('temp_')) return
@@ -1048,7 +959,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
               uniqueRespondents.set(r.userId, r)
             }
           })
-
           uniqueRespondents.forEach((_, userId) => {
             sendNotification(userId, 'response', projectId!, 'responses_revoked_vacancy_deleted', {
               projectName: name || project?.title || 'Проект',
@@ -1063,7 +973,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
               uniqueInvitees.set(i.userId, i)
             }
           })
-
           uniqueInvitees.forEach((_, userId) => {
             sendNotification(userId, 'invite', projectId!, 'invites_revoked_vacancy_deleted', {
               projectName: name || project?.title || 'Проект',
@@ -1071,7 +980,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
             }, name || project?.title || 'Проект')
           })
         })
-
         await Promise.all(deletedVacancyIds.map(id => vacanciesApi.delete(id)))
         setDeletedVacancyIds([])
       }
@@ -1093,27 +1001,22 @@ export const Project = ({ onCancel }: ProjectProps) => {
 
       if (deletedMemberIds.length > 0) {
         const removedMembers = initialTeamState.filter(m => deletedMemberIds.includes(m.memberId))
-
         await Promise.all(deletedMemberIds.map(memberId =>
           projectMembersApi.removeMember(memberId)
         ))
-
         removedMembers.forEach(member => {
           const nickname = member.userData?.nickname || 'Пользователь'
           const projectName = name || project?.title || 'Проект'
-
           if (project?.ownerId) {
             sendNotification(project.ownerId, 'project', projectId!, 'removed', {
               nickname,
               projectName,
             }, projectName)
           }
-
           sendNotification(member.userId, 'project', projectId!, 'removed_self', {
             projectName,
           }, projectName)
         })
-
         setDeletedMemberIds([])
       }
 
@@ -1121,19 +1024,15 @@ export const Project = ({ onCancel }: ProjectProps) => {
         memberId,
         newRole
       }))
-
       if (roleUpdates.length > 0) {
         await Promise.all(roleUpdates.map(({ memberId, newRole }) =>
           projectMembersApi.updateMemberRole(memberId, newRole)
         ))
-
         roleUpdates.forEach(({ memberId, newRole }) => {
           const member = initialTeamState.find(m => m.memberId === memberId)
           if (!member) return
-
           const nickname = member.userData?.nickname || 'Пользователя'
           const projectName = name || project?.title || 'Проект'
-
           if (project?.ownerId) {
             sendNotification(project.ownerId, 'project', projectId!, 'role_changed', {
               nickname,
@@ -1141,26 +1040,22 @@ export const Project = ({ onCancel }: ProjectProps) => {
               role: newRole,
             }, projectName)
           }
-
           sendNotification(member.userId, 'project', projectId!, 'role_changed_self', {
             projectName,
             role: newRole,
           }, projectName)
         })
-
         setEditedRoles({})
       }
 
       if (status !== initialState.status) {
         const projectName = name || project?.title || 'Проект'
-
         if (project?.ownerId) {
           sendNotification(project.ownerId, 'project', projectId!, 'status_changed', {
             projectName,
             status,
           }, projectName)
         }
-
         notifyAllMembersExceptOwner(localTeamMembers, project?.ownerId, 'project', projectId!, 'status_changed', {
           projectName,
           status,
@@ -1175,27 +1070,23 @@ export const Project = ({ onCancel }: ProjectProps) => {
       teamInitializedRef.current = false
       vacanciesSyncedRef.current = false
       setLoadedDraft(undefined)
-
-      setInitialState({ 
-        name, 
-        shortDesc, 
-        status, 
-        description: commitResponse?.fullDescription || description, 
-        isPrivate 
+      setInitialState({
+        name,
+        shortDesc,
+        status,
+        description: commitResponse?.fullDescription || description,
+        isPrivate
       })
-
       setHasBasicInfoDraft(false)
       setHasDescriptionDraft(false)
       setHasTeamDraft(false)
       setHasVacanciesDraft(false)
-
       setSaveSuccess(true)
-      setTimeout(() => setSaveSuccess(false), 3000)
-
+      setTimeout(() => setSaveSuccess(false), TIMING.toastMs)
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Не удалось сохранить проект'
       setSaveError(msg)
-      setTimeout(() => setSaveError(null), 3000)
+      setTimeout(() => setSaveError(null), TIMING.toastMs)
     } finally {
       setIsSaving(false)
     }
@@ -1210,17 +1101,13 @@ export const Project = ({ onCancel }: ProjectProps) => {
     mutationFn: async ({ email, role }: { email: string; role: string }) => {
       const emailValid = validatorFormat.email(email)
       const roleError = checkRoleFormat(role)
-
       if (!emailValid) {
         throw new Error('Введите корректный email')
       }
-
       if (roleError) {
         throw new Error(roleError)
       }
-
       const targetUser = await usersApi.findByEmail(email)
-
       if (!targetUser) throw new Error('Пользователя с такой почтой не существует')
 
       try {
@@ -1237,7 +1124,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
           addError?.toString?.() ||
           ''
         ).toLowerCase()
-
         if (
           errorMsg.includes('уже является участником') ||
           errorMsg.includes('already') ||
@@ -1248,7 +1134,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
         ) {
           throw new Error('Этот пользователь уже в команде')
         }
-
         throw addError
       }
       return targetUser
@@ -1259,15 +1144,12 @@ export const Project = ({ onCancel }: ProjectProps) => {
       setInviteRoleError(null)
       setInviteMessage('Участник успешно добавлен в команду')
       setInviteMessageType('success')
-      setTimeout(() => resetInviteMessage(), 3000)
-
+      setTimeout(() => resetInviteMessage(), TIMING.toastMs)
       teamInitializedRef.current = false
       await queryClient.invalidateQueries({ queryKey: queryKeys.projects.memberProjects(projectId!) })
-
       const projectName = name || project?.title || 'Проект'
       const nickname = targetUser.nickname || 'Пользователь'
       const role = inviteRole.trim()
-
       if (project?.ownerId) {
         sendNotification(project.ownerId, 'project', projectId!, 'added', {
           nickname,
@@ -1275,26 +1157,23 @@ export const Project = ({ onCancel }: ProjectProps) => {
           role,
         }, projectName)
       }
-
       sendNotification(targetUser.userId, 'project', projectId!, 'added_self', {
         projectName,
         role,
       }, projectName)
-
       queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all })
     },
     onError: (error: any) => {
       const message = error?.message || error?.toString?.() || 'Не удалось добавить участника'
       setInviteMessage(message)
       setInviteMessageType('error')
-      setTimeout(() => resetInviteMessage(), 3000)
+      setTimeout(() => resetInviteMessage(), TIMING.toastMs)
     },
   })
 
   const handleInvite = () => {
     const roleError = checkRoleFormat(inviteRole)
     setInviteRoleError(roleError)
-
     if (!roleError) {
       inviteMemberMutation.mutate({ email: inviteEmail, role: inviteRole })
     }
@@ -1331,9 +1210,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
     setLocalTeamMembers(prev => prev.map(m =>
       m.memberId === memberId ? { ...m, role: newRole } : m
     ))
-
     const originalRole = initialTeamState.find(m => m.memberId === memberId)?.role
-
     setEditedRoles(prev => {
       const newRoles = { ...prev }
       if (originalRole !== undefined && newRole === originalRole) {
@@ -1369,7 +1246,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
   const saveVacancy = () => {
     if (!vacTitle.trim()) return
     const tags = vacTags.trim().split(/\s+/).filter(Boolean)
-
     if (editingVacancy) {
       setLocalVacancies(prev => prev.map(v =>
         v.vacancyId === editingVacancy.vacancyId
@@ -1392,7 +1268,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
       }
       setLocalVacancies(prev => [...prev, tempVacancy])
     }
-
     closeVacancyForm()
   }
 
@@ -1407,7 +1282,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
 
   const handleDeleteSuccess = () => {
     const projectName = name || project?.title || 'Проект'
-
     notifyAllMembersExceptOwner(localTeamMembers, project?.ownerId, 'project', projectId!, 'project_deleted', {
       projectName,
     }, projectName)
@@ -1418,7 +1292,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
         uniqueRespondents.set(r.userId, r)
       }
     })
-
     uniqueRespondents.forEach((response, userId) => {
       sendNotification(userId, 'response', projectId!, 'responses_revoked_project_deleted', {
         projectName,
@@ -1432,7 +1305,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
         uniqueInvitees.set(i.userId, i)
       }
     })
-
     uniqueInvitees.forEach((invite, userId) => {
       sendNotification(userId, 'invite', projectId!, 'invites_revoked_project_deleted', {
         projectName,
@@ -1441,16 +1313,13 @@ export const Project = ({ onCancel }: ProjectProps) => {
     })
 
     queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all })
-
     navigate(`${profilePath}/activity`, { replace: true })
   }
 
   const handleResponseAction = async (response: ResponseData, action: 'accept' | 'decline') => {
     try {
       await responseApi.delete(response.responseId)
-
       const eventType = action === 'accept' ? 'response_accepted' : 'response_rejected'
-
       sendNotification(response.userId, 'response', response.projectId, eventType, {
         projectName: response.projectTitle || 'Проект',
         vacancyName: response.vacancyTitle || 'Заявка',
@@ -1463,7 +1332,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
             userId: response.userId,
             role: response.vacancyTitle || 'Участник'
           })
-
           queryClient.invalidateQueries({ queryKey: queryKeys.projects.memberProjects(projectId!) })
           teamInitializedRef.current = false
         }
@@ -1471,7 +1339,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
           console.error('Ошибка добавления участника:', addError)
         }
       }
-
       queryClient.invalidateQueries({ queryKey: queryKeys.responses.byProject(projectId!) })
       queryClient.invalidateQueries({
         queryKey: queryKeys.notifications.all,
@@ -1486,13 +1353,11 @@ export const Project = ({ onCancel }: ProjectProps) => {
   const handleCancelInvite = async (invite: InviteData) => {
     try {
       await inviteApi.delete(invite.inviteId)
-
       sendNotification(invite.userId, 'invite', invite.projectId, 'invite_cancelled', {
         projectName: invite.projectTitle || 'Проект',
         vacancyName: invite.role || 'Заявка',
         nickname: currentUserNickname || 'Пользователь',
       }, invite.projectTitle || 'Проект')
-
       queryClient.invalidateQueries({ queryKey: queryKeys.invites.outgoing(profileId || '') })
       queryClient.invalidateQueries({
         queryKey: queryKeys.notifications.all,
@@ -1505,7 +1370,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
   }
 
   const createCommentMutation = useMutation({
-    mutationFn: (dto: any) => commentApi.create(dto),
+  mutationFn: (dto: { referenceType: string; referenceId: string; content: string; parentCommentId?: string }) => commentApi.create(dto),
     onSuccess: () => {
       refetchComments()
       setNewComment('')
@@ -1557,7 +1422,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
           <div className='comment-avatar'>
             <img src={node.avatarUrl || '/default-avatar.png'} alt={node.nickname || 'User'} />
           </div>
-
           <div className='comment-body'>
             <div className='comment-header'>
               <div className='comment-meta'>
@@ -1565,7 +1429,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
                 <span className='comment-date'>{new Date(node.createdAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })}, {new Date(node.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</span>
                 {node.isEdited && <span className='comment-edited'>• изменено</span>}
               </div>
-
               {!node.isDeleted && (
                 <div className='comment-actions-right'>
                   {canEdit && (
@@ -1584,7 +1447,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
                   {canDelete && (
                     <button
                       className='comment-remove-badge'
-                      onClick={() => {deleteCommentMutation.mutate(node.commentId)}}
+                      onClick={() => { deleteCommentMutation.mutate(node.commentId) }}
                     >
                       <Reject className='ico' />
                     </button>
@@ -1592,13 +1455,11 @@ export const Project = ({ onCancel }: ProjectProps) => {
                 </div>
               )}
             </div>
-
             {node.isDeleted ? (
               <div className='comment-content deleted'>Комментарий удален</div>
             ) : (
               <div className='comment-content'>{node.content}</div>
             )}
-
             <div className='comment-actions-left'>
               {!node.isDeleted && (
                 <button
@@ -1622,7 +1483,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
                 </button>
               )}
             </div>
-
             {replyingTo === node.commentId && (
               <div className='comment-reply-input'>
                 <textarea
@@ -1656,7 +1516,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
                 </div>
               </div>
             )}
-
             {editingCommentId === node.commentId && (
               <div className='comment-edit-input'>
                 <textarea
@@ -1686,7 +1545,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
             )}
           </div>
         </div>
-
         {hasReplies && expanded && (
           <div className='comment-replies'>
             {node.replies.map(reply => renderCommentNode(reply, depth + 1))}
@@ -1695,11 +1553,11 @@ export const Project = ({ onCancel }: ProjectProps) => {
       </div>
     )
   }
-    
+
   return (
     <div className='project-page'>
       {isPreview ? (
-                <ProjectPublicView
+        <ProjectPublicView
           isPreview
           data={{
             projectId: projectId!,
@@ -1712,7 +1570,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
           }}
           team={localTeamMembers}
           vacancies={localVacancies}
-          onBack={() => {}}
+          onBack={() => { }}
         />
       ) : (
         <>
@@ -1733,7 +1591,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
                     handleProjectChange(e)
                   }}
                   onBlur={handleProjectBlur}
-                  maxLength={50} />
+                  maxLength={LIMITS.project.titleMax} />
               </div>
               <div className='project-field-row'>
                 <label className='project-field-label'>Краткое описание:</label>
@@ -1742,12 +1600,12 @@ export const Project = ({ onCancel }: ProjectProps) => {
                   className={`project-short-desc-editor ${projectTouched.shortDesc && projectDirty.shortDesc && checkProjectFormat('shortDesc', shortDesc) ? 'input-error' : ''}`}
                   value={shortDesc}
                   onChange={e => {
-                    if (e.target.value.length > 150) return;
+                    if (e.target.value.length > LIMITS.project.shortDescriptionMax) return;
                     setShortDesc(e.target.value)
                     handleProjectChange(e)
                   }}
                   onBlur={handleProjectBlur}
-                  maxLength={150}
+                  maxLength={LIMITS.project.shortDescriptionMax}
                   placeholder='Кратко опишите суть проекта в 1-2 предложениях'
                 />
               </div>
@@ -1755,7 +1613,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
                 <label className='project-field-label'>Статус:</label>
                 <div className='project-select-wrapper' ref={statusMenuRef}>
                   <div className={`project-select ${isStatusOpen ? 'active' : ''}`} onClick={() => setStatusOpen(!isStatusOpen)}>
-                    <p className='project-select-value'>{status}</p><DropdownIcon className={`project-select-arrow ${isStatusOpen ? 'rotated' : ''}`} />
+                    <p className='project-select-value'>{status}</p> <DropdownIcon className={`project-select-arrow ${isStatusOpen ? 'rotated' : ''}`} />
                   </div>
                   <Dropdown isOpen={isStatusOpen} items={statusOptions} onSelect={handleStatusSelect} />
                 </div>
@@ -1781,100 +1639,95 @@ export const Project = ({ onCancel }: ProjectProps) => {
             </div>
           </section>
 
-        <section className='project-section'>
-          <div className='section-header-wrapper'>
-            <h2 className='project-section-title'>Описание проекта</h2>
-            {hasDescriptionDraft && <span className='draft-indicator'>(черновик)</span>}
-            <span className={`description-char-counter ${description.length > MAX_DESCRIPTION ? 'limit' : ''}`}>
-              {description.length} / {MAX_DESCRIPTION}
-            </span>
-          </div>
-
-          {isPreviewDescription ? (
-            <div className='description-preview-container'>
-              {description ? (
-                <div className='project-description-preview markdown-content'>
-                  <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
-                    {description}
-                  </ReactMarkdown>
+          <section className='project-section'>
+            <div className='section-header-wrapper'>
+              <h2 className='project-section-title'>Описание проекта</h2>
+              {hasDescriptionDraft && <span className='draft-indicator'>(черновик)</span>}
+              <span className={`description-char-counter ${description.length > LIMITS.longTextMax ? 'limit' : ''}`}>
+                {description.length} / {LIMITS.longTextMax}
+              </span>
+            </div>
+            {isPreviewDescription ? (
+              <div className='description-preview-container'>
+                {description ? (
+                  <div className='project-description-preview markdown-content'>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                      {description}
+                    </ReactMarkdown>
+                  </div>
+                ) : (
+                  <p className='description-preview-empty'>Описание пока не заполнено</p>
+                )}
+              </div>
+            ) : (
+              <textarea
+                ref={descriptionTextareaRef}
+                className={`project-md-editor ${description.length > LIMITS.longTextMax ? 'input-error' : ''}`}
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                placeholder={'### Заголовок проекта\n\nРасскажите о целях и задачах вашего проекта.\n\nИспользуйте **жирный текст** для акцентов и списки для структуры.\n\nПример:\n- Цель проекта\n- Задачи\n- Ожидаемые результаты'}
+              />
+            )}
+            <div className='media-upload-section'>
+              <input
+                type='file'
+                ref={mediaInputRef}
+                accept='image/*'
+                hidden
+                onChange={handleMediaUpload}
+                disabled={isUploadingMedia || isPreviewDescription}
+              />
+              <div className='media-upload-header'>
+                <button
+                  type='button'
+                  className='media-upload-btn'
+                  onClick={() => mediaInputRef.current?.click()}
+                  disabled={isUploadingMedia || isPreviewDescription}
+                >
+                  <Add className='media-upload-ico' />
+                  <span>Прикрепить медиа</span>
+                </button>
+                <p className='media-upload-hint'>Общий размер медиа до 50 МБ</p>
+                <div className='preview-toggle-container'>
+                  <p className='preview-toggle-label'>Предпросмотр</p>
+                  <Toggle checked={isPreviewDescription} onChange={setIsPreviewDescription} />
                 </div>
-              ) : (
-                <p className='description-preview-empty'>Описание пока не заполнено</p>
+              </div>
+              {mediaError && (
+                <p className='media-error-text'>{mediaError}</p>
+              )}
+              {projectMedia.length > 0 && (
+                <div className='media-list'>
+                  {projectMedia.map((media, index) => (
+                    <div className='media-item-wrapper' key={`${media.name}-${index}`}>
+                      <div className='media-item'>
+                        <p className='media-name'>{media.name}</p>
+                        <p className='media-size'>{formatFileSize(media.size)}</p>
+                      </div>
+                      <div className='media-actions'>
+                        <button
+                          type='button'
+                          className='media-action-btn copy'
+                          onClick={() => handleInsertMedia(media.url, media.name)}
+                          disabled={isPreviewDescription}
+                        >
+                          <CopyIcon className='ico' />
+                        </button>
+                        <button
+                          type='button'
+                          className='media-action-btn delete'
+                          onClick={() => handleDeleteMedia(media.name, media.url, media.isDraft)}
+                          disabled={isPreviewDescription}
+                        >
+                          <RejectIcon className='ico' />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
-          ) : (
-            <textarea
-              ref={descriptionTextareaRef}
-              className={`project-md-editor ${description.length > MAX_DESCRIPTION ? 'input-error' : ''}`}
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              placeholder={'### Заголовок проекта\n\nРасскажите о целях и задачах вашего проекта.\n\nИспользуйте **жирный текст** для акцентов и списки для структуры.\n\nПример:\n- Цель проекта\n- Задачи\n- Ожидаемые результаты'}
-            />
-          )}
-
-          <div className='media-upload-section'>
-            <input
-              type='file'
-              ref={mediaInputRef}
-              accept='image/*'
-              hidden
-              onChange={handleMediaUpload}
-              disabled={isUploadingMedia || isPreviewDescription}
-            />
-            <div className='media-upload-header'>
-              <button 
-                type='button' 
-                className='media-upload-btn' 
-                onClick={() => mediaInputRef.current?.click()}
-                disabled={isUploadingMedia || isPreviewDescription}
-              >
-                <Add className='media-upload-ico' />
-                <span>Прикрепить медиа</span>
-              </button>
-              <p className='media-upload-hint'>Общий размер медиа до 50 МБ</p>
-              
-              <div className='preview-toggle-container'>
-                <p className='preview-toggle-label'>Предпросмотр</p>
-                <Toggle checked={isPreviewDescription} onChange={setIsPreviewDescription} />
-              </div>
-            </div>
-
-            {mediaError && (
-              <p className='media-error-text'>{mediaError}</p>
-            )}
-
-            {projectMedia.length > 0 && (
-              <div className='media-list'>
-                {projectMedia.map((media, index) => (
-                  <div className='media-item-wrapper' key={`${media.name}-${index}`}>
-                    <div className='media-item'>
-                      <p className='media-name'>{media.name}</p>
-                      <p className='media-size'>{formatFileSize(media.size)}</p>
-                    </div>
-                    <div className='media-actions'>
-                      <button
-                        type='button'
-                        className='media-action-btn copy'
-                        onClick={() => handleInsertMedia(media.url, media.name)}
-                        disabled={isPreviewDescription}
-                      >
-                        <CopyIcon className='ico' />
-                      </button>
-                      <button
-                        type='button'
-                        className='media-action-btn delete'
-                        onClick={() => handleDeleteMedia(media.name, media.url, media.isDraft)}
-                        disabled={isPreviewDescription}
-                      >
-                        <RejectIcon className='ico' />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
+          </section>
 
           <section className='project-section'>
             <div className='section-header-wrapper'>
@@ -1896,7 +1749,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
                 value={inviteRole}
                 onChange={handleInviteRoleChange}
                 onBlur={handleInviteRoleBlur}
-                maxLength={50}
+                maxLength={LIMITS.member.roleMax}
               />
               <button
                 className='team-invite-btn'
@@ -1941,7 +1794,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
                   value={vacTitle}
                   onChange={e => setVacTitle(e.target.value)}
                   onBlur={() => setVacancyTouched(prev => ({ ...prev, vacTitle: true }))}
-                  maxLength={50} />
+                  maxLength={LIMITS.vacancy.titleMax} />
                 <textarea
                   name="vacDesc"
                   className={`project-md-editor small ${vacancyTouched.vacDesc && checkVacancyFormat('vacDesc', vacDesc) ? 'input-error' : ''}`}
@@ -1949,7 +1802,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
                   value={vacDesc}
                   onChange={e => {
                     const value = e.target.value;
-                    if (value.length > 500) return;
+                    if (value.length > LIMITS.vacancy.descriptionMax) return;
                     if (getVisualLineCount(value, e.target) > 10) return;
                     setVacDesc(value);
                   }}
@@ -2082,7 +1935,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
             <h2 className='project-section-title'>
               Комментарии: <span className='project-count'>{comments.length}</span>
             </h2>
-
             <div className='comment-input-wrapper'>
               <textarea
                 className='comment-textarea'
@@ -2098,7 +1950,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
                 Отправить
               </button>
             </div>
-
             <div className='comments-list'>
               {comments.length === 0 ? (
                 <p className='no-comments-text'>Пока нет комментариев. Будьте первым!</p>
@@ -2107,7 +1958,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
               )}
             </div>
           </section>
-
         </>
       )}
 

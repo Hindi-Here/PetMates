@@ -14,78 +14,6 @@ namespace api.Controllers
         private readonly Supabase.Client _client = client;
         private readonly SupportManager _SupMan = SupMan;
 
-        // Извлечь данные контекста из JSON
-        private static Dictionary<string, object?> ExtractContextData(object? contextData)
-        {
-            if (contextData == null)
-                return [];
-
-            if (contextData is Dictionary<string, object?> dict)
-                return dict;
-
-            if (contextData is Dictionary<string, JsonElement> jsonDict)
-            {
-                var result = new Dictionary<string, object?>();
-                foreach (var kvp in jsonDict)
-                {
-                    result[kvp.Key] = ExtractValueFromJsonElement(kvp.Value);
-                }
-                return result;
-            }
-
-            if (contextData is JsonElement jsonElement)
-            {
-                var result = new Dictionary<string, object?>();
-                foreach (var prop in jsonElement.EnumerateObject())
-                {
-                    result[prop.Name] = ExtractValueFromJsonElement(prop.Value);
-                }
-                return result;
-            }
-
-            if (contextData is string jsonString)
-            {
-                try
-                {
-                    using var doc = JsonDocument.Parse(jsonString);
-                    var root = doc.RootElement;
-
-                    if (root.ValueKind == JsonValueKind.Object)
-                    {
-                        var result = new Dictionary<string, object?>();
-                        foreach (var prop in root.EnumerateObject())
-                        {
-                            result[prop.Name] = ExtractValueFromJsonElement(prop.Value);
-                        }
-                        return result;
-                    }
-                }
-                catch
-                {
-
-                }
-            }
-
-            return [];
-        }
-
-        private static object? ExtractValueFromJsonElement(JsonElement element)
-        {
-            return element.ValueKind switch
-            {
-                JsonValueKind.String => element.GetString(),
-                JsonValueKind.Number => element.TryGetInt64(out var l) ? l : element.GetDouble(),
-                JsonValueKind.True => true,
-                JsonValueKind.False => false,
-                JsonValueKind.Null => null,
-                JsonValueKind.Object => element.EnumerateObject()
-                    .ToDictionary(p => p.Name, p => ExtractValueFromJsonElement(p.Value)),
-                JsonValueKind.Array => element.EnumerateArray()
-                    .Select(ExtractValueFromJsonElement).ToList(),
-                _ => element.ToString()
-            };
-        }
-
         // Получить уведомления
         [HttpGet]
         public async Task<IActionResult> GetNotifications([FromQuery] string? referenceType)
@@ -93,7 +21,7 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = _SupMan.GetUserId(authHeader);
+                var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 
@@ -114,7 +42,7 @@ namespace api.Controllers
                     n.UserId,
                     n.ReferenceId,
                     n.ReferenceType,
-                    ContextData = ExtractContextData(n.ContextData),
+                    ContextData = SupportManager.ExtractContextData(n.ContextData),
                     n.IsRead,
                     CreatedAt = n.CreatedAt.ToString("o")
                 }).ToList();
@@ -134,7 +62,7 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = _SupMan.GetUserId(authHeader);
+                var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 
@@ -167,7 +95,7 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = _SupMan.GetUserId(authHeader);
+                var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 
@@ -200,7 +128,7 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = _SupMan.GetUserId(authHeader);
+                var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 
@@ -231,7 +159,7 @@ namespace api.Controllers
                     newNotification.UserId,
                     newNotification.ReferenceId,
                     newNotification.ReferenceType,
-                    ContextData = ExtractContextData(newNotification.ContextData),
+                    ContextData = SupportManager.ExtractContextData(newNotification.ContextData),
                     newNotification.IsRead,
                     CreatedAt = newNotification.CreatedAt.ToString("o")
                 });
@@ -249,7 +177,7 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = _SupMan.GetUserId(authHeader);
+                var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 

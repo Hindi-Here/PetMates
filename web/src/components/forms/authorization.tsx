@@ -17,13 +17,28 @@ import { authApi } from '../services/auth';
 import EyeIcon from '@icons/eye.svg?react'
 import EyeHiddenIcon from '@icons/eye_hidden.svg?react'
 
+import { LIMITS, minChars, maxChars } from '../scripts/limits'
+const { nicknameMin, nicknameMax, emailMax, passwordMin, passwordMax } = LIMITS.auth
+
+interface FormData {
+  name: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  rememberMe: boolean;
+}
+
+interface FormProps {
+  onClose: () => void;
+}
+
 // Компонент формы авторизации (регистрация и вход) с поддержкой OAuth
-const Form = ({ onClose }: any) => {
+const Form = ({ onClose }: FormProps) => {
   const [isRegister, setIsRegister] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   
-  const { data, touched, dirty, handleChange, handleBlur } = useChangeInput(
+  const { data, touched, dirty, handleChange, handleBlur } = useChangeInput<FormData>(
     {
       name: '',
       email: '',
@@ -64,14 +79,14 @@ const Form = ({ onClose }: any) => {
             <input 
               className={`form-field-input ${touched.name && dirty.name && checkFormat('name', data.name, data, isRegister) ? 'input-error' : ''}`}
               name='name'
-              maxLength={30}
+              maxLength={nicknameMax}
               value={data.name}
               onChange={handleChange}
               onBlur={handleBlur}
             />
             <div className="form-field-helper-container">
               <InfoIcon className='form-field-helper-ico'/>
-              <p className="form-field-helper-text"> Имя пользователя должно быть от 3 до 50 символов </p>
+              <p className="form-field-helper-text"> Имя пользователя должно быть от {nicknameMin} до {nicknameMax} символов </p>
             </div>
           </div>
         )}
@@ -81,7 +96,7 @@ const Form = ({ onClose }: any) => {
           <input 
             className={`form-field-input ${touched.email && dirty.email && checkFormat('email', data.email, data, isRegister) ? 'input-error' : ''}`}
             name='email'
-            maxLength={255}
+            maxLength={emailMax}
             value={data.email}
             onChange={handleChange}
             onBlur={handleBlur}
@@ -96,7 +111,7 @@ const Form = ({ onClose }: any) => {
               className={`form-field-input ${touched.password && dirty.password && checkFormat('password', data.password, data, isRegister) ? 'input-error' : ''}`}
               type={showPassword ? 'text' : 'password'}
               name='password'
-              maxLength={255}
+              maxLength={passwordMax}
               value={data.password}
               onChange={handleChange}
               onBlur={handleBlur}
@@ -117,7 +132,7 @@ const Form = ({ onClose }: any) => {
           {isRegister && (
             <div className="form-field-helper-container">
               <InfoIcon className='form-field-helper-ico'/>
-              <p className="form-field-helper-text"> Пароль должен содержать не менее 8 символов, включая цифры, буквы, спец. символы </p>
+              <p className="form-field-helper-text"> Пароль должен содержать не менее {passwordMin} символов, включая цифры, буквы, спец. символы </p>
             </div>
           )}
           {!isRegister && (
@@ -134,7 +149,7 @@ const Form = ({ onClose }: any) => {
               className={`form-field-input ${touched.confirmPassword && dirty.confirmPassword && checkFormat('confirmPassword', data.confirmPassword, data, isRegister) ? 'input-error' : ''}`}
               type='password'
               name='confirmPassword'
-              maxLength={255}
+              maxLength={passwordMax}
               value={data.confirmPassword}
               onChange={handleChange}
               onBlur={handleBlur}
@@ -199,7 +214,7 @@ const Form = ({ onClose }: any) => {
 }
 
 // Компонент обертки для формы авторизации, блокирующий прокрутку страницы при открытой форме
-export default function AuthorizationForm({ onClose }: any) { 
+export default function AuthorizationForm({ onClose }: FormProps) { 
   useBlockScroll(true); 
   return (
     <div className='dark-area-container' onClick={onClose}> 
@@ -211,24 +226,24 @@ export default function AuthorizationForm({ onClose }: any) {
 }
 
 // Валидация поля формы и возврат сообщения об ошибке
-const checkFormat = (fieldName: string, value: string, data: any, isRegister: boolean): string | null => {
+const checkFormat = (fieldName: string, value: string, data: FormData, isRegister: boolean): string | null => {
   const isLogin = !isRegister;
   
-  const rules: Record<string, Array<[boolean, string]>> = {
+  const rules: Record <string, Array <[boolean, string] > > = {
     name: [
       [!validatorFormat.required(value), 'Введите имя'],
-      [!validatorFormat.minLength(value, 3), 'Минимум 3 символа'],
-      [!validatorFormat.maxLength(value, 50), 'Максимум 50 символов']
+      [!validatorFormat.minLength(value, nicknameMin), minChars(nicknameMin)],
+      [!validatorFormat.maxLength(value, nicknameMax), maxChars(nicknameMax)]
     ],
     email: [
       [!validatorFormat.required(value), 'Введите email'],
       [!isLogin && !validatorFormat.email(value), 'Неверный формат email'],
-      [!validatorFormat.maxLength(value, 255), 'Слишком длинный email']
+      [!validatorFormat.maxLength(value, emailMax), maxChars(emailMax)]
     ],
     password: [
       [!validatorFormat.required(value), 'Введите пароль'],
-      [!isLogin && !validatorFormat.minLength(value, 8), 'Минимум 8 символов'],
-      [!isLogin && !validatorFormat.maxLength(value, 255), 'Слишком длинный пароль'],
+      [!isLogin && !validatorFormat.minLength(value, passwordMin), minChars(passwordMin)],
+      [!isLogin && !validatorFormat.maxLength(value, passwordMax), maxChars(passwordMax)],
       [!isLogin && !validatorFormat.password(value), 'Пароль должен содержать буквы, цифры и спец. символы']
     ],
     confirmPassword: [
@@ -245,7 +260,7 @@ const checkFormat = (fieldName: string, value: string, data: any, isRegister: bo
 };
 
 // Проверка валидности всей формы
-const checkForm = (data: any, isRegister: boolean): boolean => {
+const checkForm = (data: FormData, isRegister: boolean): boolean => {
   if (!isRegister) {
     return (
       validatorFormat.required(data.email) && 
@@ -255,14 +270,14 @@ const checkForm = (data: any, isRegister: boolean): boolean => {
 
   return (
     validatorFormat.required(data.name) &&
-    validatorFormat.minLength(data.name, 3) &&
-    validatorFormat.maxLength(data.name, 50) &&
+    validatorFormat.minLength(data.name, nicknameMin) &&
+    validatorFormat.maxLength(data.name, nicknameMax) &&
     
     validatorFormat.required(data.email) &&
     validatorFormat.email(data.email) &&
     
     validatorFormat.required(data.password) &&
-    validatorFormat.minLength(data.password, 8) &&
+    validatorFormat.minLength(data.password, passwordMin) &&
     validatorFormat.password(data.password) &&
     
     validatorFormat.required(data.confirmPassword) &&
@@ -271,7 +286,7 @@ const checkForm = (data: any, isRegister: boolean): boolean => {
 };
 
 // Регистрация пользователя
-const Register = async (data: any, onError: (msg: string | null) => void, onClose?: () => void) => {
+const Register = async (data: FormData, onError: (msg: string | null) => void, onClose?: () => void) => {
   onError(null); 
   try {
     await authApi.register(data.name, data.email, data.password, data.confirmPassword);
@@ -283,7 +298,7 @@ const Register = async (data: any, onError: (msg: string | null) => void, onClos
 };
 
 // Вход пользователя
-const Login = async (data: any, onError: (msg: string | null) => void, onClose?: () => void) => {
+const Login = async (data: FormData, onError: (msg: string | null) => void, onClose?: () => void) => {
   onError(null);
   try {
     await authApi.login(data.email, data.password, data.rememberMe);

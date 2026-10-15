@@ -10,7 +10,7 @@ import { EventFooter } from './event_footer'
 import { useEffect, useMemo, useState } from 'react'
 import { useDraftAutosave } from '../../hooks/useDraftAutosave'
 
-const MAX_RESULTS = 20000
+import { LIMITS, TIMING } from '../../scripts/limits'
 
 interface EventResultsProps {
   event: EventDetails
@@ -31,7 +31,7 @@ export const EventResults = ({ event, profileId, draft, onDraftChange }: EventRe
   const [initial, setInitial] = useState(event.results ?? '')
   const [value, setValue] = useState(draft ?? event.results ?? '')
 
-  const tooLong = value.length > MAX_RESULTS
+  const tooLong = value.length > LIMITS.longTextMax
   const hasChanges = useMemo(() => value !== initial, [value, initial])
 
   useEffect(() => {
@@ -57,10 +57,10 @@ export const EventResults = ({ event, profileId, draft, onDraftChange }: EventRe
       setValue(next)
       queryClient.invalidateQueries({ queryKey: queryKeys.events.all })
       setSaveSuccess(true)
-      setTimeout(() => setSaveSuccess(false), 3000)
+      setTimeout(() => setSaveSuccess(false), TIMING.toastMs)
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Не удалось сохранить результаты')
-      setTimeout(() => setSaveError(null), 4000)
+      setTimeout(() => setSaveError(null), TIMING.toastMs)
     } finally {
       setIsSaving(false)
     }
@@ -75,7 +75,7 @@ export const EventResults = ({ event, profileId, draft, onDraftChange }: EventRe
           <h2 className='project-section-title'>Результаты</h2>
           {hasChanges && <span className='draft-indicator'>(черновик)</span>}
           <span className={`event-char-counter ${tooLong ? 'limit' : ''}`}>
-            {value.length} / {MAX_RESULTS}
+            {value.length} / {LIMITS.longTextMax}
           </span>
         </div>
 
@@ -88,7 +88,7 @@ export const EventResults = ({ event, profileId, draft, onDraftChange }: EventRe
           emptyPreviewText='Результаты пока не заполнены'
           placeholder={'### Итоги мероприятия\n\nУкажите финалистов, поздравления и награды.\n\n- 1 место: Участник ...\n- 2 место: Участник ...'}
         />
-        {tooLong && <p className='event-field-error'>Максимум {MAX_RESULTS} символов</p>}
+        {tooLong && <p className='event-field-error'>Максимум {LIMITS.longTextMax} символов</p>}
       </section>
 
       <EventFooter

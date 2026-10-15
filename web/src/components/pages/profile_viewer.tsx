@@ -5,7 +5,7 @@ import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useSystemRole } from '../hooks/useSystemRole'
 import { queryKeys } from '../scripts/query/queryKeys'
-import { usersApi } from '../services/users'
+import { usersApi, type UserData } from '../services/users'
 import type { ThirdProfileData } from '../hooks/useThirdProfile'
 import { ProfilePublicView, type ProfilePublicData } from './profile_public_view'
 
@@ -24,7 +24,7 @@ export default function ProfileViewer() {
   })
 
   const isStaff = currentSystemRole === 'admin' || currentSystemRole === 'moderator'
-  const isBanned = (user as any)?.isBanned === true
+  const isBanned = (user as UserData)?.isBanned === true
 
   if (!isLoading && !isStaff && (!user || isBanned)) {
     return (

@@ -118,7 +118,9 @@
     flex-grow: 1; 
 }
 
-@media (max-width: 965px) {
+.content-container { min-width: 0; }   
+
+@media (max-width: 964px) {
     .main {
         width: 100%;
         justify-content: center;

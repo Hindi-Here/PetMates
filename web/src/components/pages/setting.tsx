@@ -10,18 +10,19 @@ import DeleteAccountForm from '../forms/delete_account'
 import ImportantIcon from '@icons/important_warning.svg?react'
 import DeleteIcon from '@icons/delete.svg?react'
 
+import { LIMITS, TIMING } from '../scripts/limits'
+
 // Валидация поля пароля и возврат сообщения об ошибке
 const checkPasswordFormat = (fieldName: string, value: string, newPassword: string): string | null => {
   const rules: Record<string, Array<[boolean, string]>> = {
     oldPassword: [
       [!validatorFormat.required(value), 'Введите старый пароль'],
-      [!validatorFormat.minLength(value, 8), 'Минимум 8 символов'],
+      [!validatorFormat.minLength(value, LIMITS.auth.passwordMin), `Минимум ${LIMITS.auth.passwordMin} символов`],
     ],
     newPassword: [
       [!validatorFormat.required(value), 'Введите новый пароль'],
-      [!validatorFormat.minLength(value, 8), 'Минимум 8 символов'],
-      [!validatorFormat.maxLength(value, 255), 'Слишком длинный пароль'],
-      [!validatorFormat.password(value), 'Пароль должен содержать буквы, цифры и спец. символы'],
+      [!validatorFormat.minLength(value, LIMITS.auth.passwordMin), `Минимум ${LIMITS.auth.passwordMin} символов`],
+      [!validatorFormat.maxLength(value, LIMITS.auth.passwordMax), 'Слишком длинный пароль'],
     ],
     confirmPassword: [
       [!validatorFormat.required(value), 'Подтвердите пароль'],
@@ -38,8 +39,8 @@ const checkPasswordFormat = (fieldName: string, value: string, newPassword: stri
 const checkEmailFormat = (fieldName: string, value: string): string | null => {
   const rules: Record<string, Array<[boolean, string]>> = {
     newEmail: [
-      [!validatorFormat.email(value), 'Некорректный формат email'],
-      [!validatorFormat.maxLength(value, 255), 'Максимум 255 символов'],
+    [!validatorFormat.email(value), 'Некорректный формат email'],
+    [!validatorFormat.maxLength(value, LIMITS.auth.emailMax), `Максимум ${LIMITS.auth.emailMax} символов`],
     ],
     confirmCode: [
       [!validatorFormat.required(value), 'Введите код подтверждения'],
@@ -139,9 +140,9 @@ export const Setting = () => {
   const isPasswordValid = useMemo(() => {
     return (
       validatorFormat.required(passData.oldPassword) &&
-      validatorFormat.minLength(passData.oldPassword, 8) &&
+      validatorFormat.minLength(passData.oldPassword, LIMITS.auth.passwordMin) &&
       validatorFormat.required(passData.newPassword) &&
-      validatorFormat.minLength(passData.newPassword, 8) &&
+      validatorFormat.minLength(passData.newPassword, LIMITS.auth.passwordMin) &&
       validatorFormat.password(passData.newPassword) &&
       validatorFormat.required(passData.confirmPassword) &&
       passData.newPassword === passData.confirmPassword
@@ -168,10 +169,10 @@ export const Setting = () => {
     try {
       await settingApi.changeEmail(emailData.newEmail, emailData.confirmCode)
       setEmailSuccess(true)
-      setTimeout(() => setEmailSuccess(false), 3000)
+      setTimeout(() => setEmailSuccess(false), TIMING.toastMs)
     } catch (err: any) {
       setEmailError(err.message || 'Ошибка смены почты')
-      setTimeout(() => setEmailError(null), 3000)
+      setTimeout(() => setEmailError(null), TIMING.toastMs)
     }
   }, [emailData])
 
@@ -181,10 +182,10 @@ export const Setting = () => {
     try {
       await settingApi.changePassword(passData.oldPassword, passData.newPassword, passData.confirmPassword)
       setPassSuccess(true)
-      setTimeout(() => setPassSuccess(false), 3000)
+      setTimeout(() => setPassSuccess(false), TIMING.toastMs)
     } catch (err: any) {
       setPassError(err.message || 'Ошибка смены пароля')
-      setTimeout(() => setPassError(null), 3000)
+      setTimeout(() => setPassError(null), TIMING.toastMs)
     }
   }, [passData])
 

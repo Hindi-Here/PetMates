@@ -291,19 +291,30 @@
 }
 
 @media (max-width: 480px) {
-  .auth-service-items-container {
-    flex-wrap: wrap;
-    gap: rem(8);
-    justify-content: center;
+  .auth-service-container {
+    padding-left: rem(12);
+    padding-right: rem(12);
 
-    .auth-service-item-container {
-      width: calc(50% - #{rem(4)});
+    .auth-service-items-container {
       padding-left: 0;
+      padding-right: 0;
+      flex-wrap: wrap;
       justify-content: center;
+      gap: rem(8);
+
+      .auth-service-item-container {
+        flex: 1 1 calc(50% - #{rem(4)});
+        width: auto;
+        min-width: 0;
+        height: rem(40);
+        padding-left: 0;
+        justify-content: center;
+        gap: rem(10);
+
+        &:last-child:nth-child(odd) { flex-basis: 100%; }
+      }
     }
   }
 
-  .form-complete-container .form-complete-button {
-    width: 100%;
-  }
+  .form-complete-container .form-complete-button { width: 100%; }
 }

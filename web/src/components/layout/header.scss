@@ -483,6 +483,7 @@
     align-items: center;
     justify-content: center;
     transition: 0.25s;
+    position: relative;
 
     .short-menu-ico{
         transition: 0.25s;
@@ -508,4 +509,13 @@
         width: rem(350);
         max-width: calc(100vw - rem(20));
     }
+}
+
+@media (max-width: 600px) {
+  .logo-container {
+    width: auto;
+    gap: rem(8);
+    .ico-container { padding-left: rem(16); }
+    .name-project-text { font-size: rem(26); }
+  }
 }

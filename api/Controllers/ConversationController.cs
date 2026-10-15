@@ -20,7 +20,7 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = _SupMan.GetUserId(authHeader);
+                var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 
@@ -86,7 +86,7 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = _SupMan.GetUserId(authHeader);
+                var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 
@@ -121,40 +121,14 @@ namespace api.Controllers
                     }
                 }
 
-                await EnsureParticipant(conv.ConversationId, userId);
-                await EnsureParticipant(conv.ConversationId, dto.TargetUserId);
+                await _SupMan.EnsureParticipant(conv.ConversationId, userId);
+                await _SupMan.EnsureParticipant(conv.ConversationId, dto.TargetUserId);
 
                 return Ok(new { conversationId = conv.ConversationId });
             }
             catch (Exception ex)
             {
                 return StatusCode(500, ex.Message);
-            }
-        }
-
-        // Убедиться, что пользователь является участником переписки
-        private async Task EnsureParticipant(string conversationId, string participantUserId)
-        {
-            var existing = await _client.From<ConversationParticipant>()
-                .Where(p => p.ConversationId == conversationId && p.UserId == participantUserId)
-                .Get();
-
-            if (existing.Models.Count > 0) return;
-
-            try
-            {
-                await _client.From<ConversationParticipant>().Insert(
-                    new ConversationParticipant
-                    {
-                        ParticipantId = Guid.NewGuid().ToString(),
-                        ConversationId = conversationId,
-                        UserId = participantUserId
-                    },
-                    new QueryOptions { Returning = QueryOptions.ReturnType.Minimal });
-            }
-            catch
-            {
-
             }
         }
 
@@ -165,7 +139,7 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = _SupMan.GetUserId(authHeader);
+                var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 
@@ -268,7 +242,7 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = _SupMan.GetUserId(authHeader);
+                var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 
@@ -321,7 +295,7 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = _SupMan.GetUserId(authHeader);
+                var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 
@@ -357,7 +331,7 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = _SupMan.GetUserId(authHeader);
+                var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 
@@ -388,7 +362,7 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = _SupMan.GetUserId(authHeader);
+                var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 
@@ -418,7 +392,7 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = _SupMan.GetUserId(authHeader);
+                var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 
@@ -461,7 +435,7 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = _SupMan.GetUserId(authHeader);
+                var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 
@@ -484,7 +458,7 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = _SupMan.GetUserId(authHeader);
+                var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 

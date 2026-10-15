@@ -10,7 +10,6 @@ import RejectIcon from '@icons/reject.svg?react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useSystemRole } from '../hooks/useSystemRole'
-import type { ProjectData } from '../services/project'
 import './activity.scss'
 import { useMemo, useEffect, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -21,6 +20,9 @@ import { usersApi } from '../services/users'
 import { canModerateTarget } from '../scripts/moderation'
 import DeleteProjectModerationForm from '../forms/delete_project_moderation'
 import { EventCard } from '../common/eventCard'
+
+import type { ProjectData, CreateProjectDto } from '../services/project'
+import type { UserData } from '../services/users'
 
 type ActivitySection = 'projects' | 'events'
 
@@ -60,9 +62,9 @@ const ProjectCard = ({
   useEffect(() => {
     const fetchOwnerInfo = async () => {
       try {
-        const owner = await usersApi.getUserById(project.ownerId)
-        setProjectOwnerRole((owner as any).systemRole || 'user')
-        setOwnerIsBanned((owner as any).isBanned === true)
+        const owner = await usersApi.getUserById(project.ownerId) as UserData
+        setProjectOwnerRole(owner.systemRole || 'user')
+        setOwnerIsBanned(owner.isBanned === true)
       } catch (error) {
         setProjectOwnerRole('user')
         setOwnerIsBanned(true) 
@@ -234,7 +236,7 @@ export const Activity = () => {
   })
 
   const createProjectMutation = useMutation({
-    mutationFn: (data: any) => projectsApi.createProject(data),
+    mutationFn: (data: CreateProjectDto) => projectsApi.createProject(data),
     onSuccess: (newProject) => {
       if (ownerId) {
         queryClient.invalidateQueries({ queryKey: queryKeys.projects.byUser(ownerId) })
@@ -269,7 +271,6 @@ export const Activity = () => {
       shortDescription: '',
       fullDescription: '',
       status: 'В процессе',
-      ownerId: authUserId,
       isPrivate: false
     })
   }
@@ -280,8 +281,8 @@ export const Activity = () => {
   }
 
   const filteredFavorites = useMemo(() => {
-    const memberProjectIds = new Set((memberProjects as any[]).map((p: any) => p.projectId))
-    return (favorites as any[]).filter((fav: any) => !memberProjectIds.has(fav.projectId))
+    const memberProjectIds = new Set(memberProjects.map((p: ProjectData) => p.projectId))
+    return favorites.filter((fav: ProjectData) => !memberProjectIds.has(fav.projectId))
   }, [favorites, memberProjects])
 
   const filteredFavoriteEvents = useMemo(() => {
@@ -289,11 +290,11 @@ export const Activity = () => {
     return favoriteEvents.filter(fav => !memberEventIds.has(fav.eventId))
   }, [favoriteEvents, memberEvents])
 
-  const hasAnyProjects = (projects as any[]).length > 0 || (memberProjects as any[]).length > 0 || (filteredFavorites as any[]).length > 0
+  const hasAnyProjects = projects.length > 0 || memberProjects.length > 0 || filteredFavorites.length > 0
   const hasAnyEvents = events.length > 0 || memberEvents.length > 0 || filteredFavoriteEvents.length > 0
 
   const isStaff = currentSystemRole === 'admin' || currentSystemRole === 'moderator'
-  const isBanned = (profileOwnerData as any)?.isBanned === true
+  const isBanned = profileOwnerData?.isBanned === true
 
   if (!isOwner && !isStaff) {
     if (ownerLoading) {
@@ -312,7 +313,7 @@ export const Activity = () => {
     }
   }
 
-  const canModerateOwner = !isOwner && canModerateTarget(currentSystemRole, (profileOwnerData as any)?.systemRole)
+  const canModerateOwner = !isOwner && canModerateTarget(currentSystemRole, profileOwnerData?.systemRole)
 
   return (
     <div className="activity-page">
@@ -340,12 +341,12 @@ export const Activity = () => {
             </div>
           )}
 
-          {(isOwner || (projects as any[]).length > 0) && (
+          {(isOwner || (projects as ProjectData[]).length > 0) && (
             <div className="activity-section">
               <div className="activity-header">
                 <h2 className="section-title">
                   {isOwner ? 'Мои проекты' : 'Проекты пользователя'}:{' '}
-                  <span className="projects-count">{(projects as any[]).length}</span>
+                  <span className="projects-count">{(projects as ProjectData[]).length}</span>
                 </h2>
               </div>
 
@@ -365,7 +366,7 @@ export const Activity = () => {
               )}
 
               <div className="projects-list">
-                {(projects as any[]).map((project: any) => (
+                {(projects as ProjectData[]).map((project: ProjectData) => (
                   <ProjectCard
                     key={project.projectId}
                     project={project}
@@ -376,34 +377,34 @@ export const Activity = () => {
             </div>
           )}
 
-          {(memberProjects as any[]).length > 0 && (
+          {(memberProjects as ProjectData[]).length > 0 && (
             <div className="activity-section">
               <div className="activity-header">
                 <h2 className="section-title">
                   Участник проектов:{' '}
-                  <span className="projects-count">{(memberProjects as any[]).length}</span>
+                  <span className="projects-count">{(memberProjects as ProjectData[]).length}</span>
                 </h2>
               </div>
 
               <div className="projects-list">
-                {(memberProjects as any[]).map((project: any) => (
+                {(memberProjects as ProjectData[]).map((project: ProjectData) => (
                   <ProjectCard key={project.projectId} project={project} />
                 ))}
               </div>
             </div>
           )}
 
-          {(filteredFavorites as any[]).length > 0 && (
+          {(filteredFavorites as ProjectData[]).length > 0 && (
             <div className="activity-section">
               <div className="activity-header">
                 <h2 className="section-title">
                   {isOwner ? 'Избранные проекты' : 'Избранные пользователя'}:{' '}
-                  <span className="projects-count">{(filteredFavorites as any[]).length}</span>
+                  <span className="projects-count">{(filteredFavorites as ProjectData[]).length}</span>
                 </h2>
               </div>
 
               <div className="projects-list">
-                {(filteredFavorites as any[]).map((project: any) => (
+                {(filteredFavorites as ProjectData[]).map((project: ProjectData) => (
                   <ProjectCard key={project.projectId} project={project} />
                 ))}
               </div>

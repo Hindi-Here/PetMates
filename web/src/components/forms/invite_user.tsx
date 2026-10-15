@@ -6,21 +6,24 @@ import AcceptIcon from '@icons/accept.svg?react'
 
 import { useState, useEffect } from 'react'
 import { useBlockScroll } from '../scripts/function'
-import { projectsApi } from '../services/project'
+import { projectsApi, type ProjectData } from '../services/project'
 import { vacanciesApi, type VacancyData } from '../services/vacancy'
-import { projectMembersApi } from '../services/project_members'
+import { projectMembersApi, type ProjectMemberData } from '../services/project_members'
 import { useAuth } from '../hooks/useAuth'
-import { inviteApi } from '../services/invite'
-import { usersApi } from '../services/users'
+import { inviteApi, type InviteData } from '../services/invite'
+import { usersApi, type UserData } from '../services/users'
 import { notificationApi } from '../services/notification'
 
 import { useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '../scripts/query/queryKeys'
 
-interface Project {
-  projectId: string
-  title: string
-  memberCount: number
+interface ProjectWithMembers extends ProjectData {
+  memberCount: number;
+}
+
+interface FormProps {
+  onClose: () => void;
+  invitedUser: UserData;
 }
 
 // Отправка уведомления пользователю
@@ -29,7 +32,7 @@ const sendNotification = (
   referenceType: string,
   referenceId: string,
   eventType: string,
-  contextData: Record<string, any>
+  contextData: Record<string, string | number | boolean | null | undefined>
 ) => {
   notificationApi.create({
     userId,
@@ -43,10 +46,10 @@ const sendNotification = (
 }
 
 // Компонент формы приглашения пользователя в проект
-const Form = ({ onClose, invitedUser }: any) => {
+const Form = ({ onClose, invitedUser }: FormProps) => {
   const { userId } = useAuth()
   const queryClient = useQueryClient()
-  const [projects, setProjects] = useState<Project[]>([])
+  const [projects, setProjects] = useState<ProjectWithMembers[]>([])
   const [vacancies, setVacancies] = useState<VacancyData[]>([])
   const [selectedProject, setSelectedProject] = useState<string>('')
   const [selectedVacancy, setSelectedVacancy] = useState<string>('')
@@ -76,7 +79,7 @@ const Form = ({ onClose, invitedUser }: any) => {
         const userProjects = await projectsApi.getProjectsByUser(userId)
         
         const projectsWithMembers = await Promise.all(
-          userProjects.map(async (project: any) => {
+          userProjects.map(async (project: ProjectData) => {
             try {
               const members = await projectMembersApi.getByProject(project.projectId)
               return {
@@ -130,7 +133,7 @@ const Form = ({ onClose, invitedUser }: any) => {
         const members = await projectMembersApi.getByProject(selectedProject)
         if (isCancelled) return
         
-        const memberIds = new Set<string>(members.map((m: any) => m.userId))
+        const memberIds = new Set<string>(members.map((m: ProjectMemberData) => m.userId))
         if (!isCancelled) {
           setExistingMembers(memberIds)
         }
@@ -139,8 +142,8 @@ const Form = ({ onClose, invitedUser }: any) => {
         if (isCancelled) return
         
         const pendingInvitesForProject = outgoingInvites
-          .filter(invite => invite.projectId === selectedProject && invite.status === 'pending')
-          .map(invite => invite.userId)
+          .filter((invite: InviteData) => invite.projectId === selectedProject && invite.status === 'pending')
+          .map((invite: InviteData) => invite.userId)
         
         if (!isCancelled) {
           setExistingInvites(new Set<string>(pendingInvitesForProject))
@@ -324,7 +327,7 @@ const Form = ({ onClose, invitedUser }: any) => {
 }
 
 // Компонент обертка для формы приглашения пользователя в проект (запрет скролла)
-export default function InviteUserForm({ onClose, invitedUser }: any) {
+export default function InviteUserForm({ onClose, invitedUser }: FormProps) {
   useBlockScroll(true)
   return (
     <div className='dark-area-container' onClick={onClose}> 

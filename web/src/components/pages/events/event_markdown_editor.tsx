@@ -11,7 +11,7 @@ import rehypeRaw from 'rehype-raw'
 import { Toggle } from '../../common/toggle'
 import { eventApi, type EventMediaItem, type EventMediaSection } from '../../services/event'
 
-const MAX_TOTAL_MEDIA_SIZE = 50 * 1024 * 1024
+import { LIMITS, TIMING } from '../../scripts/limits'
 
 const formatFileSize = (bytes: number): string => {
   if (bytes === 0) return '0 Б'
@@ -54,7 +54,7 @@ export const EventMarkdownEditor = ({
 
   const showMediaError = (text: string) => {
     setMediaError(text)
-    setTimeout(() => setMediaError(null), 4000)
+    setTimeout(() => setMediaError(null), TIMING.toastMs)
   }
 
   const insertAtCursor = (text: string) => {
@@ -80,8 +80,8 @@ export const EventMarkdownEditor = ({
     e.target.value = ''
     if (!file) return
 
-    if (totalSize + file.size > MAX_TOTAL_MEDIA_SIZE) {
-      showMediaError('Общий размер вложений не должен превышать 50 МБ')
+    if (totalSize + file.size > LIMITS.upload.mediaTotalMaxBytes) {
+      showMediaError(`Общий размер вложений не должен превышать ${LIMITS.upload.mediaTotalMaxBytes / 1024 / 1024} МБ`)
       return
     }
 
@@ -151,7 +151,7 @@ export const EventMarkdownEditor = ({
             <Add className='media-upload-ico' />
             <span>Прикрепить медиа</span>
           </button>
-          <p className='media-upload-hint'>Общий размер медиа до 50 МБ</p>
+          <p className='media-upload-hint'>Общий размер медиа до {LIMITS.upload.mediaTotalMaxBytes / 1024 / 1024} МБ</p>
 
           <div className='preview-toggle-container'>
             <p className='preview-toggle-label'>Предпросмотр</p>

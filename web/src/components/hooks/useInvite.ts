@@ -19,9 +19,10 @@ export const useInvites = (type: 'incoming' | 'outgoing') => {
         
         setInvites(data);
       }
-      catch (err: any) {
+      catch (err: unknown) {
         console.error('Ошибка загрузки приглашений:', err);
-        setError(err.message);
+        const message = err instanceof Error ? err.message : 'Неизвестная ошибка';
+        setError(message);
       }
       finally {
         setLoading(false);

@@ -16,9 +16,10 @@ export const useNotifications = (category?: string) => {
         const data = await notificationApi.getAll(category);
         setNotifications(data);
       }
-      catch (err: any) {
+      catch (err: unknown) {
         console.error('Ошибка загрузки уведомлений:', err);
-        setError(err.message);
+        const message = err instanceof Error ? err.message : 'Неизвестная ошибка';
+        setError(message);
       }
       finally {
         setLoading(false);

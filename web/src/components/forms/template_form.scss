@@ -296,19 +296,19 @@
 }
 
 @media (max-width: 480px) {
-  .form-container {
-    width: 100%;
-    margin: 0 rem(16);
-    max-height: 95vh;
-  }
+  .form-container { width: 100%; margin: 0 rem(16); }
 
   .form-manage {
     flex-wrap: wrap;
     height: auto;
 
-    .form-manage-button {
-      width: 100%;
-      height: rem(40);
-    }
+    .form-manage-button,
+    .form-manage-button.cancellation,
+    .form-manage-button.back { width: 100%; height: rem(40); }
   }
+}
+
+@supports (height: 100dvh) {
+  .dark-area-container { height: 100dvh; }
+  .form-container { max-height: 90dvh; }
 }

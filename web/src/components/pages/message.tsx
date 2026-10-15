@@ -9,8 +9,10 @@ import { useState, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '../scripts/query/queryKeys'
-import { conversationApi } from '../services/conversation'
+import { conversationApi, type ConversationData } from '../services/conversation'
 import { usersApi, type UserSearchResult } from '../services/users'
+
+import { LIMITS } from '../scripts/limits'
 
 // Форматирование даты для отображения в списке чатов
 const formatDate = (dateString: string | null | undefined) => {
@@ -52,7 +54,7 @@ export const Messages = () => {
     refetchOnWindowFocus: true,
   })
 
-  const hasSearched = globalQuery.trim().length >= 2
+  const hasSearched = globalQuery.trim().length >= LIMITS.search.userQueryMin
 
   const { data: foundUsers = [], isFetching: isSearchingUsers } = useQuery({
     queryKey: ['users', 'search', globalQuery],
@@ -148,7 +150,7 @@ export const Messages = () => {
     )
   }
 
-  const renderConversationCard = (conv: any) => (
+  const renderConversationCard = (conv: ConversationData) => (
     <div
       key={conv.conversationId}
       className={`conversation-card ${conv.hasUnread ? 'unread' : ''}`}

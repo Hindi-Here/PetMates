@@ -5,28 +5,20 @@ namespace api.Support
 {
     public partial class Validator
     {
-
         [GeneratedRegex(@"^[a-zA-Zа-яА-Я0-9_-]+$")]
         private static partial Regex NicknameRegex();
-
         [GeneratedRegex(@"^[a-zA-Zа-яА-Я0-9ёЁ\s\-""'.,()\/]+$")]
         private static partial Regex NameLocationRegex();
-
         [GeneratedRegex(@"^[a-zA-Zа-яА-Я0-9ёЁ\/\[\]\-\s]+$")]
         private static partial Regex RoleRegex();
-
         [GeneratedRegex(@"^#[a-zA-Zа-яА-Я0-9_\/]+$")]
         private static partial Regex TagRegex();
-
         [GeneratedRegex(@"^[^\s@]+@([^\s@.,]+\.)+[^\s@.,]{2,}$")]
         private static partial Regex EmailRegex();
-
         [GeneratedRegex(@"[A-Za-zА-Яа-я]")]
         private static partial Regex PasswordLetterRegex();
-
         [GeneratedRegex(@"[0-9]")]
         private static partial Regex PasswordNumberRegex();
-
         [GeneratedRegex(@"[!@#$%^&*()\-_=+\[\]{};':""\\|,.<>\/?]")]
         private static partial Regex PasswordSpecialRegex();
 
@@ -39,40 +31,40 @@ namespace api.Support
             {
                 if (data.Nickname.Trim().Length == 0)
                     errors.Add("[Никнейм] введите никнейм");
-                else if (data.Nickname.Length > 50)
-                    errors.Add("[Никнейм] максимум 50 символов");
+                else if (data.Nickname.Length > Limits.Auth.NicknameMax)
+                    errors.Add($"[Никнейм] максимум {Limits.Auth.NicknameMax} символов");
                 else if (!NicknameRegex().IsMatch(data.Nickname))
                     errors.Add("[Никнейм] недопустимые символы");
             }
 
             if (data.RealName != null)
             {
-                if (data.RealName.Length > 100)
-                    errors.Add("[Имя] максимум 100 символов");
+                if (data.RealName.Length > Limits.Profile.RealNameMax)
+                    errors.Add($"[Имя] максимум {Limits.Profile.RealNameMax} символов");
                 else if (data.RealName.Length > 0 && !NameLocationRegex().IsMatch(data.RealName))
                     errors.Add("[Имя] недопустимые символы");
             }
 
             if (data.Country != null)
             {
-                if (data.Country.Length > 50)
-                    errors.Add("[Страна] максимум 50 символов");
+                if (data.Country.Length > Limits.Profile.CountryMax)
+                    errors.Add($"[Страна] максимум {Limits.Profile.CountryMax} символов");
                 else if (data.Country.Length > 0 && !NameLocationRegex().IsMatch(data.Country))
                     errors.Add("[Страна] недопустимые символы");
             }
 
             if (data.City != null)
             {
-                if (data.City.Length > 50)
-                    errors.Add("[Город] максимум 50 символов");
+                if (data.City.Length > Limits.Profile.CityMax)
+                    errors.Add($"[Город] максимум {Limits.Profile.CityMax} символов");
                 else if (data.City.Length > 0 && !NameLocationRegex().IsMatch(data.City))
                     errors.Add("[Город] недопустимые символы");
             }
 
             if (data.Workplace != null)
             {
-                if (data.Workplace.Length > 100)
-                    errors.Add("[Место работы] максимум 100 символов");
+                if (data.Workplace.Length > Limits.Profile.WorkplaceMax)
+                    errors.Add($"[Место работы] максимум {Limits.Profile.WorkplaceMax} символов");
                 else if (data.Workplace.Length > 0 && !NameLocationRegex().IsMatch(data.Workplace))
                     errors.Add("[Место работы] недопустимые символы");
             }
@@ -81,18 +73,17 @@ namespace api.Support
             {
                 if (data.ProfileRole.Trim().Length == 0)
                     errors.Add("[Роль] введите роль");
-                else if (data.ProfileRole.Length > 50)
-                    errors.Add("[Роль] максимум 50 символов");
+                else if (data.ProfileRole.Length > Limits.Profile.RoleMax)
+                    errors.Add($"[Роль] максимум {Limits.Profile.RoleMax} символов");
                 else if (!RoleRegex().IsMatch(data.ProfileRole))
                     errors.Add("[Роль] недопустимые символы");
             }
 
-            if (data.Description != null && data.Description.Length > 2000)
-                errors.Add("[Описание] максимум 2000 символов");
+            if (data.Description != null && data.Description.Length > Limits.Profile.DescriptionMax)
+                errors.Add($"[Описание] максимум {Limits.Profile.DescriptionMax} символов");
 
             if (!string.IsNullOrEmpty(data.HardSkills) && !ValidateTags(data.HardSkills))
                 errors.Add("[Hard skills] теги должны начинаться с # и содержать только буквы, цифры и _");
-
             if (!string.IsNullOrEmpty(data.SoftSkills) && !ValidateTags(data.SoftSkills))
                 errors.Add("[Soft skills] теги должны начинаться с # и содержать только буквы, цифры и _");
 
@@ -107,16 +98,14 @@ namespace api.Support
             ["image/webp"] = (".webp", [[0x52, 0x49, 0x46, 0x46]]),
         };
 
-        private const long MaxAvatarSize = 5 * 1024 * 1024; // 5 МБ размер аватара
-
         // Валидация аватара
         public static (string? Error, string? Extension) ValidateAvatar(IFormFile? file)
         {
             if (file == null || file.Length == 0)
                 return ("[Аватар] файл не передан", null);
 
-            if (file.Length > MaxAvatarSize)
-                return ("[Аватар] максимальный размер файла 5 МБ", null);
+            if (file.Length > Limits.Upload.AvatarMaxBytes)
+                return ($"[Аватар] максимальный размер файла {Limits.Upload.AvatarMaxBytes / Limits.MB} МБ", null);
 
             var contentType = file.ContentType?.ToLowerInvariant() ?? "";
             if (!AllowedAvatarTypes.TryGetValue(contentType, out var typeInfo))
@@ -159,24 +148,24 @@ namespace api.Support
 
             if (string.IsNullOrWhiteSpace(nickname))
                 errors.Add("[Никнейм] введите никнейм");
-            else if (nickname.Length < 3)
-                errors.Add("[Никнейм] минимум 3 символа");
-            else if (nickname.Length > 50)
-                errors.Add("[Никнейм] максимум 50 символов");
+            else if (nickname.Length < Limits.Auth.NicknameMin)
+                errors.Add($"[Никнейм] минимум {Limits.Auth.NicknameMin} символа");
+            else if (nickname.Length > Limits.Auth.NicknameMax)
+                errors.Add($"[Никнейм] максимум {Limits.Auth.NicknameMax} символов");
             else if (!NicknameRegex().IsMatch(nickname))
                 errors.Add("[Никнейм] недопустимые символы");
 
             if (string.IsNullOrWhiteSpace(email))
                 errors.Add("[Email] введите email");
-            else if (email.Length > 255)
-                errors.Add("[Email] максимум 255 символов");
+            else if (email.Length > Limits.Auth.EmailMax)
+                errors.Add($"[Email] максимум {Limits.Auth.EmailMax} символов");
             else if (!EmailRegex().IsMatch(email))
                 errors.Add("[Email] некорректный формат");
 
             if (string.IsNullOrWhiteSpace(password))
                 errors.Add("[Пароль] введите пароль");
-            else if (password.Length < 8)
-                errors.Add("[Пароль] минимум 8 символов");
+            else if (password.Length < Limits.Auth.PasswordMin)
+                errors.Add($"[Пароль] минимум {Limits.Auth.PasswordMin} символов");
             else
             {
                 var hasLetter = PasswordLetterRegex().IsMatch(password);
@@ -202,8 +191,9 @@ namespace api.Support
         {
             if (string.IsNullOrWhiteSpace(newPassword))
                 return "[Пароль] введите новый пароль";
-            if (newPassword.Length < 8)
-                return "[Пароль] минимум 8 символов";
+
+            if (newPassword.Length < Limits.Auth.PasswordMin)
+                return $"[Пароль] минимум {Limits.Auth.PasswordMin} символов";
 
             var hasLetter = PasswordLetterRegex().IsMatch(newPassword);
             var hasNumber = PasswordNumberRegex().IsMatch(newPassword);
@@ -213,6 +203,7 @@ namespace api.Support
 
             if (string.IsNullOrWhiteSpace(confirmPassword))
                 return "[Подтверждение] подтвердите пароль";
+
             if (newPassword != confirmPassword)
                 return "[Подтверждение] пароли не совпадают";
 
@@ -224,8 +215,10 @@ namespace api.Support
         {
             if (string.IsNullOrWhiteSpace(newEmail))
                 return "[Email] введите новую почту";
-            if (newEmail.Length > 255)
-                return "[Email] максимум 255 символов";
+
+            if (newEmail.Length > Limits.Auth.EmailMax)
+                return $"[Email] максимум {Limits.Auth.EmailMax} символов";
+
             if (!EmailRegex().IsMatch(newEmail))
                 return "[Email] некорректный формат";
 
@@ -241,12 +234,12 @@ namespace api.Support
             {
                 if (title.Trim().Length == 0)
                     errors.Add("[Название проекта] введите название проекта");
-                else if (title.Length > 50)
-                    errors.Add("[Название проекта] максимум 50 символов");
+                else if (title.Length > Limits.Project.TitleMax)
+                    errors.Add($"[Название проекта] максимум {Limits.Project.TitleMax} символов");
             }
 
-            if (shortDescription != null && shortDescription.Length > 150)
-                errors.Add("[Краткое описание] максимум 150 символов");
+            if (shortDescription != null && shortDescription.Length > Limits.Project.ShortDescriptionMax)
+                errors.Add($"[Краткое описание] максимум {Limits.Project.ShortDescriptionMax} символов");
 
             return errors.Count > 0 ? errors[0] : null;
         }
@@ -256,10 +249,12 @@ namespace api.Support
         {
             if (string.IsNullOrWhiteSpace(role))
                 return "[Роль] введите роль";
-            if (role.Length > 50)
-                return "[Роль] максимум 50 символов";
-            if (role.Length < 2)
-                return "[Роль] минимум 2 символа";
+
+            if (role.Length > Limits.Member.RoleMax)
+                return $"[Роль] максимум {Limits.Member.RoleMax} символов";
+
+            if (role.Length < Limits.Member.RoleMin)
+                return $"[Роль] минимум {Limits.Member.RoleMin} символа";
 
             return null;
         }
@@ -271,13 +266,13 @@ namespace api.Support
 
             if (string.IsNullOrWhiteSpace(title))
                 errors.Add("[Название роли] введите название роли");
-            else if (title.Length > 50)
-                errors.Add("[Название роли] максимум 50 символов");
+            else if (title.Length > Limits.Vacancy.TitleMax)
+                errors.Add($"[Название роли] максимум {Limits.Vacancy.TitleMax} символов");
 
             if (string.IsNullOrWhiteSpace(description))
                 errors.Add("[Описание] введите описание");
-            else if (description.Length > 500)
-                errors.Add("[Описание] максимум 500 символов");
+            else if (description.Length > Limits.Vacancy.DescriptionMax)
+                errors.Add($"[Описание] максимум {Limits.Vacancy.DescriptionMax} символов");
 
             if (string.IsNullOrWhiteSpace(tags))
                 errors.Add("[Теги] введите теги");
@@ -286,9 +281,6 @@ namespace api.Support
 
             return errors.Count > 0 ? errors[0] : null;
         }
-
-        public const int MaxLongTextLength = 20000; // Максимальная длина длинного текста (описание, результаты)
-        private const long MaxEventImageSize = 50 * 1024 * 1024; // 50 МБ размер изображения мероприятия
 
         public static readonly string[] EventMediaSections = ["description", "results"];
 
@@ -303,10 +295,13 @@ namespace api.Support
         {
             if (string.IsNullOrWhiteSpace(dto.Title))
                 return "[Название мероприятия] введите название мероприятия";
-            if (dto.Title.Trim().Length > 50)
-                return "[Название мероприятия] максимум 50 символов";
-            if (dto.ShortDescription != null && dto.ShortDescription.Length > 150)
-                return "[Краткое описание] максимум 150 символов";
+
+            if (dto.Title.Trim().Length > Limits.Event.TitleMax)
+                return $"[Название мероприятия] максимум {Limits.Event.TitleMax} символов";
+
+            if (dto.ShortDescription != null && dto.ShortDescription.Length > Limits.Event.ShortDescriptionMax)
+                return $"[Краткое описание] максимум {Limits.Event.ShortDescriptionMax} символов";
+
             if (dto.EventStartDate > dto.EventEndDate)
                 return "[Даты мероприятия] дата окончания раньше даты начала";
 
@@ -318,31 +313,36 @@ namespace api.Support
         {
             if (string.IsNullOrWhiteSpace(dto.Title))
                 return "[Название мероприятия] введите название мероприятия";
-            if (dto.Title.Trim().Length > 50)
-                return "[Название мероприятия] максимум 50 символов";
+
+            if (dto.Title.Trim().Length > Limits.Event.TitleMax)
+                return $"[Название мероприятия] максимум {Limits.Event.TitleMax} символов";
+
             if (string.IsNullOrWhiteSpace(dto.ShortDescription))
                 return "[Краткое описание] введите краткое описание";
-            if (dto.ShortDescription.Trim().Length > 150)
-                return "[Краткое описание] максимум 150 символов";
-            if (dto.Description != null && dto.Description.Length > MaxLongTextLength)
-                return $"[Описание] максимум {MaxLongTextLength} символов";
+
+            if (dto.ShortDescription.Trim().Length > Limits.Event.ShortDescriptionMax)
+                return $"[Краткое описание] максимум {Limits.Event.ShortDescriptionMax} символов";
+
+            if (dto.Description != null && dto.Description.Length > Limits.LongTextMax)
+                return $"[Описание] максимум {Limits.LongTextMax} символов";
 
             if (dto.EventStartDate == null || dto.EventEndDate == null)
                 return "[Период проведения] укажите даты проведения";
+
             if (dto.EventStartDate > dto.EventEndDate)
                 return "[Период проведения] дата окончания раньше даты начала";
 
-            if (dto.ParticipantLimit is < 1 or > 100000)
-                return "[Лимит участников] допустимо от 1 до 100000";
+            if (dto.ParticipantLimit is < Limits.Event.ParticipantLimitMin or > Limits.Event.ParticipantLimitMax)
+                return $"[Лимит участников] допустимо от {Limits.Event.ParticipantLimitMin} до {Limits.Event.ParticipantLimitMax}";
 
             var stages = dto.Stages ?? [];
-            if (stages.Count > 20)
-                return "[Этапы] максимум 20 этапов";
+            if (stages.Count > Limits.Event.StagesMax)
+                return $"[Этапы] максимум {Limits.Event.StagesMax} этапов";
 
             foreach (var s in stages)
             {
-                if (string.IsNullOrWhiteSpace(s.Title) || s.Title.Trim().Length > 50)
-                    return "[Этапы] название этапа от 1 до 50 символов";
+                if (string.IsNullOrWhiteSpace(s.Title) || s.Title.Trim().Length > Limits.Event.StageTitleMax)
+                    return $"[Этапы] название этапа от 1 до {Limits.Event.StageTitleMax} символов";
 
                 if (!DateTime.TryParseExact(s.StartDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var start)
                     || !DateTime.TryParseExact(s.EndDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var end))
@@ -350,6 +350,7 @@ namespace api.Support
 
                 if (start > end)
                     return "[Этапы] дата окончания этапа раньше даты начала";
+
                 if (start < dto.EventStartDate.Value.Date || end > dto.EventEndDate.Value.Date)
                     return "[Этапы] этап должен входить в период проведения";
             }
@@ -360,8 +361,8 @@ namespace api.Support
         // Валидация формы заявки (стандартных полей больше нет)
         public static string? ValidateEventForm(List<Models.EventFormField> fields)
         {
-            if (fields.Count > 50)
-                return "[Форма] максимум 50 полей";
+            if (fields.Count > Limits.Event.FormFieldsMax)
+                return $"[Форма] максимум {Limits.Event.FormFieldsMax} полей";
 
             var ids = new HashSet<string>();
             var labels = new HashSet<string>();
@@ -373,10 +374,13 @@ namespace api.Support
 
                 if (!FormFieldIdRegex().IsMatch(id))
                     return "[Форма] некорректный идентификатор поля";
+
                 if (!ids.Add(id))
                     return "[Форма] идентификаторы полей должны быть уникальны";
-                if (label.Length == 0 || label.Length > 100)
-                    return "[Форма] название критерия от 1 до 100 символов";
+
+                if (label.Length == 0 || label.Length > Limits.Event.FormLabelMax)
+                    return $"[Форма] название критерия от 1 до {Limits.Event.FormLabelMax} символов";
+
                 if (!labels.Add(label.ToLowerInvariant()))
                     return "[Форма] названия критериев не должны повторяться";
             }
@@ -385,7 +389,6 @@ namespace api.Support
         }
 
         public static readonly string[] EventDraftSections = ["general", "form", "results"]; // Разделы черновика мероприятия
-        private const int MaxEventDraftLength = 100_000; // Максимальный объём данных черновика
 
         // Валидация раздела черновика
         public static string? ValidateEventDraftSection(string section)
@@ -396,15 +399,16 @@ namespace api.Support
         // Валидация объёма данных черновика
         public static string? ValidateEventDraftPayload(string raw)
         {
-            return raw.Length > MaxEventDraftLength ? "[Черновик] слишком большой объём данных" : null;
+            return raw.Length > Limits.Event.DraftPayloadMax
+                ? $"[Черновик] слишком большой объём данных (максимум {Limits.Event.DraftPayloadMax})"
+                : null;
         }
 
         // Валидация результатов мероприятия
         public static string? ValidateEventResults(string? results)
         {
-            if (results != null && results.Length > MaxLongTextLength)
-                return $"[Результаты] максимум {MaxLongTextLength} символов";
-
+            if (results != null && results.Length > Limits.LongTextMax)
+                return $"[Результаты] максимум {Limits.LongTextMax} символов";
             return null;
         }
 
@@ -426,14 +430,14 @@ namespace api.Support
             if (file == null || file.Length == 0)
                 return ("[Изображение] файл не передан", null);
 
-            if (file.Length > MaxEventImageSize)
-                return ("[Изображение] максимальный размер файла 50 МБ", null);
+            if (file.Length > Limits.Upload.ImageMaxBytes)
+                return ($"[Изображение] максимальный размер файла {Limits.Upload.ImageMaxBytes / Limits.MB} МБ", null);
 
             using var stream = file.OpenReadStream();
             var h = new byte[12];
             var read = stream.Read(h, 0, h.Length);
-
             string? extension = null;
+
             if (read >= 8 && h[0] == 0x89 && h[1] == 0x50 && h[2] == 0x4E && h[3] == 0x47)
                 extension = ".png";
             else if (read >= 3 && h[0] == 0xFF && h[1] == 0xD8 && h[2] == 0xFF)
@@ -452,14 +456,10 @@ namespace api.Support
         // Валидация длинного описания проекта
         public static string? ValidateProjectDescription(string? description)
         {
-            if (description != null && description.Length > MaxLongTextLength)
-                return $"[Описание] максимум {MaxLongTextLength} символов";
-
+            if (description != null && description.Length > Limits.LongTextMax)
+                return $"[Описание] максимум {Limits.LongTextMax} символов";
             return null;
         }
-
-        public const int MaxApplicationAnswerLength = 2000; // Максимальная длина в заявке от заявителя
-        public const int MaxDecisionCommentLength = 1000; // Максимальная длина комментария от организатора
 
         // Валидация ответов в заявке на участие
         public static string? ValidateEventApplication(
@@ -472,13 +472,14 @@ namespace api.Support
             foreach (var input in inputs)
             {
                 var fieldId = input.FieldId ?? "";
-
                 if (!formFields.ContainsKey(fieldId))
                     return "[Заявка] неизвестное поле формы";
+
                 if (!seen.Add(fieldId))
                     return "[Заявка] поля формы не должны повторяться";
-                if ((input.Value ?? "").Length > MaxApplicationAnswerLength)
-                    return $"[Заявка] ответ: максимум {MaxApplicationAnswerLength} символов";
+
+                if ((input.Value ?? "").Length > Limits.Event.ApplicationAnswerMax)
+                    return $"[Заявка] ответ: максимум {Limits.Event.ApplicationAnswerMax} символов";
             }
 
             foreach (var field in formFields.Values.Where(f => f.Required))
@@ -498,8 +499,9 @@ namespace api.Support
                 return "[Решение] недопустимое решение";
 
             var comment = dto.Comment?.Trim() ?? "";
-            if (comment.Length > MaxDecisionCommentLength)
-                return $"[Комментарий] максимум {MaxDecisionCommentLength} символов";
+            if (comment.Length > Limits.Event.DecisionCommentMax)
+                return $"[Комментарий] максимум {Limits.Event.DecisionCommentMax} символов";
+
             if (dto.Decision == "revision" && comment.Length == 0)
                 return "[Комментарий] опишите, что нужно доработать";
 

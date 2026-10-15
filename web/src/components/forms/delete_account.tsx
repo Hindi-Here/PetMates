@@ -12,8 +12,14 @@ import { settingApi } from '../services/setting';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/cfg';
 
+import { LIMITS } from '../scripts/limits'
+
+interface FormProps {
+  onClose: () => void;
+}
+
 // Компонент формы удаления аккаунта с подтверждением и проверкой никнейма
-const Form = ({ onClose }: any) => {
+const Form = ({ onClose }: FormProps) => {
   const navigate = useNavigate();
   const { userId: currentUserId } = useAuth();
   const [step, setStep] = useState(1);
@@ -118,7 +124,7 @@ const Form = ({ onClose }: any) => {
             <input 
               className={`form-field-input red ${nicknameError ? 'input-error' : ''}`} 
               name='name' 
-              maxLength={50} 
+              maxLength={LIMITS.auth.nicknameMax} 
               value={data.name} 
               onChange={handleNameChange}
             />
@@ -187,7 +193,7 @@ const Form = ({ onClose }: any) => {
   )
 }
 
-export default function DeleteAccountForm({ onClose }: any) {
+export default function DeleteAccountForm({ onClose }: FormProps) {
   useBlockScroll(true);
   return (
      <div className='dark-area-container' onClick={onClose}> 

@@ -22,7 +22,7 @@ export type ProfilePublicData = ThirdProfileData & {
   isBanned?: boolean
 }
 
-const parseSkills = (skillsData: any): string[] => {
+const parseSkills = (skillsData: string | string[] | null | undefined): string[] => {
   if (Array.isArray(skillsData)) return skillsData
   if (typeof skillsData === 'string') {
     if (skillsData.trim().startsWith('[')) {

@@ -519,3 +519,9 @@
   gap: rem(8);
   margin-top: rem(4);
 }
+
+@media (max-width: 480px) {
+  .moderation-menu-wrapper { top: rem(12); right: rem(12); }
+  .moderation-menu-btn { width: rem(32); height: rem(32); }
+  .user-card-container.has-moderation-menu .info-place-container { padding-right: rem(52); }
+}

@@ -8,7 +8,7 @@ import { eventApi, type MyApplication } from '../../services/event'
 import type { EventPublicData } from './event_public_view'
 import './event_applications.scss'
 
-const MAX_ANSWER = 2000
+import { LIMITS } from '../../scripts/limits'
 
 const BANNER_TEXT: Record<MyApplication['status'], string> = {
   pending: 'Заявка отправлена и ожидает решения организатора',
@@ -126,7 +126,7 @@ export const EventApplicationForm = ({ data }: { data: EventPublicData }) => {
                 <textarea
                   className={`event-answer-input ${fieldError ? 'input-error' : ''}`}
                   value={values[field.id] ?? ''}
-                  maxLength={MAX_ANSWER}
+                  maxLength={LIMITS.event.applicationAnswerMax}
                   disabled={!canFill || busy}
                   placeholder='Ваш ответ'
                   onChange={e => { setValues(prev => ({ ...prev, [field.id]: e.target.value })); setTouched(prev => ({ ...prev, [field.id]: true })) }}

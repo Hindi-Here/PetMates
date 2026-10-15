@@ -3,7 +3,12 @@
   flex-direction: column;
   gap: rem(24);
   padding-bottom: rem(36);
+
+  .contacts-list .contact-item .contact-link,
+  .profile-area-container .description-text { overflow-wrap: anywhere; }
 }
+
+.profile-field-container { grid-template-columns: rem(220) minmax(0, 1fr); }
 
 .profile-header-container {
   display: flex;
@@ -11,6 +16,9 @@
   gap: rem(16);
   height: rem(100);
   position: relative;
+
+  .contacts-list .contact-item .contact-link,
+  .profile-area-container .description-text { overflow-wrap: anywhere; }
 
   .profile-avatar {
     width: rem(100);
@@ -372,6 +380,9 @@
     height: auto;
     flex-wrap: nowrap; 
     align-items: center;
+
+    .contacts-list .contact-item .contact-link,
+    .profile-area-container .description-text { overflow-wrap: anywhere; }
 
     .profile-avatar {
       width: rem(70);

@@ -254,97 +254,25 @@
 
 @media (max-width: 600px) {
   .sort-line-container {
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
     gap: rem(8);
+    height: auto;
 
+    .sort-group-container { min-width: 0; height: rem(40); }
     .sort-type-container {
-      padding-left: rem(12);
-      padding-right: rem(12);
-      gap: rem(6);
-      min-width: 0;
-      flex: 1 1 auto;
-
-      .sort-type-text {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
+      width: 100%; min-width: 0;
+      padding-left: rem(12); padding-right: rem(12); gap: rem(6);
     }
+    .sort-type-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    .sort-vector-ico-container { height: rem(40); }
 
-    .sort-vector-ico-container {
-      flex-shrink: 0;
-    }
+    .sort-group-container:nth-child(2) .dropdown-container { left: auto; right: 0; }
+
+    .banned-filter-container,
+    .staff-filter-container { grid-column: 1 / -1; }
   }
 }
-
-@media (max-width: 480px) {
-  .search-line-container {
-    gap: rem(8); 
-
-    .search-input-container {
-      width: auto;
-      flex: 1 1 auto;
-      min-width: 0;
-      padding-left: rem(8);
-      gap: rem(8); 
-    }
-
-    .search-input {
-      &::placeholder {
-        color: transparent;
-        font-size: rem(12);
-      }
-    }
-
-    .search-button-container {
-      flex-shrink: 0;
-
-      .search-button {
-        width: rem(90);
-        font-size: rem(12);
-      }
-    }
-  }
-
-  .sort-line-container {
-    .sort-type-container {
-      padding-left: rem(8);
-      padding-right: rem(8);
-    }
-  }
-}
-
 @media (max-width: 360px) {
-  .search-line-container {
-    gap: rem(6);
-    
-    .search-input-container {
-      padding-left: rem(6);
-      gap: rem(6);
-      
-      .search-ico {
-        width: rem(15); 
-        height: rem(15);
-      }
-    }
-    
-    .search-button-container {
-      .search-button {
-        width: rem(80);
-        font-size: rem(11);
-        padding: 0 rem(8);
-      }
-    }
-  }
-
-  .sort-line-container {
-    .sort-type-dropdown-ico {
-      display: none;
-    }
-    
-    .sort-type-container {
-      padding-left: rem(6);
-      padding-right: rem(6);
-    }
-  }
+  .sort-line-container .sort-type-dropdown-ico { display: none; }
 }

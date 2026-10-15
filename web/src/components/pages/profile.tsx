@@ -1,57 +1,71 @@
 import './profile.scss'
 import { useNavigate, useLocation, useParams, Navigate } from 'react-router-dom'
-
 import LockIcon from '@icons/lock.svg?react'
 import Add from '@icons/plus.svg?react'
 import Reject from '@icons/reject.svg?react'
 import Delete from '@icons/delete.svg?react'
-
 import { Activity } from './activity'
 import { Notifications } from './notification'
 import { Setting } from './setting'
 import { Project } from './project'
 import ProjectViewer from './project_viewer'
-
 import ProfileViewer from './profile_viewer'
 import { ProfilePublicView, type ProfilePublicData } from './profile_public_view'
-
 import { useEffect, useMemo, useState, useRef } from 'react'
 import { projectsApi } from '../services/project'
 import { useChangeInput, validatorFormat, validatorRegex } from '../scripts/function'
 import { useAuth } from '../hooks/useAuth'
-import { useProfile } from '../hooks/useProfile'
+import { useProfile, type ProfileData } from '../hooks/useProfile'
 import { profileApi } from '../services/profile'
-
 import { Toggle } from '../common/toggle'
-
 import { Responses } from './response'
 import { Messages } from './message'
 import { Chat } from './chat'
 import { EventPage } from './events/event_page'
-
 import { useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '../scripts/query/queryKeys'
+import { LIMITS, TIMING } from '../scripts/limits'
 
-// Рендер компонента для неавторизованных пользователей
+interface ProfileFormData {
+  nickname: string
+  realName: string
+  age: string
+  gender: string
+  country: string
+  city: string
+  workplace: string
+  profileRole: string
+  description: string
+  hardSkills: string
+  softSkills: string
+  contacts: string
+  avatarUrl: string
+}
+
+interface ContactItem {
+  id: number
+  label: string
+  url: string
+  isNew: boolean
+}
+
 const UnauthorizedProfile = () => {
   return (
     <div className='profile-info-container'>
-        <div className='info-container'>
-            <LockIcon className='info-ico'/>
-            <p className='info-comment'> Зарегистрируйтесь или войдите в аккаунт, чтобы управлять своим профилем</p>
-        </div>
+      <div className='info-container'>
+        <LockIcon className='info-ico'/>
+        <p className='info-comment'> Зарегистрируйтесь или войдите в аккаунт, чтобы управлять своим профилем </p>
+      </div>
     </div>
   )
 }
 
-// Рендер компонента для авторизованных пользователей
 const AuthorizedProfile = () => {
   const [isPreview, setIsPreview] = useState(false)
   const { isAuthenticated, userId } = useAuth()
   const { profileId } = useParams<{ profileId: string }>()
   const profileKey = profileId || userId
   const queryClient = useQueryClient()
-  
   const { data: user, refresh } = useProfile(isAuthenticated)
   
   const tabRoutes: Record<string, string> = {
@@ -62,11 +76,12 @@ const AuthorizedProfile = () => {
     'Уведомления': 'notifications',
     'Настройки': 'settings',
   }
-
+  
   const navigate = useNavigate()
   const location = useLocation()
   const currentPath = location.pathname
   const prefix = profileKey ? `/profile/${profileKey}` : '/profile'
+  
   const isProjectRoute = currentPath === `${prefix}/activity/project` || currentPath.startsWith(`${prefix}/activity/project/`)
   const isEventRoute = currentPath === `${prefix}/activity/event` || currentPath.startsWith(`${prefix}/activity/event/`)
   const isActivityRoute = currentPath === `${prefix}/activity` || currentPath.startsWith(`${prefix}/activity/`)
@@ -75,18 +90,19 @@ const AuthorizedProfile = () => {
   const isSettingsRoute = currentPath.startsWith(`${prefix}/settings`)
   const isChatRoute = currentPath !== `${prefix}/messages` && currentPath.startsWith(`${prefix}/messages/`)
   const isMessagesRoute = currentPath === `${prefix}/messages` || currentPath.startsWith(`${prefix}/messages/`)
+  
   const activeTab = isResponsesRoute
-  ? 'Отклики'
-  : isMessagesRoute
+    ? 'Отклики'
+    : isMessagesRoute
     ? 'Сообщения'
     : isNotificationsRoute
-      ? 'Уведомления'
-      : isSettingsRoute
-        ? 'Настройки'
-        : isProjectRoute || isActivityRoute
-          ? 'Активность'
-          : 'Информация'
-
+    ? 'Уведомления'
+    : isSettingsRoute
+    ? 'Настройки'
+    : isProjectRoute || isActivityRoute
+    ? 'Активность'
+    : 'Информация'
+  
   const validationRules = {
     nickname: validatorRegex.username,
     realName: (val: string) => validatorRegex.text(val, 100),
@@ -99,7 +115,7 @@ const AuthorizedProfile = () => {
     hardSkills: validatorRegex.tags,
     softSkills: validatorRegex.tags,
   }
-
+  
   const { data, touched, dirty, handleChange: handleValidationChange, handleBlur, reset } = useChangeInput(
     {
       nickname: '',
@@ -115,14 +131,28 @@ const AuthorizedProfile = () => {
     },
     validationRules
   )
-
-  const [formData, setFormData] = useState<Record<string, any>>({})
-
+  
+  const [formData, setFormData] = useState<ProfileFormData>({
+    nickname: '',
+    realName: '',
+    age: '',
+    gender: '',
+    country: '',
+    city: '',
+    workplace: '',
+    profileRole: '',
+    description: '',
+    hardSkills: '',
+    softSkills: '',
+    contacts: '',
+    avatarUrl: '',
+  })
+  
   const normalizeValue = (name: string, value: string) => {
     const rule = validationRules[name as keyof typeof validationRules]
     return rule ? rule(value) : value
   }
-
+  
   useEffect(() => {
     if (user) {
       setFormData({
@@ -143,7 +173,7 @@ const AuthorizedProfile = () => {
       try {
         const parsed = user.contacts ? JSON.parse(user.contacts) : []
         if (Array.isArray(parsed)) {
-          setContacts(parsed.map((c: any) => ({
+          setContacts(parsed.map((c: { name?: string; label?: string; link?: string; url?: string }) => ({
             id: Date.now() + Math.random(),
             label: c.name ?? c.label ?? '',
             url: c.link ?? c.url ?? '',
@@ -157,75 +187,72 @@ const AuthorizedProfile = () => {
       }
     }
   }, [user])
-
+  
   const hasChanges = useMemo(() => {
     if (!user) return false
-    
-    const normalize = (val: any) =>
+    const normalize = (val: unknown) =>
       val === null || val === undefined ? '' : String(val).trim()
-    
     return Object.keys(formData).some(key =>
-      normalize(formData[key]) !== normalize((user as any)[key])
+      normalize(formData[key as keyof ProfileFormData]) !== normalize((user as Record<string, unknown>)[key])
     )
   }, [formData, user])
-
+  
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     const normalizedValue = normalizeValue(name, value)
     handleValidationChange(e)
     setFormData(prev => ({ ...prev, [name]: normalizedValue ?? '' }))
   }
-
+  
   const [isLoading, setIsLoading] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess] = useState(false)
-
+  
   const handleSave = async () => {
     if (!hasChanges || !user) return
     setIsLoading(true)
     setSaveError(null)
     setSaveSuccess(false)
-
     try {
       if (pendingAvatarFile) {
         const result = await profileApi.uploadAvatar(pendingAvatarFile)
         setFormData(prev => ({ ...prev, avatarUrl: result.avatarUrl }))
         setPendingAvatarFile(null)
       }
-
-      const changes: Record<string, any> = {}
-      const normalize = (val: any) => val === null || val === undefined ? '' : String(val).trim()
-
+      const changes: Record<string, string | number | boolean | null> = {}
+      const normalize = (val: unknown) => val === null || val === undefined ? '' : String(val).trim()
       Object.keys(formData).forEach(key => {
         if (key === 'avatarUrl') return
-        const newVal = normalize(formData[key])
-        const oldVal = normalize((user as any)[key])
+        const newVal = normalize(formData[key as keyof ProfileFormData])
+        const oldVal = normalize((user as Record<string, unknown>)[key])
         if (newVal !== oldVal) {
-          changes[key] = formData[key] === '' ? null : formData[key]
+          const value = formData[key as keyof ProfileFormData]
+          if (key === 'age') {
+            changes[key] = value === '' ? null : Number(value)
+          } else {
+            changes[key] = value === '' ? null : value
+          }
         }
       })
-
       if (Object.keys(changes).length > 0) {
-        await profileApi.updateMe(changes)
+        await profileApi.updateMe(changes as unknown as ProfileData)
       }
-
       if (profileKey) {
         queryClient.invalidateQueries({ queryKey: queryKeys.profile.me(profileKey) })
       }
-      
       await refresh()
       setSaveSuccess(true)
-      setTimeout(() => setSaveSuccess(false), 3000)
+      setTimeout(() => setSaveSuccess(false), TIMING.toastMs)
     }
     catch (err: any) {
       setSaveError(err.message || 'Ошибка сохранения')
-      setTimeout(() => setSaveError(null), 3000)
+      setTimeout(() => setSaveError(null), TIMING.toastMs)
     }
     finally {
       setIsLoading(false)
     }
   }
-
+  
   const handleCancel = () => {
     if (user) {
       setPendingAvatarFile(null)
@@ -246,7 +273,7 @@ const AuthorizedProfile = () => {
       })
       try {
         const parsed = user.contacts ? JSON.parse(user.contacts) : []
-        setContacts(parsed.map((c: any) => ({
+        setContacts(parsed.map((c: { name?: string; label?: string; link?: string; url?: string }) => ({
           id: Date.now() + Math.random(),
           label: c.name ?? c.label ?? '',
           url: c.link ?? c.url ?? '',
@@ -259,103 +286,88 @@ const AuthorizedProfile = () => {
       reset()
     }
   }
-
-  interface ContactItem {
-    id: number
-    label: string
-    url: string
-    isNew: boolean
-  }
-
+  
   const [contacts, setContacts] = useState<ContactItem[]>([])
-
+  
   const addContact = () => {
     setContacts(prev => [...prev, { id: Date.now(), label: '', url: '', isNew: true }])
   }
-
+  
   const removeContact = (id: number) => {
     setContacts(prev => prev.filter(c => c.id !== id))
   }
-
+  
   const updateContact = (id: number, field: 'label' | 'url', value: string) => {
     setContacts(prev => prev.map(c => c.id === id ? { ...c, [field]: value } : c))
   }
-
+  
   useEffect(() => {
     try {
       const serialized = JSON.stringify(contacts.map(c => ({ name: c.label, link: c.url })))
       setFormData(prev => ({ ...prev, contacts: serialized }))
     } catch {}
   }, [contacts])
-
+  
   const isFormValid = useMemo(() => {
     const fields = ['nickname', 'realName', 'age', 'country', 'city',
       'workplace', 'profileRole', 'description', 'hardSkills', 'softSkills']
-
-    const fieldsValid = fields.every(field => checkFormat(field, formData[field] ?? '') === null)
-
+    const fieldsValid = fields.every(field => checkFormat(field, formData[field as keyof ProfileFormData] ?? '') === null)
     const contactsValid = contacts.every(c => !c.isNew || (c.label.trim() && c.url.trim()))
-
     return fieldsValid && contactsValid
   }, [formData, contacts])
-
+  
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null)
-
+  
   const handleAvatarClick = () => fileInputRef.current?.click()
-
-  const MAX_AVATAR_SIZE = 5 * 1024 * 1024
-
+  
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-
-    if (file.size > MAX_AVATAR_SIZE) {
-      setSaveError('Максимальный размер аватара 5 МБ')
-      setTimeout(() => setSaveError(null), 3000)
+    if (file.size > LIMITS.upload.avatarMaxBytes) {
+      setSaveError(`Максимальный размер аватара ${LIMITS.upload.avatarMaxBytes / 1024 / 1024} МБ`)
+      setTimeout(() => setSaveError(null), TIMING.toastMs)
       e.target.value = ''
       return
     }
-
     const localUrl = URL.createObjectURL(file)
     setFormData(prev => ({ ...prev, avatarUrl: localUrl }))
     setPendingAvatarFile(file)
     e.target.value = ''
   }
-
+  
   const isThirdParty = profileId && profileId !== userId
-
   const protectedTabs = ['Отклики', 'Сообщения', 'Уведомления', 'Настройки']
   const isBlockedThirdPartyTab = Boolean(isThirdParty) && protectedTabs.includes(activeTab)
-
+  
   useEffect(() => {
     if (isBlockedThirdPartyTab && userId) {
       navigate(`/profile/${userId}/${tabRoutes[activeTab]}`, { replace: true })
     }
   }, [isBlockedThirdPartyTab, activeTab, userId])
-
+  
   if (isBlockedThirdPartyTab) {
     return null
   }
-
+  
   return (
     <div className='profile-content-container'>
       <div className='tab-wrapper'>
-      <div className='tab-container'>
-        {(isThirdParty
-          ? ['Информация', 'Активность']
-          : ['Информация', 'Активность', 'Отклики', 'Сообщения', 'Уведомления', 'Настройки']
-        ).map(tab => (
-          <button
-            key={tab}
-            className={`tab ${activeTab === tab ? 'active' : ''}`}
-            onClick={() => navigate(`${prefix}/${tabRoutes[tab]}`)}>
-            {tab}
-          </button>
-        ))}
+        <div className='tab-container'>
+          {(isThirdParty
+            ? ['Информация', 'Активность']
+            : ['Информация', 'Активность', 'Отклики', 'Сообщения', 'Уведомления', 'Настройки']
+          ).map(tab => (
+            <button
+              key={tab}
+              className={`tab ${activeTab === tab ? 'active' : ''}`}
+              onClick={() => navigate(`${prefix}/${tabRoutes[tab]}`)}>
+              {tab}
+            </button>
+          ))}
+        </div>
       </div>
-      </div>
-
+      
       {activeTab === 'Информация' && !isProjectRoute && (
         isThirdParty ? (
           <ProfileViewer />
@@ -383,26 +395,26 @@ const AuthorizedProfile = () => {
                   <input 
                     className={`username-input ${touched.nickname && dirty.nickname && checkFormat('nickname', data.nickname) ? 'input-error' : ''}`} 
                     name="nickname" 
-                    maxLength={50} 
+                    maxLength={LIMITS.profile.nicknameMax} 
                     value={formData.nickname ?? ''}
                     onChange={handleChange} 
                     onBlur={handleBlur} />
                 </div>
               </div>
             </div>
-
+            
             <div className='profile-body-field-container'>
               <div className='profile-field-container'>
                 <p className='profile-field-text'> Реальное имя пользователя: </p>
                 <input 
                   className={`profile-field-input ${touched.realName && dirty.realName && checkFormat('realName', data.realName) ? 'input-error' : ''}`} 
                   name="realName" 
-                  maxLength={100} 
+                  maxLength={LIMITS.profile.realNameMax} 
                   value={formData.realName ?? ''}
                   onChange={handleChange} 
                   onBlur={handleBlur} />
               </div>
-
+              
               <div className='profile-field-container'>
                 <p className='profile-field-text'> Возраст: </p>
                 <input 
@@ -412,7 +424,7 @@ const AuthorizedProfile = () => {
                   onChange={handleChange} 
                   onBlur={handleBlur} />
               </div>
-
+              
               <div className='profile-field-container'>
                 <p className='profile-field-text'> Пол: </p>
                 <div className='profile-radio-container'>
@@ -430,59 +442,59 @@ const AuthorizedProfile = () => {
                   </label>
                 </div>
               </div>
-
+              
               <div className='profile-field-container'>
                 <p className='profile-field-text'> Страна: </p>
                 <input 
                   className={`profile-field-input ${touched.country && dirty.country && checkFormat('country', data.country) ? 'input-error' : ''}`} 
                   name="country" 
-                  maxLength={50} 
+                  maxLength={LIMITS.profile.countryMax} 
                   value={formData.country ?? ''}
                   onChange={handleChange} 
                   onBlur={handleBlur}  />
               </div>
-
+              
               <div className='profile-field-container'>
                 <p className='profile-field-text'> Город: </p>
                 <input 
                   className={`profile-field-input ${touched.city && dirty.city && checkFormat('city', data.city) ? 'input-error' : ''}`} 
                   name="city" 
-                  maxLength={50} 
+                  maxLength={LIMITS.profile.cityMax} 
                   value={formData.city ?? ''}
                   onChange={handleChange} 
                   onBlur={handleBlur}  />
               </div>
-
+              
               <div className='profile-field-container'>
                 <p className='profile-field-text'> Место учебы/работы: </p>
                 <input 
                   className={`profile-field-input ${touched.workplace && dirty.workplace && checkFormat('workplace', data.workplace) ? 'input-error' : ''}`} 
                   name="workplace" 
-                  maxLength={100} 
+                  maxLength={LIMITS.profile.workplaceMax} 
                   value={formData.workplace ?? ''}
                   onChange={handleChange} 
                   onBlur={handleBlur}  />
               </div>
-
+              
               <div className='profile-field-container'>
                 <p className='profile-field-text role'> Роль: </p>
                 <input 
                   className={`profile-field-input role ${touched.profileRole && dirty.profileRole && checkFormat('profileRole', data.profileRole) ? 'input-error' : ''}`} 
                   name="profileRole" 
-                  maxLength={50} 
+                  maxLength={LIMITS.profile.roleMax} 
                   value={formData.profileRole ?? ''}
                   onChange={handleChange} 
                   onBlur={handleBlur}  />
               </div>
             </div>
-
+            
             <div className='profile-body-area-container'>
               <div className='profile-area-container'>
                 <div className='profile-area-text-container'>
                   <div className='profile-area-text-wrapper'>
                     <p className='profile-area-text'> Описание: </p>
-                    <p className={`char-counter ${(formData.description?.length ?? 0) >= 2000 ? 'limit' : ''}`}>
-                      {formData.description?.length ?? 0} / 2000
+                    <p className={`char-counter ${(formData.description?.length ?? 0) >= LIMITS.profile.descriptionMax ? 'limit' : ''}`}>
+                      {formData.description?.length ?? 0} / {LIMITS.profile.descriptionMax}
                     </p>
                   </div>
                 </div>
@@ -494,7 +506,7 @@ const AuthorizedProfile = () => {
                   onBlur={handleBlur}
                   placeholder={'### Обо мне\n\nРасскажите о себе, своих интересах и опыте.\n\n**Навыки:**\n- Язык программирования / технология\n- Инструменты и фреймворки\n- Soft skills\n\n**Цели:**\n- Чему хотите научиться\n- Какие проекты интересны\n\n**Контакты:**\n- Telegram / Email / GitHub'}/>
               </div>
-
+              
               <div className='profile-area-container'>
                 <div className='profile-area-text-container'>
                   <p className='profile-area-text'> Hard Skills: </p>
@@ -502,13 +514,13 @@ const AuthorizedProfile = () => {
                 <textarea 
                   className={`profile-area-input ${touched.hardSkills && dirty.hardSkills && checkFormat('hardSkills', data.hardSkills) ? 'input-error' : ''}`} 
                   name='hardSkills' 
-                  maxLength={250} 
+                  maxLength={LIMITS.profile.skillsMax} 
                   placeholder='#python #django #sql' 
                   value={formData.hardSkills ?? ''}
                   onChange={handleChange} 
                   onBlur={handleBlur}/>
               </div>
-
+              
               <div className='profile-area-container'>
                 <div className='profile-area-text-container'>
                   <p className='profile-area-text'> Soft Skills: </p>
@@ -516,24 +528,22 @@ const AuthorizedProfile = () => {
                 <textarea 
                   className={`profile-area-input ${touched.softSkills && dirty.softSkills && checkFormat('softSkills', data.softSkills) ? 'input-error' : ''}`} 
                   name='softSkills' 
-                  maxLength={250} 
+                  maxLength={LIMITS.profile.skillsMax} 
                   placeholder='#коммуникация #работа_в_команде #ответственность' 
                   value={formData.softSkills ?? ''}
                   onChange={handleChange} 
                   onBlur={handleBlur}/>
               </div>
-
+              
               <div className='profile-area-container'>
                 <div className='profile-area-text-container'>
                   <p className='profile-area-text'> Контакты: </p>
                 </div>
-
                 <div className='contacts-list'>
                   {contacts.map(contact => (
                     <div key={contact.id} className='contact-item'>
                       <input className='contact-input label' placeholder='Название' value={contact.label} onChange={e => updateContact(contact.id, 'label', e.target.value)} />
                       <input className='contact-input url' placeholder='Ссылка' value={contact.url} onChange={e => updateContact(contact.id, 'url', e.target.value)} />
-
                       {contact.isNew ? (
                         <>
                           <button className='contact-action reject' onClick={() => removeContact(contact.id)}>
@@ -556,7 +566,7 @@ const AuthorizedProfile = () => {
           </>
         )
       )}
-
+      
       {activeTab === 'Активность' && (
         isProjectRoute ? (
           <ProjectOrThirdSide />
@@ -566,7 +576,7 @@ const AuthorizedProfile = () => {
           <Activity />
         )
       )}
-
+      
       {!isThirdParty && (
         <>
           {activeTab === 'Отклики' && <Responses />}
@@ -575,7 +585,7 @@ const AuthorizedProfile = () => {
           {activeTab === 'Настройки' && <Setting />}
         </>
       )}
-
+      
       {!isThirdParty && !isProjectRoute && activeTab === 'Информация' && (
         <div className='manage-container'>
           <button className='manage-button' onClick={handleSave} disabled={!hasChanges || !isFormValid || isLoading} >
@@ -590,7 +600,7 @@ const AuthorizedProfile = () => {
           </div>
         </div>
       )}
-
+      
       {!isThirdParty && !isProjectRoute && activeTab === 'Информация' && (
         <>
           {saveError && (<p className='save-error-text message-auto-hide' onAnimationEnd={() => setSaveError(null)}>
@@ -605,16 +615,14 @@ const AuthorizedProfile = () => {
   )
 }
 
-// Рендер компонента для выбора Project или ProjectThirdSide на основе владельца
 const ProjectOrThirdSide = () => {
   const { projectId } = useParams<{ projectId: string }>()
   const { userId } = useAuth()
   const [ownerId, setOwnerId] = useState<string | null>(null)
   const [isChecking, setIsChecking] = useState(true)
-
+  
   useEffect(() => {
     if (!projectId) return
-
     setIsChecking(true)
     projectsApi.getProject(projectId)
       .then(projectData => {
@@ -627,26 +635,25 @@ const ProjectOrThirdSide = () => {
         setIsChecking(false)
       })
   }, [projectId])
-
+  
   if (isChecking) {
     return <div className='project-page' />
   }
-
+  
   return ownerId === userId && ownerId !== null ? <Project /> : <ProjectViewer />
 }
 
-// Главный компонент с логикой маршрутизации профиля
 export default function Profile() {
   const { profileId } = useParams<{ profileId: string }>()
   const { isAuthenticated, userId } = useAuth()
-
+  
   if (!profileId) {
     if (isAuthenticated && userId) {
       return <Navigate to={`/profile/${userId}/info`} replace />
     }
     return isAuthenticated ? <AuthorizedProfile /> : <UnauthorizedProfile />
   }
-
+  
   const isThirdParty = profileId !== userId
   
   if (isThirdParty || isAuthenticated) {
@@ -656,34 +663,33 @@ export default function Profile() {
   return <UnauthorizedProfile />
 }
 
-// Валидация поля профиля и возврат сообщения об ошибке
 const checkFormat = (fieldName: string, value: string): string | null => {
   const rules: Record<string, Array<[boolean, string]>> = {
     nickname: [
       [!validatorFormat.required(value), 'Введите никнейм'],
-      [!validatorFormat.maxLength(value, 50), 'Максимум 50 символов']
+      [!validatorFormat.maxLength(value, LIMITS.profile.nicknameMax), 'Максимум 50 символов']
     ],
     realName: [
-      [!validatorFormat.maxLength(value, 100), 'Максимум 100 символов']
+      [!validatorFormat.maxLength(value, LIMITS.profile.realNameMax), 'Максимум 100 символов']
     ],
     age: [
       [value.length > 0 && !validatorFormat.number(value), 'Возраст должен содержать только цифры']
     ],
     country: [
-      [!validatorFormat.maxLength(value, 50), 'Максимум 50 символов']
+      [!validatorFormat.maxLength(value, LIMITS.profile.countryMax), 'Максимум 50 символов']
     ],
     city: [
-      [!validatorFormat.maxLength(value, 50), 'Максимум 50 символов']
+      [!validatorFormat.maxLength(value, LIMITS.profile.cityMax), 'Максимум 50 символов']
     ],
     workplace: [
-      [!validatorFormat.maxLength(value, 100), 'Максимум 100 символов']
+      [!validatorFormat.maxLength(value, LIMITS.profile.workplaceMax), 'Максимум 100 символов']
     ],
     profileRole: [
       [!validatorFormat.required(value), 'Введите роль'],
-      [!validatorFormat.maxLength(value, 50), 'Максимум 50 символов']
+      [!validatorFormat.maxLength(value, LIMITS.profile.roleMax), 'Максимум 50 символов']
     ],
     description: [
-      [!validatorFormat.maxLength(value, 2000), 'Максимум 2000 символов']
+      [!validatorFormat.maxLength(value, LIMITS.profile.descriptionMax), 'Максимум 2000 символов']
     ],
     hardSkills: [
       [value.length > 0 && !validatorFormat.hasTag(value), 'Теги должны начинаться с # и содержать только буквы, цифры и _']
@@ -692,10 +698,10 @@ const checkFormat = (fieldName: string, value: string): string | null => {
       [value.length > 0 && !validatorFormat.hasTag(value), 'Теги должны начинаться с # и содержать только буквы, цифры и _']
     ],
   }
-
+  
   const fieldRules = rules[fieldName as keyof typeof rules]
   if (!fieldRules) return null
-
+  
   const error = fieldRules.find(([isInvalid]) => isInvalid)
   return error?.[1] ?? null
 }

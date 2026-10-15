@@ -6,7 +6,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useSystemRole } from '../hooks/useSystemRole'
 import { queryKeys } from '../scripts/query/queryKeys'
 import { projectsApi } from '../services/project'
-import { projectMembersApi } from '../services/project_members'
+import { projectMembersApi, type ProjectMemberData } from '../services/project_members'
 import { usersApi, type UserData } from '../services/users'
 import { vacanciesApi } from '../services/vacancy'
 import { ProjectPublicView, type TeamMemberWithUser } from './project_public_view'
@@ -39,7 +39,7 @@ export default function ProjectViewer() {
       const members = await projectMembersApi.getByProject(projectId)
       const proj = await projectsApi.getProject(projectId)
 
-      const membersWithUsers: TeamMemberWithUser[] = members.map((member: any) => ({
+      const membersWithUsers: TeamMemberWithUser[] = members.map((member: ProjectMemberData) => ({
         memberId: member.memberId,
         projectId: member.projectId,
         userId: member.userId,
@@ -88,7 +88,7 @@ export default function ProjectViewer() {
   })
 
   const isStaff = currentSystemRole === 'admin' || currentSystemRole === 'moderator'
-  const isBanned = (ownerData as any)?.isBanned === true
+  const isBanned = ownerData?.isBanned === true
 
   if (projectLoading || ownerLoading) {
     return <div className='loading-container' />
@@ -114,7 +114,7 @@ export default function ProjectViewer() {
         data={{
           projectId: project.projectId,
           ownerId: project.ownerId,
-          ownerSystemRole: (ownerData as any)?.systemRole,
+          ownerSystemRole: ownerData?.systemRole,
           title: project.title,
           status: project.status,
           description: project.fullDescription ?? '',

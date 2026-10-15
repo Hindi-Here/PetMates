@@ -13,8 +13,7 @@ import { eventApi, type EventDetails, type EventFormField } from '../../services
 import { EventFooter } from './event_footer'
 import { useDraftAutosave } from '../../hooks/useDraftAutosave'
 
-const MAX_FIELDS = 50
-const MAX_LABEL = 100
+import { LIMITS, TIMING } from '../../scripts/limits'
 
 let fieldCounter = 0
 const newFieldId = () => `f-${Date.now().toString(36)}${(fieldCounter++).toString(36)}`
@@ -32,8 +31,8 @@ const validate = (fields: EventFormField[]): Record<string, string> => {
       errors[f.id] = 'Введите название критерия'
       return
     }
-    if (label.length > MAX_LABEL) {
-      errors[f.id] = `Максимум ${MAX_LABEL} символов`
+    if (label.length > LIMITS.event.formLabelMax) {
+      errors[f.id] = `Максимум ${LIMITS.event.formLabelMax} символов`
       return
     }
     const key = label.toLowerCase()
@@ -84,7 +83,7 @@ export const EventForm = ({ event, profileId, draft, onDraftChange }: EventFormP
   const touch = (id: string) => setTouched(prev => (prev[id] ? prev : { ...prev, [id]: true }))
 
   const addField = () => {
-    if (fields.length >= MAX_FIELDS) return
+    if (fields.length >= LIMITS.event.formFieldsMax) return
     setFields(prev => [...prev, { id: newFieldId(), label: '', required: false }])
   }
 
@@ -103,10 +102,10 @@ export const EventForm = ({ event, profileId, draft, onDraftChange }: EventFormP
       setFields(saved.applicationForm)
       queryClient.invalidateQueries({ queryKey: queryKeys.events.all })
       setSaveSuccess(true)
-      setTimeout(() => setSaveSuccess(false), 3000)
+      setTimeout(() => setSaveSuccess(false), TIMING.toastMs)
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Не удалось сохранить форму')
-      setTimeout(() => setSaveError(null), 4000)
+      setTimeout(() => setSaveError(null), TIMING.toastMs)
     } finally {
       setIsSaving(false)
     }
@@ -143,7 +142,7 @@ export const EventForm = ({ event, profileId, draft, onDraftChange }: EventFormP
                     className={`project-field-input ${error ? 'input-error' : ''}`}
                     placeholder='Критерий (например, «Ссылка на портфолио»)'
                     value={field.label}
-                    maxLength={MAX_LABEL}
+                    maxLength={LIMITS.event.formLabelMax}
                     onChange={e => { updateField(field.id, { label: e.target.value }); touch(field.id) }}
                     onBlur={() => touch(field.id)}
                   />
@@ -166,7 +165,7 @@ export const EventForm = ({ event, profileId, draft, onDraftChange }: EventFormP
           })}
         </div>
 
-        <button type='button' className='event-add-stage-btn' onClick={addField} disabled={fields.length >= MAX_FIELDS}>
+        <button type='button' className='event-add-stage-btn' onClick={addField} disabled={fields.length >=  LIMITS.event.formFieldsMax}>
           <Add className='event-add-stage-ico' />
           <span>Добавить поле</span>
         </button>

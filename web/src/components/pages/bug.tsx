@@ -11,10 +11,14 @@ import { useProfile } from '../hooks/useProfile'
 import { reportApi, type ReportType } from '../services/report'
 import { Dropdown } from '../common/dropdown'
 
-const MAX_TOTAL_SIZE = 50 * 1024 * 1024
+import { LIMITS, TIMING } from '../scripts/limits'
+
+interface BugFormData {
+  report: string;
+}
 
 // Валидация данных формы отправки сообщения
-const validate = (data: any): boolean => {
+const validate = (data: BugFormData): boolean => {
   return !validatorFormat.required(data.report)
 }
 
@@ -67,9 +71,9 @@ export default function Bug() {
     const currentSize = attachments.reduce((acc, file) => acc + file.size, 0)
     const newSize = selected.reduce((acc, file) => acc + file.size, 0)
     
-    if (currentSize + newSize > MAX_TOTAL_SIZE) {
-      setSendError('Общий размер вложений не должен превышать 50 МБ')
-      setTimeout(() => setSendError(null), 4000)
+    if (currentSize + newSize > LIMITS.report.attachmentsMaxBytes) {
+      setSendError(`Общий размер вложений не должен превышать ${LIMITS.report.attachmentsMaxBytes / 1024 / 1024} МБ`)
+      setTimeout(() => setSendError(null), TIMING.toastMs)
       e.target.value = ''
       return
     }
@@ -99,10 +103,10 @@ export default function Bug() {
       handleChange({ target: { name: 'report', value: '' } } as React.ChangeEvent<HTMLTextAreaElement>)
       setAttachments([])
       setSendSuccess(true)
-      setTimeout(() => setSendSuccess(false), 3000)
+      setTimeout(() => setSendSuccess(false), TIMING.toastMs)
     } catch (err: any) {
       setSendError(err.message || 'Ошибка отправки')
-      setTimeout(() => setSendError(null), 4000)
+      setTimeout(() => setSendError(null), TIMING.toastMs)
     } finally {
       setIsSending(false)
     }
@@ -184,13 +188,13 @@ export default function Bug() {
               <Dropdown isOpen={isTypeDropdownOpen} items={reportTypeOptions} onSelect={handleTypeSelect} />
             </div>
           </div>
-          <p className={`char-counter ${(data.report?.length ?? 0) >= 1024 ? 'limit' : ''}`}>
-            {data.report?.length ?? 0} / 1024
+          <p className={`char-counter ${(data.report?.length ?? 0) >= LIMITS.report.messageMax ? 'limit' : ''}`}>
+            {data.report?.length ?? 0} / {LIMITS.report.messageMax}
           </p>
         </div>
 
         <textarea 
-          className={`send-area ${(data.report?.length ?? 0) >= 1024 ? 'input-error' : ''}`} 
+          className={`send-area ${(data.report?.length ?? 0) >= LIMITS.report.messageMax ? 'input-error' : ''}`} 
           name='report' 
           value={data.report} 
           onChange={handleChange}
@@ -216,7 +220,7 @@ export default function Bug() {
               <Add className='attachment-add-ico' />
               <span>Прикрепить фото/видео</span>
             </button>
-            <p className='attachment-hint'>Общий размер вложений до 50 МБ</p>
+            <p className='attachment-hint'>Общий размер вложений до {LIMITS.report.attachmentsMaxBytes / 1024 / 1024} МБ</p>
           </div>
 
           {attachments.length > 0 && (

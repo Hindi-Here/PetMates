@@ -115,7 +115,7 @@ namespace api.Controllers
                 var userAuth = await _client.Auth.GetUser(token);
                 if (userAuth == null) return Unauthorized();
 
-                if (!IsNicknameValid(userAuth, request.Nickname))
+                if (!SupportManager.IsNicknameValid(userAuth, request.Nickname))
                     return BadRequest(new { message = "[Никнейм] введённый никнейм не совпадает с текущим" });
 
                 var supabaseUrl = Environment.GetEnvironmentVariable("SUPABASE_URL");
@@ -153,7 +153,7 @@ namespace api.Controllers
                 var userAuth = await _client.Auth.GetUser(token);
                 if (userAuth == null) return Unauthorized();
 
-                if (!IsNicknameValid(userAuth, request.Nickname))
+                if (!SupportManager.IsNicknameValid(userAuth, request.Nickname))
                     return BadRequest(new { message = "[Никнейм] введённый никнейм не совпадает с текущим" });
 
                 return Ok(new { message = "Никнейм подтверждён" });
@@ -162,16 +162,6 @@ namespace api.Controllers
             {
                 return StatusCode(500, new { message = "Ошибка проверки никнейма" });
             }
-        }
-
-        // Никнейм валидация
-        private static bool IsNicknameValid(Supabase.Gotrue.User userAuth, string? nickname)
-        {
-            var currentNickname = userAuth.UserMetadata?
-                .GetValueOrDefault("nickname")?.ToString() ?? "";
-
-            return !string.IsNullOrWhiteSpace(nickname) &&
-                   string.Equals(nickname.Trim(), currentNickname.Trim(), StringComparison.OrdinalIgnoreCase);
         }
     }
 

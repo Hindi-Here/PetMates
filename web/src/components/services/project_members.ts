@@ -7,6 +7,20 @@ export interface ProjectMemberData {
   userId: string;
   role: string;
   joinedAt?: string;
+  nickname?: string;
+  avatarUrl?: string;
+  realName?: string;
+  age?: number;
+  city?: string;
+  workplace?: string;
+  profileRole?: string;
+  systemRole?: string;
+  isBanned?: boolean;
+  hardSkills?: string | string[];
+  softSkills?: string | string[];
+  lastOnlineAt?: string;
+  isOnline?: boolean;
+  lastSeen?: string;
 }
 
 export interface AddProjectMemberDto {
@@ -17,7 +31,7 @@ export interface AddProjectMemberDto {
 
 export const projectMembersApi = {
   // Получить всех участников проекта
-  getByProject: async (projectId: string) => {
+  getByProject: async (projectId: string): Promise<ProjectMemberData[]> => {
     const { data: { session } } = await supabase.auth.getSession();
     const response = await fetch(`${API_BASE}/api/projectmembers/project/${projectId}`, {
       headers: {

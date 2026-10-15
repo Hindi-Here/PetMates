@@ -6,10 +6,12 @@ import NotFoundContentIcon from '@icons/not_found_content.svg?react'
 import { useState, useMemo } from 'react'
 import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { queryKeys } from '../scripts/query/queryKeys'
-import { vacanciesApi } from '../services/vacancy'
+import { vacanciesApi, type VacancyData } from '../services/vacancy'
 import { VacancyCard } from '../common/vacancyCard'
 import Search from '../common/search'
 import { useSystemRole } from '../hooks/useSystemRole'
+
+type VacancyWithOwner = VacancyData & { ownerBanned?: boolean };
 
 const FoundCount = ({ count }: { count: number }) => (
   <div className='content-item-count-container'>
@@ -49,9 +51,9 @@ export default function Vacancy() {
     let result = [...vacancies]
 
     if (!isStaff) {
-      result = result.filter(v => !(v as any).ownerBanned)
+      result = result.filter(v => !(v as VacancyWithOwner).ownerBanned)
     } else if (isStaff && showBannedOnly) {
-      result = result.filter(v => (v as any).ownerBanned === true)
+      result = result.filter(v => (v as VacancyWithOwner).ownerBanned === true)
     }
 
     const query = appliedSearch.trim().toLowerCase()

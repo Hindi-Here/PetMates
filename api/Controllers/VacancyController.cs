@@ -18,16 +18,9 @@ namespace api.Controllers
         {
             try
             {
-                var authHeader = Request.Headers.Authorization.ToString();
-                var currentUserId = _SupMan.GetUserId(authHeader);
-
-                if (!string.IsNullOrEmpty(currentUserId))
-                {
-                    await _SupMan.UpdateLastOnlineAsync(currentUserId);
-                }
-
-                var currentRole = string.IsNullOrEmpty(currentUserId) ? null : await GetCurrentUserRole(currentUserId);
-                var isStaff = currentRole == "moderator" || currentRole == "admin";
+                var viewer = await _SupMan.GetViewerAsync(Request.Headers.Authorization.ToString());
+                var currentUserId = viewer.UserId;
+                var isStaff = viewer.IsStaff;
 
                 var response = await _client.From<Vacancy>()
                     .Where(v => v.IsOpen == true)
@@ -121,13 +114,6 @@ namespace api.Controllers
             }
         }
 
-        // Роль этого пользователя
-        private async Task<string?> GetCurrentUserRole(string userId)
-        {
-            var response = await _client.From<User>().Where(u => u.UserId == userId).Get();
-            return response.Models.FirstOrDefault()?.SystemRole;
-        }
-
         // Получить все заявки проекта
         [HttpGet("project/{projectId}")]
         public async Task<IActionResult> GetProjectVacancies(string projectId)
@@ -135,14 +121,14 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var currentUserId = _SupMan.GetUserId(authHeader);
+                var currentUserId = await _SupMan.GetUserIdAsync(authHeader);
 
                 if (!string.IsNullOrEmpty(currentUserId))
                 {
                     await _SupMan.UpdateLastOnlineAsync(currentUserId);
                 }
 
-                bool isStaff = await IsUserStaff(currentUserId!);
+                bool isStaff = await _SupMan.IsStaffAsync(currentUserId);
 
                 var response = await _client.From<Vacancy>()
                     .Where(v => v.ProjectId == projectId)
@@ -202,7 +188,7 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = _SupMan.GetUserId(authHeader);
+                var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 
@@ -256,7 +242,7 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = _SupMan.GetUserId(authHeader);
+                var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 
@@ -321,7 +307,7 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = _SupMan.GetUserId(authHeader);
+                var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 
@@ -337,24 +323,6 @@ namespace api.Controllers
             {
                 return StatusCode(500, ex.Message);
             }
-        }
-
-        // Является ли юзер администратором или модератором
-        private async Task<bool> IsUserStaff(string userId)
-        {
-            if (string.IsNullOrEmpty(userId))
-            {
-                return false;
-            }
-
-            var user = await _client.From<User>()
-                .Where(u => u.UserId == userId)
-                .Get();
-
-            var role = user.Models.FirstOrDefault()?.SystemRole;
-            bool isStaff = role == "admin" || role == "moderator";
-
-            return isStaff;
         }
     }
 }

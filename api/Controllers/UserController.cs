@@ -19,26 +19,19 @@ namespace api.Controllers
         {
             try
             {
-                var authHeader = Request.Headers.Authorization.ToString();
-                var id = _SupMan.GetUserId(authHeader);
-                if (!string.IsNullOrEmpty(id))
-                {
-                    await _SupMan.UpdateLastOnlineAsync(id);
-                }
-
-                var currentRole = string.IsNullOrEmpty(id) ? null : await GetCurrentUserRole(id);
-                var isStaff = currentRole == "moderator" || currentRole == "admin";
+                var viewer = await _SupMan.GetViewerAsync(Request.Headers.Authorization.ToString());
+                var isStaff = viewer.IsStaff;
 
                 var response = await _client.From<User>().Get();
                 var users = response.Models;
 
                 if (showStaffOnly && showBannedOnly)
                 {
-                    users = [.. users.Where(u => (u.SystemRole == "moderator" || u.SystemRole == "admin") && u.IsBanned == true)];
+                    users = [.. users.Where(u => Roles.IsStaff(u.SystemRole) && u.IsBanned == true)];
                 }
                 else if (showStaffOnly)
                 {
-                    users = [.. users.Where(u => u.SystemRole == "moderator" || u.SystemRole == "admin")];
+                    users = [.. users.Where(u => Roles.IsStaff(u.SystemRole))];
                 }
                 else if (showBannedOnly && isStaff)
                 {
@@ -128,13 +121,6 @@ namespace api.Controllers
             }
         }
 
-        // Роль этого пользователя
-        private async Task<string?> GetCurrentUserRole(string userId)
-        {
-            var response = await _client.From<User>().Where(u => u.UserId == userId).Get();
-            return response.Models.FirstOrDefault()?.SystemRole;
-        }
-
         // Получить профиль пользователя по его идентификатору
         [HttpGet("{userId}")]
         public async Task<IActionResult> GetUserProfile(string userId)
@@ -142,7 +128,7 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var id = _SupMan.GetUserId(authHeader);
+                var id = await _SupMan.GetUserIdAsync(authHeader);
                 if (!string.IsNullOrEmpty(id))
                 {
                     await _SupMan.UpdateLastOnlineAsync(id);
@@ -193,16 +179,16 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var currentUserId = _SupMan.GetUserId(authHeader);
+                var currentUserId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(currentUserId))
                     return Unauthorized();
 
-                if (string.IsNullOrWhiteSpace(query) || query.Trim().Length < 2)
+                if (string.IsNullOrWhiteSpace(query) || query.Trim().Length < Limits.Search.UserQueryMin)
                     return Ok(new List<object>());
 
                 var users = await _client.From<User>()
                     .Filter("nickname", Constants.Operator.ILike, $"%{query.Trim()}%")
-                    .Limit(20)
+                    .Limit(Limits.Search.UserResultsMax)
                     .Get();
 
                 var result = users.Models

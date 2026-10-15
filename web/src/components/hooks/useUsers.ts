@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { usersApi } from '../services/users';
 import type { UserData } from '../services/users';
+import { TIMING } from '../scripts/limits'
 
 // Хук для получения списка пользователей с возможностью обновления
 export const useUsers = () => {
@@ -18,7 +19,7 @@ export const useUsers = () => {
 
   useEffect(() => {
     fetchUsers();
-    const interval = setInterval(fetchUsers, 120000);
+    const interval = setInterval(fetchUsers, TIMING.usersRefreshMs);
     return () => clearInterval(interval);
   }, [fetchUsers]);
 

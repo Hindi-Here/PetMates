@@ -6,6 +6,8 @@ import { NavLink } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { authApi } from '../services/auth';
 
+import { LAYOUT } from '../scripts/limits'
+
 export function HeaderDropdownNavigation({
   isAuthenticated,
   onOpenAuth
@@ -13,7 +15,7 @@ export function HeaderDropdownNavigation({
   isAuthenticated: boolean | null
   onOpenAuth: () => void
 }): JSX.Element {
-  const isShortVer = useIsShort(965);
+  const isShortVer = useIsShort(LAYOUT.shortBreakpoint);
   const { userId } = useAuth();
 
   interface NavItem {

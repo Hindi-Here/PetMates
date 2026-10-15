@@ -8,6 +8,8 @@ import { queryKeys } from '../../scripts/query/queryKeys'
 import { eventApi, type ApplicationDecision } from '../../services/event'
 import { ApplicationStatusBadge } from './event_application_status'
 
+import { LIMITS } from '../../scripts/limits'
+
 interface EventApplicationDetailProps {
   eventId: string
   applicationId: string
@@ -174,7 +176,7 @@ export const EventApplicationDetail = ({ eventId, applicationId, basePath }: Eve
                 <textarea
                   className='event-answer-input'
                   value={comment}
-                  maxLength={1000}
+                  maxLength={LIMITS.event.decisionCommentMax}
                   placeholder={mode === 'revision' ? 'Что нужно доработать (обязательно)' : 'Причина отказа (необязательно)'}
                   onChange={e => setComment(e.target.value)}
                 />

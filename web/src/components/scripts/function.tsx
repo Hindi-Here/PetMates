@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from "react-router-dom";
 
+import { LIMITS, LAYOUT } from '../scripts/limits';
+
 // Подъем скролла в топ
 export const ScrollToTop = () => {
   const { pathname } = useLocation();
@@ -38,7 +40,7 @@ export const AnimatedDropdown = ({ isOpen, children, className }: AnimatedDropdo
 );
 
 // Проверка маленького экрана
-export function useIsShort(smallPoint = 965) {
+export function useIsShort(smallPoint = LAYOUT.shortBreakpoint) {
   const [flag, setFlag] = useState(window.innerWidth < smallPoint);
 
   useEffect(() => {
@@ -126,7 +128,7 @@ export const validatorFormat = {
     const hasLetter = /[A-Za-zА-Яа-я]/.test(value);
     const hasNumber = /[0-9]/.test(value);
     const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(value);
-    return value.length >= 8 && hasLetter && hasNumber && hasSpecial;
+    return value.length >= LIMITS.auth.passwordMin && hasLetter && hasNumber && hasSpecial;
   },
 
   hasTag: (value: string) => {
@@ -155,27 +157,27 @@ export const validatorRegex = {
   message: (value: string) => value,
 
   // Специальные поля
-  username: (value: string, max: number = 50) => {
+  username: (value: string, max: number = LIMITS.auth.nicknameMax) => {
     return value.replace(/[^a-zA-Zа-яА-Я0-9_-]/g, '').slice(0, max);
   },
-
-  email: (value: string, max: number = 255) => {
+  
+  email: (value: string, max: number = LIMITS.auth.emailMax) => {
     return value
       .replace(/[^a-zA-Zа-яА-Я0-9@._-]/g, '')
       .replace(/([@.])\1+/g, '$1')
-      .slice(0, max); 
+      .slice(0, max);
+  },
+
+  role: (value: string, max: number = LIMITS.profile.roleMax) => {
+    return value
+      .replace(/[^a-zA-Zа-яА-Я0-9ёЁ/[]-\s]/g, '')
+      .replace(/^\s+/, '')
+      .replace(/\s\s+/g, ' ')
+      .slice(0, max);
   },
 
   password: (value: string) => {
     return value.replace(/\s/g, '');
-  },
-
-  role: (value: string, max: number = 50) => {
-    return value
-      .replace(/[^a-zA-Zа-яА-Я0-9ёЁ\/[\]\-\s]/g, '')
-      .replace(/^\s+/, '')
-      .replace(/\s\s+/g, ' ')
-      .slice(0, max);  
   },
 
   tags: (value: string) => {

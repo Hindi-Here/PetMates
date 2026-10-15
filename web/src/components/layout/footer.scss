@@ -49,3 +49,9 @@
         }
     }
 }
+
+@media (max-width: 964px) {
+  .footer { height: auto; min-height: rem(75); padding: rem(8) rem(16); }
+  .footer .container { justify-content: center; }
+  .contact-container { width: auto; height: auto; }
+}

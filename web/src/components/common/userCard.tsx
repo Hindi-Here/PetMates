@@ -13,21 +13,7 @@ import { moderationApi } from '../services/moderation'
 import { useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '../scripts/query/queryKeys'
 import type { UserData } from '../services/users'
-
 import BanUserForm from '../forms/ban_user'
-
-// Склонения текста в карточке
-const getProjectCountText = (count: number): string => {
-  if (count === 0) return 'проектах'
-  const lastDigit = count % 10
-  const lastTwoDigits = count % 100
-
-  if (lastTwoDigits >= 11 && lastTwoDigits <= 19) return 'проектах'
-  if (lastDigit === 1) return 'проекте'
-  if (lastDigit >= 2 && lastDigit <= 4) return 'проектах'
-
-  return 'проектах'
-}
 
 // Компонент карточки пользователя (информация, логика, модерация)
 export const UserCard = ({ 
@@ -52,16 +38,17 @@ export const UserCard = ({
   showModerationMenu?: boolean
   actions?: ReactNode
   roleSlot?: ReactNode
-})  => {
+}) => {
   const navigate = useNavigate()
-  const isBanned = (user as any).isBanned
   const queryClient = useQueryClient()
   const { isAuthenticated, userId: authUserId } = useAuth()
   const currentSystemRole = useSystemRole()
   
+  const isBanned = user.isBanned ?? false
+  const targetSystemRole = user.systemRole
+  
   const canInvite = isAuthenticated && authUserId !== user.userId && !disabledInvite && !isBanned
 
-  const targetSystemRole = (user as any).systemRole as string | undefined
   const canModerate = showModerationMenu &&
     isAuthenticated &&
     authUserId !== user.userId &&
@@ -104,26 +91,27 @@ export const UserCard = ({
   
   const metaInfo = [
     user.realName,
-    user.age && `${user.age} лет`,
+    user.age ? `${user.age} лет` : null,
     user.city,
     user.workplace
-  ].filter(Boolean)
+  ].filter((item): item is string => Boolean(item)) // Строгая типизация фильтра
 
-  const parseSkills = (skillsData: any): string[] => {
-  if (Array.isArray(skillsData)) return skillsData;
-  if (typeof skillsData === 'string') {
-    if (skillsData.trim().startsWith('[')) {
-      try {
-        const parsed = JSON.parse(skillsData);
-        return Array.isArray(parsed) ? parsed : [];
-      } catch {
-        return [];
+  // Строгая типизация входных данных
+  const parseSkills = (skillsData: string | string[] | null | undefined): string[] => {
+    if (Array.isArray(skillsData)) return skillsData;
+    if (typeof skillsData === 'string') {
+      if (skillsData.trim().startsWith('[')) {
+        try {
+          const parsed = JSON.parse(skillsData);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
       }
+      return skillsData.split(/[\s,]+/).filter(Boolean);
     }
-    return skillsData.split(/[\s,]+/).filter(Boolean);
-  }
-  return [];
-};
+    return [];
+  };
 
   const skills: string[] = parseSkills(user?.hardSkills);
   
@@ -167,6 +155,7 @@ export const UserCard = ({
         })
 
         setVisibleCount(count)
+        if (count === 0 && metaInfo.length > 0) setVisibleCount(1) // Fallback
       })
     }
 
@@ -183,7 +172,7 @@ export const UserCard = ({
   const tagRowRef = useRef<HTMLDivElement>(null)
   const [visibleTagCount, setVisibleTagCount] = useState(skills.length)
 
-   useEffect(() => {
+  useEffect(() => {
     const row = tagRowRef.current
     if (!row) return
 
@@ -202,7 +191,7 @@ export const UserCard = ({
         })
 
         if (count < skills.length) {
-          const moreTag = row.querySelector('.more-tag') as HTMLElement
+          const moreTag = row.querySelector('.more-tag') as HTMLElement | null
           const moreWidth = moreTag ? moreTag.offsetWidth + 8 : 50
 
           let recalc = 0
@@ -249,7 +238,7 @@ export const UserCard = ({
 
             {isMenuOpen && (
               <div className='moderation-menu'>
-                {(user as any).isBanned ? (
+                {isBanned ? (
                   <button onClick={(e) => { e.stopPropagation(); handleUnban() }}>Разблокировать</button>
                 ) : (
                   <button className='danger' onClick={(e) => { e.stopPropagation(); handleBan() }}>Заблокировать</button>
@@ -370,7 +359,7 @@ export const UserCard = ({
           <p className='project-count-text'>
             {activityLoading 
               ? 'Активность в 0 проектах' 
-              : `Активность в ${activityCount} ${getProjectCountText(activityCount)}`}
+              : `Активность в ${activityCount} проектах`}
           </p>
         </div>
       </div>
@@ -389,5 +378,3 @@ export const UserCard = ({
     </>
   )
 }
-
-export { getProjectCountText }

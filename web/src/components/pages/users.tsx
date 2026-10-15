@@ -72,10 +72,10 @@ export default function Users() {
       })
     }
 
-    result.sort((a, b) => {
+    result.sort((a: UserData, b: UserData) => {
       let compare = 0
       if (sortField === 'date') {
-        compare = new Date((a as any).createdAt ?? 0).getTime() - new Date((b as any).createdAt ?? 0).getTime()
+        compare = new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime()
       }
       else if (sortField === 'alphabet') {
         compare = (a.nickname || '').localeCompare(b.nickname || '')

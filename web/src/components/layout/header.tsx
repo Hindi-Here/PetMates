@@ -25,6 +25,8 @@ import { useNavigate } from 'react-router-dom'
 
 import { getNotificationIcon, getNotificationText } from '../common/notificationText'
 
+import { LAYOUT } from '../scripts/limits';
+
 // Компонент логотипа сайта с переходом на главную страницу
 const Logo = () => {
   const navigate = useNavigate()
@@ -42,7 +44,7 @@ const Logo = () => {
 }
 
 // Компонент кнопки входа для неавторизованных пользователей
-const Login = ({ onOpen }: any) => {
+const Login = ({ onOpen }: { onOpen: () => void }) => {
   return (
     <div className='login-container'>
       <button className='login-button' onClick={onOpen}> Войти </button>
@@ -96,7 +98,7 @@ const NotificationPanel = ({
     enabled: isOpen,
   })
 
-  const recentNotifications = notifications.slice(0, 25)
+  const recentNotifications = notifications.slice(0, LAYOUT.notificationsPreview)
 
   const markAsReadMutation = useMutation({
     mutationFn: (notificationId: string) => notificationApi.markAsRead(notificationId),
@@ -221,7 +223,7 @@ const NotificationPanel = ({
 export default function Header() {
   const { isAuthenticated } = useAuth();
   const { data: user } = useProfile(isAuthenticated);
-  const isShortVer = useIsShort(965);
+  const isShortVer = useIsShort(LAYOUT.shortBreakpoint);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
 
   return (
@@ -270,7 +272,7 @@ const Profile = ({ user }: { user: ProfileData | null }) => {
     enabled: !!userId,
   })
 
-  const hasUnreadMessages = conversations.some((conv: any) => conv.hasUnread)
+  const hasUnreadMessages = conversations.some((conv: { hasUnread: boolean }) => conv.hasUnread)
 
   return (
     <div className='profile-container'>
@@ -304,10 +306,14 @@ const Profile = ({ user }: { user: ProfileData | null }) => {
         </div>
         <div className='username-container'>
           <p className='username-text'>
-            {user?.nickname && user.nickname.length > 15 ? user.nickname.slice(0, 15) + '…' : user?.nickname}
+            {user?.nickname && user.nickname.length > LAYOUT.headerNicknameChars 
+              ? user.nickname.slice(0, LAYOUT.headerNicknameChars) + '…' 
+              : user?.nickname}
           </p>
           <p className='mail-text'>
-            {user?.email && user.email.length > 25 ? user.email.slice(0, 25) + '…' : user?.email}
+            {user?.email && user.email.length > LAYOUT.headerEmailChars 
+              ? user.email.slice(0, LAYOUT.headerEmailChars) + '…' 
+              : user?.email}
           </p>
         </div>
         <div className='dropdown-ico-container'>

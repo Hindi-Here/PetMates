@@ -288,7 +288,7 @@ export const projectDraftApi = {
   },
 
   // Применить (сохранить) изменения из черновика в проект
-  commitDraft: async (projectId: string, dto: CommitProjectDto): Promise<any> => {
+  commitDraft: async (projectId: string, dto: CommitProjectDto): Promise<{ message: string; fullDescription?: string }> => {
     const { data: { session } } = await supabase.auth.getSession();
     const response = await fetch(`${API_BASE}/api/projects/${projectId}/commit`, {
       method: 'POST',

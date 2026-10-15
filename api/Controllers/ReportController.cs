@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using api.Support;
+using Microsoft.AspNetCore.Mvc;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -14,32 +15,19 @@ namespace api.Controllers
             Environment.GetEnvironmentVariable("TELEGRAM_CHAT_ID")!
         );
 
-        private static readonly Dictionary<string, string> TypeLabels = new()
-        {
-            { "bug", "БАГ" },
-            { "complaint", "ЖАЛОБА" },
-            { "suggestion", "ПРЕДЛОЖЕНИЕ" },
-            { "opinion", "МНЕНИЕ" },
-        };
-
-        private const long MaxTotalAttachmentsSize = 50 * 1024 * 1024;
-
         // Отправить сообщение в Telegram
         [HttpPost("send")]
-        [RequestSizeLimit(MaxTotalAttachmentsSize + 5 * 1024 * 1024)] 
+        [RequestSizeLimit(Limits.Report.RequestBytes)]
         public async Task<IActionResult> SendReport([FromForm] ReportFormRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.Message))
                 return BadRequest(new { error = "[Текст] Сообщение не может быть пустым" });
-
-            if (request.Message.Length > 1024)
+            if (request.Message.Length > Limits.Report.MessageMax)
                 return BadRequest(new { error = "[Текст] Сообщение слишком длинное" });
-
             var validFiles = request.Files?.Where(f => f.Length > 0).ToList() ?? [];
-
             var totalSize = validFiles.Sum(f => f.Length);
-            if (totalSize > MaxTotalAttachmentsSize)
-                return BadRequest(new { error = "[Вложения] Общий размер вложений не должен превышать 50 МБ" });
+            if (totalSize > Limits.Report.AttachmentsMaxBytes)
+                return BadRequest(new { error = $"[Вложения] Общий размер вложений не должен превышать {Limits.Report.AttachmentsMaxBytes / Limits.MB} МБ" });
 
             var allowedTypes = new[] { "image/", "video/" };
             if (validFiles.Any(f => string.IsNullOrEmpty(f.ContentType) || !allowedTypes.Any(t => f.ContentType.StartsWith(t))))
@@ -49,7 +37,7 @@ namespace api.Controllers
                 ? "Аноним"
                 : request.Nickname;
 
-            var typeLabel = TypeLabels.TryGetValue(request.Type ?? "", out var label) ? label : "МНЕНИЕ";
+            var typeLabel = SupportManager.GetReportTypeLabel(request.Type);
             var text = $"*[{typeLabel}]* от {sender}\n{request.Message}";
 
             try

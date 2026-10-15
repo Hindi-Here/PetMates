@@ -22,6 +22,8 @@ import { Responses } from '../pages/response'
 import { Messages } from '../pages/message'
 import { Chat } from '../pages/chat'
 
+import { LAYOUT } from '../scripts/limits';
+
 interface MenuItem {
   id: string;
   label: string;
@@ -180,7 +182,7 @@ const Content = () => {
 
 // Главный компонент макета страницы
 export default function Main () {
-  const isShortVer = useIsShort(965);
+  const isShortVer = useIsShort(LAYOUT.shortBreakpoint);
 
   return (
     <div className='main'>

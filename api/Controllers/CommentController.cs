@@ -20,7 +20,7 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = _SupMan.GetUserId(authHeader);
+                var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (!string.IsNullOrEmpty(userId))
                 {
                     await _SupMan.UpdateLastOnlineAsync(userId);
@@ -80,7 +80,7 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = _SupMan.GetUserId(authHeader);
+                var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 
@@ -89,7 +89,7 @@ namespace api.Controllers
 
                 await _SupMan.UpdateLastOnlineAsync(userId);
 
-                if (!await CanAccessReference(dto.ReferenceType, dto.ReferenceId, userId))
+                if (!await _SupMan.CanAccessReference(dto.ReferenceType, dto.ReferenceId, userId))
                     return NotFound();
 
                 var newComment = new Comment
@@ -111,7 +111,7 @@ namespace api.Controllers
                     new QueryOptions { Returning = QueryOptions.ReturnType.Minimal }
                 );
 
-                await ProcessMentions(newComment, userId);
+                await _SupMan.ProcessMentions(newComment, userId);
 
                 return Ok(new
                 {
@@ -138,7 +138,7 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = _SupMan.GetUserId(authHeader);
+                var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 
@@ -178,7 +178,7 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = _SupMan.GetUserId(authHeader);
+                var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 
@@ -191,202 +191,18 @@ namespace api.Controllers
                     return NotFound();
 
                 var isAuthor = comment.UserId == userId;
-                var isModeratorDeleting = !isAuthor && await IsReferenceOwner(comment.ReferenceType, comment.ReferenceId, userId);
+                var isModeratorDeleting = !isAuthor && await _SupMan.IsReferenceOwner(comment.ReferenceType, comment.ReferenceId, userId);
 
                 if (!isAuthor && !isModeratorDeleting)
                     return Forbid();
 
-                await DeleteOrSoftDelete(comment, isModeratorDeleting);
+                await _SupMan.DeleteOrSoftDelete(comment, isModeratorDeleting);
 
                 return Ok(new { message = "Комментарий удалён" });
             }
             catch (Exception ex)
             {
                 return StatusCode(500, ex.Message);
-            }
-        }
-
-        // Удаление комментария с проверкой наличия дочерних комментариев
-        private async Task DeleteOrSoftDelete(Comment comment, bool isModeratorDeleting)
-        {
-            var childrenResponse = await _client.From<Comment>()
-                .Where(c => c.ParentCommentId == comment.CommentId)
-                .Get();
-
-            if (childrenResponse.Models.Count == 0)
-            {
-                await _client.From<Comment>()
-                    .Where(c => c.CommentId == comment.CommentId)
-                    .Delete();
-
-                if (!string.IsNullOrEmpty(comment.ParentCommentId))
-                {
-                    await CleanupAncestorIfOrphaned(comment.ParentCommentId);
-                }
-            }
-            else
-            {
-                await _client.From<Comment>()
-                    .Where(c => c.CommentId == comment.CommentId)
-                    .Set(c => c.IsDeleted, true)
-                    .Set(c => c.DeletedByModerator, isModeratorDeleting)
-                    .Set(c => c.UpdatedAt!, DateTime.UtcNow)
-                    .Update();
-            }
-        }
-
-        // Очистить родительский комментарий при условии, если нет дочерних комментариев
-        private async Task CleanupAncestorIfOrphaned(string parentId)
-        {
-            var parentResponse = await _client.From<Comment>()
-                .Where(c => c.CommentId == parentId)
-                .Get();
-
-            var parent = parentResponse.Models.FirstOrDefault();
-            if (parent == null || !parent.IsDeleted)
-                return;
-
-            var siblingsResponse = await _client.From<Comment>()
-                .Where(c => c.ParentCommentId == parentId)
-                .Get();
-
-            if (siblingsResponse.Models.Count > 0)
-                return;
-
-            await _client.From<Comment>()
-                .Where(c => c.CommentId == parentId)
-                .Delete();
-
-            if (!string.IsNullOrEmpty(parent.ParentCommentId))
-            {
-                await CleanupAncestorIfOrphaned(parent.ParentCommentId);
-            }
-        }
-
-        // Проверка доступа
-        private async Task<bool> CanAccessReference(string referenceType, string referenceId, string userId)
-        {
-            if (referenceType == "project")
-            {
-                var project = await _client.From<Project>()
-                    .Where(p => p.ProjectId == referenceId)
-                    .Get();
-                var p = project.Models.FirstOrDefault();
-                if (p == null) return false;
-
-                if (!p.IsPrivate) return true;
-                if (p.OwnerId == userId) return true;
-
-                var membership = await _client.From<ProjectMember>()
-                    .Where(pm => pm.ProjectId == referenceId && pm.UserId == userId)
-                    .Get();
-                return membership.Models.Count > 0;
-            }
-
-            if (referenceType == "event")
-            {
-                var evResponse = await _client.From<Event>().Where(e => e.EventId == referenceId).Get();
-                var ev = evResponse.Models.FirstOrDefault();
-                if (ev == null) return false;
-                if (!ev.IsPrivate || ev.OwnerId == userId) return true;
-
-                var membership = await _client.From<EventMember>()
-                    .Where(m => m.EventId == referenceId && m.UserId == userId)
-                    .Get();
-                return membership.Models.Count > 0;
-            }
-
-            return true;
-        }
-
-        // Проверка на владельца
-        private async Task<bool> IsReferenceOwner(string referenceType, string referenceId, string userId)
-        {
-            if (referenceType == "project")
-            {
-                var project = await _client.From<Project>()
-                    .Where(p => p.ProjectId == referenceId && p.OwnerId == userId)
-                    .Get();
-                return project.Models.Count > 0;
-            }
-
-            if (referenceType == "event")
-            {
-                var evResponse = await _client.From<Event>().Where(e => e.EventId == referenceId).Get();
-                var ev = evResponse.Models.FirstOrDefault();
-                if (ev == null) return false;
-                if (!ev.IsPrivate || ev.OwnerId == userId) return true;
-
-                var membership = await _client.From<EventMember>()
-                    .Where(m => m.EventId == referenceId && m.UserId == userId)
-                    .Get();
-                return membership.Models.Count > 0;
-            }
-
-            return false;
-        }
-
-        // Упоминание (ответить пользователю)
-        private async Task ProcessMentions(Comment comment, string authorId)
-        {
-            var matches = MyRegex().Matches(comment.Content ?? "");
-            if (matches.Count == 0) return;
-
-            var nicknames = matches.Select(m => m.Groups[1].Value).Distinct().ToList();
-
-            foreach (var nickname in nicknames)
-            {
-                var userResponse = await _client.From<User>()
-                    .Where(u => u.Nickname == nickname)
-                    .Get();
-
-                var mentionedUser = userResponse.Models.FirstOrDefault();
-                if (mentionedUser == null || mentionedUser.UserId == authorId)
-                    continue;
-
-                var mention = new CommentMention
-                {
-                    MentionId = Guid.NewGuid().ToString(),
-                    CommentId = comment.CommentId,
-                    MentionedUserId = mentionedUser.UserId!,
-                    CreatedAt = DateTime.UtcNow
-                };
-
-                try
-                {
-                    await _client.From<CommentMention>().Insert(
-                        mention,
-                        new QueryOptions { Returning = QueryOptions.ReturnType.Minimal }
-                    );
-                }
-                catch
-                {
-                    continue;
-                }
-
-                var author = await _client.From<User>().Where(u => u.UserId == authorId).Get();
-                var authorNickname = author.Models.FirstOrDefault()?.Nickname ?? "Пользователь";
-
-                var notification = new Notification
-                {
-                    NotificationId = Guid.NewGuid().ToString(),
-                    UserId = mentionedUser.UserId!,
-                    ReferenceId = comment.ReferenceId,
-                    ReferenceType = "comment",
-                    ContextData = System.Text.Json.JsonSerializer.Serialize(new
-                    {
-                        eventType = "comment_mention",
-                        nickname = authorNickname,
-                        commentId = comment.CommentId
-                    }),
-                    IsRead = false,
-                    CreatedAt = DateTime.UtcNow
-                };
-
-                await _client.From<Notification>().Insert(
-                    notification,
-                    new QueryOptions { Returning = QueryOptions.ReturnType.Minimal }
-                );
             }
         }
 
