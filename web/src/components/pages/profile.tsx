@@ -667,29 +667,29 @@ const checkFormat = (fieldName: string, value: string): string | null => {
   const rules: Record<string, Array<[boolean, string]>> = {
     nickname: [
       [!validatorFormat.required(value), 'Введите никнейм'],
-      [!validatorFormat.maxLength(value, LIMITS.profile.nicknameMax), 'Максимум 50 символов']
+      [!validatorFormat.maxLength(value, LIMITS.profile.nicknameMax), `Максимум ${LIMITS.profile.nicknameMax} символов`]
     ],
     realName: [
-      [!validatorFormat.maxLength(value, LIMITS.profile.realNameMax), 'Максимум 100 символов']
+      [!validatorFormat.maxLength(value, LIMITS.profile.realNameMax), `Максимум ${LIMITS.profile.realNameMax} символов`]
     ],
     age: [
       [value.length > 0 && !validatorFormat.number(value), 'Возраст должен содержать только цифры']
     ],
     country: [
-      [!validatorFormat.maxLength(value, LIMITS.profile.countryMax), 'Максимум 50 символов']
+      [!validatorFormat.maxLength(value, LIMITS.profile.countryMax), `Максимум ${LIMITS.profile.countryMax} символов`]
     ],
     city: [
-      [!validatorFormat.maxLength(value, LIMITS.profile.cityMax), 'Максимум 50 символов']
+      [!validatorFormat.maxLength(value, LIMITS.profile.cityMax), `Максимум ${LIMITS.profile.cityMax} символов`]
     ],
     workplace: [
-      [!validatorFormat.maxLength(value, LIMITS.profile.workplaceMax), 'Максимум 100 символов']
+      [!validatorFormat.maxLength(value, LIMITS.profile.workplaceMax), `Максимум ${LIMITS.profile.workplaceMax} символов`]
     ],
     profileRole: [
       [!validatorFormat.required(value), 'Введите роль'],
-      [!validatorFormat.maxLength(value, LIMITS.profile.roleMax), 'Максимум 50 символов']
+      [!validatorFormat.maxLength(value, LIMITS.profile.roleMax), `Максимум ${LIMITS.profile.roleMax} символов`]
     ],
     description: [
-      [!validatorFormat.maxLength(value, LIMITS.profile.descriptionMax), 'Максимум 2000 символов']
+      [!validatorFormat.maxLength(value, LIMITS.profile.descriptionMax), `Максимум ${LIMITS.profile.descriptionMax} символов`]
     ],
     hardSkills: [
       [value.length > 0 && !validatorFormat.hasTag(value), 'Теги должны начинаться с # и содержать только буквы, цифры и _']
