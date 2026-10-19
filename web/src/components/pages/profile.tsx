@@ -24,7 +24,7 @@ import { Chat } from './chat'
 import { EventPage } from './events/event_page'
 import { useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '../scripts/query/queryKeys'
-import { LIMITS, TIMING } from '../scripts/limits'
+import { LIMITS, TIMING, maxChars, minChars } from '../scripts/limits'
 
 interface ProfileFormData {
   nickname: string
@@ -105,11 +105,11 @@ const AuthorizedProfile = () => {
   
   const validationRules = {
     nickname: validatorRegex.username,
-    realName: (val: string) => validatorRegex.text(val, 100),
+    realName: (val: string) => validatorRegex.text(val, LIMITS.profile.realNameMax),
     age: validatorRegex.number,
-    country: (val: string) => validatorRegex.text(val, 50),
-    city: (val: string) => validatorRegex.text(val, 50),
-    workplace: (val: string) => validatorRegex.text(val, 100),
+    country: (val: string) => validatorRegex.text(val, LIMITS.profile.countryMax),
+    city: (val: string) => validatorRegex.text(val, LIMITS.profile.cityMax),
+    workplace: (val: string) => validatorRegex.text(val, LIMITS.profile.workplaceMax),
     profileRole: validatorRegex.role,
     description: validatorRegex.message,
     hardSkills: validatorRegex.tags,

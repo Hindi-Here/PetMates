@@ -94,9 +94,8 @@ export const UserCard = ({
     user.age ? `${user.age} лет` : null,
     user.city,
     user.workplace
-  ].filter((item): item is string => Boolean(item)) // Строгая типизация фильтра
+  ].filter((item): item is string => Boolean(item))
 
-  // Строгая типизация входных данных
   const parseSkills = (skillsData: string | string[] | null | undefined): string[] => {
     if (Array.isArray(skillsData)) return skillsData;
     if (typeof skillsData === 'string') {
@@ -155,7 +154,7 @@ export const UserCard = ({
         })
 
         setVisibleCount(count)
-        if (count === 0 && metaInfo.length > 0) setVisibleCount(1) // Fallback
+        if (count === 0 && metaInfo.length > 0) setVisibleCount(1) 
       })
     }
 

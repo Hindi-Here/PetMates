@@ -156,7 +156,7 @@ namespace api.Models
 
     public class EventApplicationDecisionDto
     {
-        public string Decision { get; set; } = string.Empty;   // accept | reject | revision
+        public string Decision { get; set; } = string.Empty;
         public string? Comment { get; set; }
     }
 

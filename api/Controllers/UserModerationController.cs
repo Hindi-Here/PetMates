@@ -12,6 +12,7 @@ namespace api.Controllers
         private readonly Client _client = client;
         private readonly SupportManager _SupMan = SupMan;
 
+        // Бан пользователя
         [HttpPut("{targetUserId}/ban")]
         public async Task<IActionResult> BanUser(string targetUserId, [FromBody] BanUserDto dto)
         {
@@ -28,6 +29,10 @@ namespace api.Controllers
                 var targetRole = await _SupMan.GetRoleAsync(targetUserId);
                 if (currentRole == Roles.Moderator && targetRole != Roles.User)
                     return Forbid();
+
+                var error = Validator.ValidateRequiredText(dto.Reason, Limits.Moderation.ReasonMax, "Причина");
+                if (error != null)
+                    return BadRequest(new { message = error });
 
                 var targetUserResponse = await _client.From<User>().Where(u => u.UserId == targetUserId).Get();
                 var targetUser = targetUserResponse.Models.FirstOrDefault();
@@ -73,6 +78,7 @@ namespace api.Controllers
             }
         }
 
+        // Разбан пользователя
         [HttpPut("{targetUserId}/unban")]
         public async Task<IActionResult> UnbanUser(string targetUserId)
         {
@@ -132,6 +138,7 @@ namespace api.Controllers
             }
         }
 
+        // Обновить роль участника (назначить/снять)
         [HttpPut("{targetUserId}/role")]
         public async Task<IActionResult> SetRole(string targetUserId, [FromBody] SetRoleDto dto)
         {
@@ -183,7 +190,4 @@ namespace api.Controllers
             }
         }
     }
-
-    public class BanUserDto { public string? Reason { get; set; } }
-    public class SetRoleDto { public string Role { get; set; } = string.Empty; }
 }

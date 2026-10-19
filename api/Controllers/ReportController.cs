@@ -20,10 +20,14 @@ namespace api.Controllers
         [RequestSizeLimit(Limits.Report.RequestBytes)]
         public async Task<IActionResult> SendReport([FromForm] ReportFormRequest request)
         {
-            if (string.IsNullOrWhiteSpace(request.Message))
-                return BadRequest(new { error = "[Текст] Сообщение не может быть пустым" });
-            if (request.Message.Length > Limits.Report.MessageMax)
-                return BadRequest(new { error = "[Текст] Сообщение слишком длинное" });
+            var messageError = Validator.ValidateRequiredText(request.Message, Limits.Report.MessageMax, "Текст");
+            if (messageError != null)
+                return BadRequest(new { error = messageError });
+
+            var nicknameError = Validator.ValidateOptionalText(request.Nickname, Limits.Report.NicknameMax, "Никнейм");
+            if (nicknameError != null)
+                return BadRequest(new { error = nicknameError });
+
             var validFiles = request.Files?.Where(f => f.Length > 0).ToList() ?? [];
             var totalSize = validFiles.Sum(f => f.Length);
             if (totalSize > Limits.Report.AttachmentsMaxBytes)

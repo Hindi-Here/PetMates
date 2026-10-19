@@ -19,7 +19,7 @@ import { notificationApi } from '../services/notification'
 import { usersApi } from '../services/users'
 import type { VacancyData } from '../services/vacancy'
 import type { UserData } from '../services/users'
-import type { ProjectMemberData } from '../services/project_members' // <-- Убедитесь, что этот тип экспортируется
+import type { ProjectMemberData } from '../services/project_members'
 import DeleteVacancyModerationForm from '../forms/delete_vacancy_moderation'
 
 type NotificationContextData = Record<string, string | number | boolean | null | undefined>;
@@ -89,8 +89,6 @@ export const VacancyCard = ({
         const project = await projectsApi.getProject(vacancy.projectId)
         setProjectOwnerId(project.ownerId)
         
-        // Явное приведение к UserData, если API не типизирован идеально, 
-        // но лучше, чтобы usersApi.getUserById возвращал UserData
         const ownerUser = await usersApi.getUserById(project.ownerId) as UserData | null
         
         setProjectOwnerRole(ownerUser?.systemRole ?? 'user')

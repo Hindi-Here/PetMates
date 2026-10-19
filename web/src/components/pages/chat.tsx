@@ -21,7 +21,7 @@ import { conversationApi, type MessageData, type ConversationData } from '../ser
 import { usersApi } from '../services/users'
 import { useAuth } from '../hooks/useAuth'
 
-import { TIMING } from '../scripts/limits'
+import { LIMITS, TIMING } from '../scripts/limits'
 
 type MessageStatus = 'wait' | 'sent' | 'read'
 
@@ -637,6 +637,7 @@ export const Chat = () => {
           className='chat-textarea'
           placeholder='Написать сообщение...'
           value={newMessage}
+          maxLength={LIMITS.chat.messageMax}
           onChange={(e) => setNewMessage(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {

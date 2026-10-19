@@ -84,8 +84,9 @@ namespace api.Controllers
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 
-                if (string.IsNullOrWhiteSpace(dto.Content))
-                    return BadRequest(new { message = "Комментарий не может быть пустым" });
+                var error = Validator.ValidateComment(dto.Content);
+                if (error != null)
+                    return BadRequest(new { message = error });
 
                 await _SupMan.UpdateLastOnlineAsync(userId);
 
@@ -142,8 +143,9 @@ namespace api.Controllers
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 
-                if (string.IsNullOrWhiteSpace(dto.Content))
-                    return BadRequest(new { message = "Комментарий не может быть пустым" });
+                var error = Validator.ValidateComment(dto.Content);
+                if (error != null)
+                    return BadRequest(new { message = error });
 
                 var response = await _client.From<Comment>()
                     .Where(c => c.CommentId == commentId && c.UserId == userId)
@@ -205,8 +207,5 @@ namespace api.Controllers
                 return StatusCode(500, ex.Message);
             }
         }
-
-        [GeneratedRegex(@"@([a-zA-Z0-9_]+)")]
-        private static partial Regex MyRegex();
     }
 }

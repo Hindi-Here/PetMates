@@ -4,6 +4,7 @@ import ImportantWarningIcon from '@icons/important_warning.svg?react'
 import { useBlockScroll } from '../scripts/function'
 import { moderationApi } from '../services/moderation'
 import { useState } from 'react'
+import { LIMITS } from '../scripts/limits'
 
 interface DeleteProjectModerationFormProps {
   projectId: string
@@ -56,9 +57,13 @@ const Form = ({ projectId, projectTitle, onClose, onSuccess }: DeleteProjectMode
 
         <div className='form-field-container'>
           <p className='form-field-text'>Причина удаления</p>
+          <p className={`char-counter ${reason.length >= LIMITS.moderation.reasonMax ? 'limit' : ''}`}>
+            {reason.length} / {LIMITS.moderation.reasonMax}
+          </p>
           <textarea
             className='form-field-input message red'
             value={reason}
+            maxLength={LIMITS.moderation.reasonMax}
             onChange={(e) => setReason(e.target.value)}
             placeholder='Опишите причину — она будет показана владельцу проекта'
           />

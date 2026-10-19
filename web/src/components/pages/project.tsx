@@ -36,7 +36,7 @@ import DeleteProjectForm from '../forms/delete_project'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '../scripts/query/queryKeys'
 import { UserCard } from '../common/userCard'
-import { LIMITS, TIMING } from '../scripts/limits'
+import { LIMITS, TIMING, maxChars, minChars } from '../scripts/limits'
 
 export interface TeamMemberWithUser {
   memberId: string
@@ -139,8 +139,8 @@ const TeamMemberProjectCard = ({
   const checkRoleFormat = (value: string): string | null => {
     const rules: Array<[boolean, string]> = [
       [!validatorFormat.required(value), 'Введите роль'],
-      [!validatorFormat.maxLength(value, LIMITS.member.roleMax), 'Максимум 50 символов'],
-      [value.length > 0 && value.length < LIMITS.member.roleMin, 'Минимум 2 символа'],
+      [!validatorFormat.maxLength(value, LIMITS.member.roleMax), maxChars(LIMITS.member.roleMax)],
+      [value.length > 0 && value.length < LIMITS.member.roleMin, minChars(LIMITS.member.roleMin)],
     ]
     const error = rules.find(([isInvalid]) => isInvalid)
     return error?.[1] ?? null
@@ -476,8 +476,8 @@ export const Project = ({ onCancel }: ProjectProps) => {
       description: '',
     },
     {
-      name: (val: string) => validatorRegex.text(val, 50),
-      shortDesc: (val: string) => validatorRegex.text(val, 150),
+      name: (val: string) => validatorRegex.text(val, LIMITS.project.titleMax),
+      shortDesc: (val: string) => validatorRegex.text(val, LIMITS.project.shortDescriptionMax),
       status: (val: string) => val,
       description: (val: string) => validatorRegex.message(val),
     }
@@ -513,11 +513,11 @@ export const Project = ({ onCancel }: ProjectProps) => {
     const rules: Record<string, Array<[boolean, string]>> = {
       vacTitle: [
         [!validatorFormat.required(value), 'Введите название роли'],
-        [!validatorFormat.maxLength(value, LIMITS.vacancy.titleMax), 'Максимум 50 символов']
+        [!validatorFormat.maxLength(value, LIMITS.vacancy.titleMax), maxChars(LIMITS.vacancy.titleMax)]
       ],
       vacDesc: [
         [!validatorFormat.required(value), 'Введите описание'],
-        [!validatorFormat.maxLength(value, LIMITS.vacancy.descriptionMax), 'Максимум 500 символов']
+        [!validatorFormat.maxLength(value, LIMITS.vacancy.descriptionMax), maxChars(LIMITS.vacancy.descriptionMax)]
       ],
       vacTags: [
         [!validatorFormat.required(value), 'Введите теги'],
@@ -1687,7 +1687,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
                   <Add className='media-upload-ico' />
                   <span>Прикрепить медиа</span>
                 </button>
-                <p className='media-upload-hint'>Общий размер медиа до 50 МБ</p>
+                <p className='media-upload-hint'>Общий размер медиа до {LIMITS.upload.mediaTotalMaxBytes} МБ</p>
                 <div className='preview-toggle-container'>
                   <p className='preview-toggle-label'>Предпросмотр</p>
                   <Toggle checked={isPreviewDescription} onChange={setIsPreviewDescription} />
@@ -1803,7 +1803,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
                   onChange={e => {
                     const value = e.target.value;
                     if (value.length > LIMITS.vacancy.descriptionMax) return;
-                    if (getVisualLineCount(value, e.target) > 10) return;
+                    if (getVisualLineCount(value, e.target) >  LIMITS.vacancy.descriptionMaxLines) return;
                     setVacDesc(value);
                   }}
                   onBlur={() => setVacancyTouched(prev => ({ ...prev, vacDesc: true }))} />
@@ -1814,7 +1814,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
                   value={vacTags}
                   onChange={e => {
                     let value = validatorRegex.tags(e.target.value);
-                    if (getVisualLineCount(value, e.target) > 2) return;
+                    if (getVisualLineCount(value, e.target) > LIMITS.vacancy.tagsMaxLines) return;
                     setVacTags(value);
                   }}
                   onBlur={() => setVacancyTouched(prev => ({ ...prev, vacTags: true }))} />

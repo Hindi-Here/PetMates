@@ -1,9 +1,9 @@
 ﻿using api.Models;
 using Supabase.Postgrest;
 using System.Globalization;
-using System.IdentityModel.Tokens.Jwt;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Caching.Hybrid;
 
 namespace api.Support
 {
@@ -122,10 +122,17 @@ namespace api.Support
 
 
 
-    public partial class SupportManager(Supabase.Client client)
+    public partial class SupportManager(Supabase.Client client, HybridCache cache)
     {
         private readonly Supabase.Client _client = client;
         private static readonly Regex MentionRegex = MyRegex();
+
+        private readonly HybridCache _cache = cache;
+
+        private static readonly HybridCacheEntryOptions AuthCacheOptions = new()
+        {
+            Expiration = TimeSpan.FromSeconds(60)
+        };
 
         // Получение токена пользователя
         public async Task<string?> GetUserIdAsync(string? authHeader)
@@ -137,15 +144,32 @@ namespace api.Support
             if (string.IsNullOrEmpty(token) || token == "undefined" || token == "null")
                 return null;
 
-            try
-            {
-                var user = await _client.Auth.GetUser(token);
-                return user?.Id;
-            }
-            catch
-            {
-                return null;
-            }
+            var tokenHash = ComputeTokenHash(token);
+
+            return await _cache.GetOrCreateAsync<string?>(
+                tokenHash,
+                async (cancellationToken) =>
+                {
+                    try
+                    {
+                        var user = await _client.Auth.GetUser(token);
+                        return user?.Id;
+                    }
+                    catch
+                    {
+                        return null;
+                    }
+                },
+                AuthCacheOptions
+            );
+        }
+
+        // Вычисление хэша токена для ключа кэша
+        private static string ComputeTokenHash(string token)
+        {
+            var bytes = System.Security.Cryptography.SHA256.HashData(
+                System.Text.Encoding.UTF8.GetBytes(token));
+            return Convert.ToBase64String(bytes);
         }
 
         // Получение id и роли
@@ -155,7 +179,11 @@ namespace api.Support
             if (string.IsNullOrEmpty(userId)) return new Viewer(null, null);
 
             await UpdateLastOnlineAsync(userId);
-            return new Viewer(userId, await GetRoleAsync(userId));
+
+            var user = await GetUserAsync(userId);
+            if (user == null || user.IsBanned) return new Viewer(null, null);
+
+            return new Viewer(userId, user.SystemRole);
         }
 
         // Роль пользователя

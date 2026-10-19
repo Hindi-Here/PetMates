@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { commentApi, type CommentData } from '../services/comment'
 import { useAuth } from '../hooks/useAuth'
+import {LIMITS} from '../scripts/limits'
 
 interface CommentNode extends CommentData {
   replies: CommentNode[]
@@ -55,6 +56,8 @@ export const CommentsSection = ({
     enabled: !!referenceId,
   })
 
+  const[_, setError] = useState<string | null>(null)
+
   const createMutation = useMutation({
     mutationFn: (dto: { content: string; parentCommentId?: string }) =>
       commentApi.create({ referenceType, referenceId, ...dto }),
@@ -63,7 +66,9 @@ export const CommentsSection = ({
       setNewComment('')
       setReplyingTo(null)
       setReplyContent('')
+      setError(null)
     },
+    onError: (e: Error) => setError(e.message),
   })
 
   const updateMutation = useMutation({
@@ -236,6 +241,7 @@ export const CommentsSection = ({
           className='comment-textarea'
           placeholder={readOnly ? 'Предпросмотр: отправка комментариев недоступна' : 'Место для твоего комментария...'}
           value={newComment}
+          maxLength={LIMITS.comment.maxLength}
           disabled={readOnly}
           onChange={e => setNewComment(e.target.value)}
         />

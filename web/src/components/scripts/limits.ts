@@ -25,6 +25,9 @@ export const LIMITS = {
 
   search: { userQueryMin: 2, userQueryMax: 50, projectQueryMin: 2, projectQueryMax: 50 },
   upload: { avatarMaxBytes: 5 * MB, mediaTotalMaxBytes: 50 * MB },
+  comment: { maxLength: 2000 },
+  chat: { messageMax: 2000 },
+  moderation: { reasonMax: 1024 },
   report: { messageMax: 1024, attachmentsMaxBytes: 50 * MB },
 } as const
 

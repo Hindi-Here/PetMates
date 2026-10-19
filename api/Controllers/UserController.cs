@@ -1,7 +1,6 @@
 ﻿using api.Models;
 using api.Support; 
 using Microsoft.AspNetCore.Mvc;
-using Supabase;
 using Supabase.Postgrest;
 
 namespace api.Controllers

@@ -111,7 +111,7 @@ export function useTagInput() {
 }
 
 
-// --- ВАЛДИАЦИЯ --- \\
+// --- ВАЛИДАЦИЯ --- \\
 
 // Первый уровень
 export const validatorFormat = {

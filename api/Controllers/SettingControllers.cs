@@ -1,4 +1,5 @@
 ﻿using api.Support;
+using api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Supabase;
 
@@ -164,9 +165,4 @@ namespace api.Controllers
             }
         }
     }
-
-    public record ChangePasswordRequest(string OldPassword, string NewPassword, string ConfirmPassword);
-    public record ChangeEmailRequest(string NewEmail, string ConfirmCode);
-    public record VerifyNicknameRequest(string Nickname);
-    public record DeleteAccountRequest(string Nickname);
 }

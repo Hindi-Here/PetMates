@@ -246,6 +246,10 @@ namespace api.Controllers
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 
+                var error = Validator.ValidateChatMessage(dto.Content);
+                if (error != null)
+                    return BadRequest(new { message = error });
+
                 if (string.IsNullOrWhiteSpace(dto.Content))
                     return BadRequest(new { message = "Сообщение не может быть пустым" });
 
@@ -298,6 +302,10 @@ namespace api.Controllers
                 var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
+
+                var error = Validator.ValidateChatMessage(dto.Content);
+                if (error != null)
+                    return BadRequest(new { message = error });
 
                 if (string.IsNullOrWhiteSpace(dto.Content))
                     return BadRequest(new { message = "Сообщение не может быть пустым" });

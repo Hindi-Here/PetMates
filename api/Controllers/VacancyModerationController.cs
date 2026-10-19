@@ -12,6 +12,7 @@ namespace api.Controllers
         private readonly Client _client = client;
         private readonly SupportManager _SupMan = SupMan;
 
+        // Удалить заявку
         [HttpDelete("{vacancyId}")]
         public async Task<IActionResult> DeleteVacancy(string vacancyId, [FromBody] DeleteVacancyWithReasonDto dto)
         {
@@ -24,6 +25,10 @@ namespace api.Controllers
                 var currentRole = await _SupMan.GetRoleAsync(currentUserId);
                 if (currentRole != Roles.Moderator && currentRole != Roles.Admin)
                     return Forbid();
+
+                var error = Validator.ValidateModerationReason(dto.Reason);
+                if (error != null)
+                    return BadRequest(new { message = error });
 
                 var vacancyResponse = await _client.From<Vacancy>().Where(v => v.VacancyId == vacancyId).Get();
                 var vacancy = vacancyResponse.Models.FirstOrDefault();
@@ -99,6 +104,4 @@ namespace api.Controllers
             }
         }
     }
-
-    public class DeleteVacancyWithReasonDto { public string? Reason { get; set; } }
 }

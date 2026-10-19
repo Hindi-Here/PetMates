@@ -202,7 +202,11 @@ export const EventPublicView = ({
       {data.description ? (
         <section className='preview-section'>
           <div className='project-description-preview markdown-content'>
-            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+            <ReactMarkdown 
+              remarkPlugins={[remarkGfm]} 
+              rehypePlugins={[rehypeRaw]} 
+              components={{ img: (props: any) => <img {...props} loading="lazy" decoding="async" /> }}
+            >
               {data.description}
             </ReactMarkdown>
           </div>

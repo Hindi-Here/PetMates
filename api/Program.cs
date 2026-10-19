@@ -1,5 +1,6 @@
 using api.Support;
 using DotNetEnv;
+using Microsoft.Extensions.Caching.Hybrid;
 using Supabase;
 using Telegram.Bot;
 
@@ -45,6 +46,13 @@ builder.Services.AddSingleton<ITelegramBotClient>(new TelegramBotClient(botToken
 
 builder.Services.AddControllers();
 
+builder.Services.AddHybridCache(options =>
+{
+    options.DefaultEntryOptions = new HybridCacheEntryOptions
+    {
+        Expiration = TimeSpan.FromSeconds(60)
+    };
+});
 builder.Services.AddScoped<SupportManager>();
 
 builder.Services.AddEndpointsApiExplorer();
@@ -54,7 +62,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowLocalhost", policy =>
     {
-        policy.WithOrigins("http://localhost:5173", "http://localhost:3000", "http://89.125.18.77")
+        var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+                             ?? [];
+
+        policy.WithOrigins(allowedOrigins)
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();

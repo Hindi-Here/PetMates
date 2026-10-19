@@ -169,6 +169,10 @@ namespace api.Controllers
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 
+                var error = Validator.ValidateProject(dto.Title, dto.ShortDescription);
+                if (error != null)
+                    return BadRequest(new { message = error });
+
                 await _SupMan.UpdateLastOnlineAsync(userId);
 
                 var newProject = new Project
@@ -410,7 +414,7 @@ namespace api.Controllers
             }
         }
 
-        // Получить команду проекта
+        // Получить проекты, где пользователь участник
         [HttpGet("user/{userId}/member")]
         public async Task<IActionResult> GetUserMemberProjects(string userId)
         {
@@ -504,9 +508,7 @@ namespace api.Controllers
                     EditedRoles = string.IsNullOrEmpty(draft.EditedRoles)
                         ? null
                         : JsonSerializer.Deserialize<Dictionary<string, string>>(draft.EditedRoles),
-                    DeletedMediaFiles = string.IsNullOrEmpty(draft.DeletedMediaFiles)
-                        ? null
-                        : JsonSerializer.Deserialize<List<string>>(draft.DeletedMediaFiles)
+                    DeletedMediaFiles = SupportManager.ParseDeletedMediaFiles(draft.DeletedMediaFiles)
                 });
             }
             catch (Exception ex)
@@ -523,7 +525,12 @@ namespace api.Controllers
             {
                 var authHeader = Request.Headers.Authorization.ToString();
                 var userId = await _SupMan.GetUserIdAsync(authHeader);
-                if (string.IsNullOrEmpty(userId)) return Unauthorized();
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+
+                var projectError = Validator.ValidateProject(dto.Title, dto.ShortDescription);
+                if (projectError != null)
+                    return BadRequest(new { message = projectError });
 
                 var ownerCheck = await _client.From<Project>()
                     .Where(p => p.ProjectId == projectId && p.OwnerId == userId)
@@ -574,7 +581,6 @@ namespace api.Controllers
                     .Get();
                 if (ownerCheck.Models.Count == 0) return NotFound();
 
-                // 1. Физически удаляем ВСЕ файлы из чернового бакета для этого проекта
                 var draftFiles = await _client.Storage.From("ProjectMediaDraft").List(projectId);
                 if (draftFiles != null && draftFiles.Count > 0)
                 {
@@ -605,7 +611,12 @@ namespace api.Controllers
             {
                 var authHeader = Request.Headers.Authorization.ToString();
                 var userId = await _SupMan.GetUserIdAsync(authHeader);
-                if (string.IsNullOrEmpty(userId)) return Unauthorized();
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+
+                var projectError = Validator.ValidateProject(dto.Title, dto.ShortDescription);
+                if (projectError != null)
+                    return BadRequest(new { message = projectError });
 
                 var response = await _client.From<Project>()
                     .Where(p => p.ProjectId == projectId && p.OwnerId == userId)
@@ -624,9 +635,7 @@ namespace api.Controllers
 
                 var finalDescription = dto.FullDescription ?? project.FullDescription ?? "";
 
-                var deletedFileNames = string.IsNullOrEmpty(draft?.DeletedMediaFiles)
-                    ? []
-                    : JsonSerializer.Deserialize<List<string>>(draft!.DeletedMediaFiles!) ?? [];
+                var deletedFileNames = SupportManager.ParseDeletedMediaFiles(draft?.DeletedMediaFiles);
 
                 if (deletedFileNames.Count > 0)
                 {
@@ -709,9 +718,7 @@ namespace api.Controllers
                 var draftResponse = await _client.From<ProjectDraft>().Where(d => d.ProjectId == projectId).Get();
                 var draft = draftResponse.Models.FirstOrDefault();
 
-                var deletedFileNames = string.IsNullOrEmpty(draft?.DeletedMediaFiles)
-                    ? []
-                    : JsonSerializer.Deserialize<List<string>>(draft!.DeletedMediaFiles!) ?? [];
+                var deletedFileNames = SupportManager.ParseDeletedMediaFiles(draft?.DeletedMediaFiles);
 
                 var result = new List<object>();
 
@@ -836,9 +843,7 @@ namespace api.Controllers
                 var draftResponse = await _client.From<ProjectDraft>().Where(d => d.ProjectId == projectId).Get();
                 var draft = draftResponse.Models.FirstOrDefault();
 
-                var deletedFileNames = string.IsNullOrEmpty(draft?.DeletedMediaFiles)
-                    ? []
-                    : JsonSerializer.Deserialize<List<string>>(draft!.DeletedMediaFiles!) ?? [];
+                var deletedFileNames = SupportManager.ParseDeletedMediaFiles(draft?.DeletedMediaFiles);
 
                 if (!deletedFileNames.Contains(fileName))
                     deletedFileNames.Add(fileName);

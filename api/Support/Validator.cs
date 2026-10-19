@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using System.Text.RegularExpressions;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace api.Support
 {
@@ -31,6 +32,8 @@ namespace api.Support
             {
                 if (data.Nickname.Trim().Length == 0)
                     errors.Add("[Никнейм] введите никнейм");
+                else if (data.Nickname.Length < Limits.Auth.NicknameMin)
+                    errors.Add($"[Никнейм] минимум {Limits.Auth.NicknameMin} символа");
                 else if (data.Nickname.Length > Limits.Auth.NicknameMax)
                     errors.Add($"[Никнейм] максимум {Limits.Auth.NicknameMax} символов");
                 else if (!NicknameRegex().IsMatch(data.Nickname))
@@ -82,10 +85,21 @@ namespace api.Support
             if (data.Description != null && data.Description.Length > Limits.Profile.DescriptionMax)
                 errors.Add($"[Описание] максимум {Limits.Profile.DescriptionMax} символов");
 
-            if (!string.IsNullOrEmpty(data.HardSkills) && !ValidateTags(data.HardSkills))
-                errors.Add("[Hard skills] теги должны начинаться с # и содержать только буквы, цифры и _");
-            if (!string.IsNullOrEmpty(data.SoftSkills) && !ValidateTags(data.SoftSkills))
-                errors.Add("[Soft skills] теги должны начинаться с # и содержать только буквы, цифры и _");
+            if (!string.IsNullOrEmpty(data.HardSkills))
+            {
+                if (data.HardSkills.Length > Limits.Profile.SkillsMax)
+                    errors.Add($"[Hard skills] максимум {Limits.Profile.SkillsMax} символов");
+                else if (!ValidateTags(data.HardSkills))
+                    errors.Add("[Hard skills] теги должны начинаться с # и содержать только буквы, цифры и _");
+            }
+
+            if (!string.IsNullOrEmpty(data.SoftSkills))
+            {
+                if (data.SoftSkills.Length > Limits.Profile.SkillsMax)
+                    errors.Add($"[Soft skills] максимум {Limits.Profile.SkillsMax} символов");
+                else if (!ValidateTags(data.SoftSkills))
+                    errors.Add("[Soft skills] теги должны начинаться с # и содержать только буквы, цифры и _");
+            }
 
             return errors.Count > 0 ? errors[0] : null;
         }
@@ -166,6 +180,8 @@ namespace api.Support
                 errors.Add("[Пароль] введите пароль");
             else if (password.Length < Limits.Auth.PasswordMin)
                 errors.Add($"[Пароль] минимум {Limits.Auth.PasswordMin} символов");
+            else if (password.Length > Limits.Auth.PasswordMax)
+                errors.Add($"[Пароль] максимум {Limits.Auth.PasswordMax} символов");
             else
             {
                 var hasLetter = PasswordLetterRegex().IsMatch(password);
@@ -194,6 +210,8 @@ namespace api.Support
 
             if (newPassword.Length < Limits.Auth.PasswordMin)
                 return $"[Пароль] минимум {Limits.Auth.PasswordMin} символов";
+            else if (newPassword.Length > Limits.Auth.PasswordMax)
+                return $"[Пароль] максимум {Limits.Auth.PasswordMax} символов";
 
             var hasLetter = PasswordLetterRegex().IsMatch(newPassword);
             var hasNumber = PasswordNumberRegex().IsMatch(newPassword);
@@ -388,7 +406,8 @@ namespace api.Support
             return null;
         }
 
-        public static readonly string[] EventDraftSections = ["general", "form", "results"]; // Разделы черновика мероприятия
+        // Разделы черновика мероприятия
+        public static readonly string[] EventDraftSections = ["general", "form", "results"];
 
         // Валидация раздела черновика
         public static string? ValidateEventDraftSection(string section)
@@ -507,5 +526,30 @@ namespace api.Support
 
             return null;
         }
+
+        // Валидация обязательного текста с ограничением длины
+        public static string? ValidateRequiredText(string? value, int max, string field)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return $"[{field}] поле не может быть пустым";
+
+            return value.Length > max ? $"[{field}] максимум {max} символов" : null;
+        }
+
+        // Валидация необязательного текста с ограничением длины
+        public static string? ValidateOptionalText(string? value, int max, string field) =>
+            value != null && value.Length > max ? $"[{field}] максимум {max} символов" : null;
+
+        // Валидация комментария
+        public static string? ValidateComment(string? content) =>
+            ValidateRequiredText(content, Limits.Comment.MaxLength, "Комментарий");
+
+        // Валидация сообщения чата
+        public static string? ValidateChatMessage(string? content) =>
+            ValidateRequiredText(content, Limits.Chat.MaxLength, "Сообщение");
+
+        // Валидация причины модерации
+        public static string? ValidateModerationReason(string? reason) =>
+            ValidateOptionalText(reason, Limits.Moderation.ReasonMax, "Причина");
     }
 }

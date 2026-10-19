@@ -12,6 +12,7 @@ namespace api.Controllers
         private readonly Client _client = client;
         private readonly SupportManager _SupMan = SupMan;
 
+        // Удалить проект 
         [HttpDelete("{projectId}")]
         public async Task<IActionResult> DeleteProject(string projectId, [FromBody] DeleteProjectWithReasonDto dto)
         {
@@ -24,6 +25,10 @@ namespace api.Controllers
                 var currentRole = await _SupMan.GetRoleAsync(currentUserId);
                 if (currentRole != Roles.Moderator && currentRole != Roles.Admin)
                     return Forbid();
+
+                var error = Validator.ValidateModerationReason(dto.Reason);
+                if (error != null)
+                    return BadRequest(new { message = error });
 
                 var response = await _client.From<Project>().Where(p => p.ProjectId == projectId).Get();
                 var project = response.Models.FirstOrDefault();
@@ -95,6 +100,4 @@ namespace api.Controllers
             }
         }
     }
-
-    public class DeleteProjectWithReasonDto { public string? Reason { get; set; } }
 }

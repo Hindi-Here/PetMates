@@ -1,4 +1,5 @@
 ﻿using api.Support;
+using api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Supabase.Gotrue;
 using System.Text.Json;
@@ -83,7 +84,4 @@ namespace api.Controllers
             }
         }
     }
-
-    public record RegisterRequest(string Nickname, string Email, string Password, string ConfirmPassword);
-    public record LoginRequest(string Email, string Password);
 }

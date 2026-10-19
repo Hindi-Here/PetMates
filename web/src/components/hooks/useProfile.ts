@@ -1,5 +1,9 @@
-import { useEffect, useState, useCallback } from 'react';
-import { profileApi } from '../services/profile';
+import { useCallback } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { profileApi } from '../services/profile'
+import { queryKeys } from '../scripts/query/queryKeys'
+import { STALE } from '../scripts/query/queryClient'
+import { useAuth } from './useAuth'
   
 export interface ProfileData {
   userId?: string;
@@ -22,72 +26,23 @@ export interface ProfileData {
   createdAt?: string | null;
 }
 
-let sharedProfileData: ProfileData | null = null;
-let isFetching = false;
-const profileSubscribers = new Set<(value: ProfileData | null) => void>();
-
-const notifyProfileSubscribers = () => {
-  profileSubscribers.forEach(callback => callback(sharedProfileData));
-};
-
-// Функция для получения данных профиля пользователя с кэшированием и уведомлением подписчиков
-const fetchSharedProfile = async (isAuth: boolean, force = false) => {
-  if (!isAuth) {
-    sharedProfileData = null;
-    notifyProfileSubscribers();
-    return null;
-  }
-
-  if (sharedProfileData && !force) {
-    return sharedProfileData;
-  }
-
-  if (isFetching) return sharedProfileData;
-
-  isFetching = true;
-  try {
-    const responseData = await profileApi.getMe();
-    sharedProfileData = responseData;
-    notifyProfileSubscribers();
-    return responseData;
-  }
-  catch (err) {
-    console.error('Profile fetch error:', err);
-    return sharedProfileData;
-  }
-  finally {
-    isFetching = false;
-  }
-};
-
 // Хук для получения данных профиля пользователя с возможностью обновления
 export const useProfile = (isAuth: boolean | null) => {
-  const [data, setData] = useState<ProfileData | null>(
-    () => isAuth ? sharedProfileData : null
-  );
+  const { userId } = useAuth()
+  const queryClient = useQueryClient()
 
-  useEffect(() => {
-    const callback = (value: ProfileData | null) => setData(value);
-    profileSubscribers.add(callback);
-    if (sharedProfileData)
-      setData(sharedProfileData);
-    return () => { profileSubscribers.delete(callback); };
-  }, []);
+  const { data } = useQuery({
+    queryKey: queryKeys.profile.me(userId),
+    queryFn: profileApi.getMe,
+    enabled: isAuth === true && !!userId,
+    staleTime: STALE.medium,
+    retry: false,
+  })
 
-  useEffect(() => {
-    if (isAuth === null) return;
-    if (isAuth && !sharedProfileData) {
-      fetchSharedProfile(isAuth);
-    }
-    else if (isAuth === false) { 
-      sharedProfileData = null;
-      notifyProfileSubscribers();
-    }
-  }, [isAuth]);
+  const refresh = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: queryKeys.profile.me(userId) }),
+    [queryClient, userId]
+  )
 
-  const refresh = useCallback(async () => {
-    return await fetchSharedProfile(!!isAuth, true);
-  }, [isAuth]);
-
-  return { data, refresh };
-};
+  return { data: data ?? null, refresh }
+}

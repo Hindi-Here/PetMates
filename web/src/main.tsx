@@ -13,6 +13,7 @@ import Footer from './components/layout/footer'
 import BannedPage from './components/pages/ban'
 import { useBanStatus } from './components/hooks/useBanStatus'
 import { ScrollToTop } from './components/scripts/function';
+import { AuthProvider } from './components/hooks/useAuth';
 
 // Компонент, который проверяет статус бана пользователя и отображает соответствующую страницу
 function AppGate() {
@@ -40,10 +41,12 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider>
-          <ScrollToTop />
-          <AppGate />
-        </ThemeProvider>
+        <AuthProvider>
+          <ThemeProvider>
+            <ScrollToTop />
+            <AppGate />
+          </ThemeProvider>
+        </AuthProvider>
       </QueryClientProvider>
     </BrowserRouter>
   </StrictMode>,

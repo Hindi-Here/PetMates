@@ -59,6 +59,8 @@
             public const int ApplicationAnswerMax = 2000;
             public const int DecisionCommentMax = 1000;
             public const int DraftPayloadMax = 100_000;
+
+            public const int ApplicationSnippetMax = 160;
         }
 
         public static class Upload
@@ -76,12 +78,28 @@
             public const int MessageMax = 1024;
             public const long AttachmentsMaxBytes = 50 * MB;
             public const long RequestBytes = AttachmentsMaxBytes + 5 * MB;
+            public const int NicknameMax = 50;
         }
 
         public static class Search
         {
             public const int UserQueryMin = 2;
             public const int UserResultsMax = 20;
+        }
+
+        public static class Comment
+        {
+            public const int MaxLength = 2000;
+        }
+
+        public static class Chat
+        {
+            public const int MaxLength = 2000;
+        }
+
+        public static class Moderation
+        {
+            public const int ReasonMax = 1024;
         }
 
         public const int OnlineThresholdMinutes = 2;
