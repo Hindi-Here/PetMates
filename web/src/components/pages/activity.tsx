@@ -11,7 +11,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useSystemRole } from '../hooks/useSystemRole'
 import './activity.scss'
-import { useMemo, useEffect, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '../scripts/query/queryKeys'
 import { projectsApi } from '../services/project'
@@ -22,7 +22,8 @@ import DeleteProjectModerationForm from '../forms/delete_project_moderation'
 import { EventCard } from '../common/eventCard'
 
 import type { ProjectData, CreateProjectDto } from '../services/project'
-import type { UserData } from '../services/users'
+import { STALE } from '../scripts/query/queryClient'
+import { useUser } from '../hooks/useUser'
 
 type ActivitySection = 'projects' | 'events'
 
@@ -52,26 +53,15 @@ const ProjectCard = ({
   const { profileId } = useParams<{ profileId: string }>()
   const queryClient = useQueryClient()
   const currentSystemRole = useSystemRole()
-  const [projectOwnerRole, setProjectOwnerRole] = useState<string | null>(null)
-  const [ownerIsBanned, setOwnerIsBanned] = useState(false)
   const [showDeleteForm, setShowDeleteForm] = useState(false)
 
   const statusConfig = getStatusConfig(project.status)
   const StatusIcon = statusConfig.Icon
 
-  useEffect(() => {
-    const fetchOwnerInfo = async () => {
-      try {
-        const owner = await usersApi.getUserById(project.ownerId) as UserData
-        setProjectOwnerRole(owner.systemRole || 'user')
-        setOwnerIsBanned(owner.isBanned === true)
-      } catch (error) {
-        setProjectOwnerRole('user')
-        setOwnerIsBanned(true) 
-      }
-    }
-    fetchOwnerInfo()
-  }, [project.ownerId])
+  const { data: owner } = useUser(project.ownerId)
+  
+  const ownerIsBanned = owner?.isBanned === true
+  const projectOwnerRole = owner?.systemRole ?? 'user'
 
   const canModerate = showModerationDelete &&
     !project.isPrivate &&
@@ -179,60 +169,49 @@ export const Activity = () => {
     queryKey: ['users', 'byId', ownerId],
     queryFn: () => usersApi.getUserById(ownerId!),
     enabled: !!ownerId && !isOwner,
+    staleTime: STALE.short,
   })
 
   const { data: projects = [] } = useQuery({
     queryKey: queryKeys.projects.byUser(ownerId!),
     queryFn: () => projectsApi.getProjectsByUser(ownerId!),
     enabled: !!ownerId && section === 'projects',
-    staleTime: 0,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
+    staleTime: STALE.short,
   })
 
   const { data: memberProjects = [] } = useQuery({
-    queryKey: queryKeys.projects.memberProjects(ownerId!),
+    queryKey: queryKeys.projects.members(ownerId!),
     queryFn: () => projectsApi.getUserMemberProjects(ownerId!),
     enabled: !!ownerId && section === 'projects',
-    staleTime: 0,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
+    staleTime: STALE.short,
   })
 
   const { data: favorites = [] } = useQuery({
     queryKey: queryKeys.projects.favorites(ownerId!),
     queryFn: () => projectsApi.getUserFavorites(ownerId!),
     enabled: !!ownerId && section === 'projects',
-    staleTime: 0,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
+    staleTime: STALE.short,
   })
 
   const { data: events = [] } = useQuery({
     queryKey: queryKeys.events.byUser(ownerId!),
     queryFn: () => eventApi.getByUser(ownerId!),
     enabled: !!ownerId && section === 'events',
-    staleTime: 0,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
+    staleTime: STALE.short,
   })
 
   const { data: memberEvents = [] } = useQuery({
     queryKey: queryKeys.events.memberEvents(ownerId!),
     queryFn: () => eventApi.getMemberEvents(ownerId!),
     enabled: !!ownerId && section === 'events',
-    staleTime: 0,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
+    staleTime: STALE.short,
   })
 
   const { data: favoriteEvents = [] } = useQuery({
     queryKey: queryKeys.events.favorites(ownerId!),
     queryFn: () => eventApi.getFavorites(ownerId!),
     enabled: !!ownerId && section === 'events',
-    staleTime: 0,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
+    staleTime: STALE.short,
   })
 
   const createProjectMutation = useMutation({

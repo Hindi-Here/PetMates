@@ -2,7 +2,7 @@ import './project_public_view.scss'
 import LockIcon from '@icons/lock.svg?react'
 
 import { useNavigate, useParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query' 
 import { useSystemRole } from '../hooks/useSystemRole'
 import { queryKeys } from '../scripts/query/queryKeys'
 import { projectsApi } from '../services/project'
@@ -10,34 +10,40 @@ import { projectMembersApi, type ProjectMemberData } from '../services/project_m
 import { usersApi, type UserData } from '../services/users'
 import { vacanciesApi } from '../services/vacancy'
 import { ProjectPublicView, type TeamMemberWithUser } from './project_public_view'
+import { STALE } from '../scripts/query/queryClient'
 
 export default function ProjectViewer() {
   const navigate = useNavigate()
   const { projectId } = useParams<{ projectId: string }>()
   const currentSystemRole = useSystemRole()
+  
+  const queryClient = useQueryClient() 
 
   const { data: project, isLoading: projectLoading } = useQuery({
     queryKey: queryKeys.projects.byId(projectId!),
     queryFn: () => projectsApi.getProject(projectId!),
     enabled: !!projectId,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-    refetchOnMount: false,
-    refetchOnWindowFocus: true,
+    staleTime: STALE.medium,
   })
 
   const { data: ownerData, isLoading: ownerLoading } = useQuery({
     queryKey: ['users', 'byId', project?.ownerId],
     queryFn: () => usersApi.getUserById(project!.ownerId),
     enabled: !!project?.ownerId,
+    staleTime: STALE.medium,
   })
 
   const { data: teamMembers = [] } = useQuery<TeamMemberWithUser[]>({
-    queryKey: queryKeys.projects.memberProjects(projectId!),
+    queryKey: queryKeys.projects.team(projectId!),
     queryFn: async () => {
       if (!projectId) return []
+      
       const members = await projectMembersApi.getByProject(projectId)
-      const proj = await projectsApi.getProject(projectId)
+      
+      const proj = await queryClient.ensureQueryData({
+        queryKey: queryKeys.projects.byId(projectId),
+        queryFn: () => projectsApi.getProject(projectId),
+      })
 
       const membersWithUsers: TeamMemberWithUser[] = members.map((member: ProjectMemberData) => ({
         memberId: member.memberId,
@@ -71,20 +77,14 @@ export default function ProjectViewer() {
       })
     },
     enabled: !!projectId,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-    refetchOnMount: false,
-    refetchOnWindowFocus: true,
+    staleTime: STALE.medium,
   })
 
   const { data: vacancies = [] } = useQuery({
     queryKey: queryKeys.vacancies.byProject(projectId!),
     queryFn: () => vacanciesApi.getByProject(projectId!),
     enabled: !!projectId,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-    refetchOnMount: false,
-    refetchOnWindowFocus: true,
+    staleTime: STALE.medium,
   })
 
   const isStaff = currentSystemRole === 'admin' || currentSystemRole === 'moderator'

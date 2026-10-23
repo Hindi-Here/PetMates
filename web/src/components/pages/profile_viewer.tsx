@@ -8,19 +8,17 @@ import { queryKeys } from '../scripts/query/queryKeys'
 import { usersApi, type UserData } from '../services/users'
 import type { ThirdProfileData } from '../hooks/useThirdProfile'
 import { ProfilePublicView, type ProfilePublicData } from './profile_public_view'
+import { STALE } from '../scripts/query/queryClient'
 
 export default function ProfileViewer() {
   const { profileId } = useParams<{ profileId: string }>()
   const currentSystemRole = useSystemRole()
 
   const { data: user, isLoading } = useQuery<ThirdProfileData>({
-    queryKey: queryKeys.profile.byId(profileId!),
+    queryKey: queryKeys.profile.me(profileId!),
     queryFn: () => usersApi.getUserById(profileId!),
     enabled: !!profileId,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-    refetchOnMount: false,
-    refetchOnWindowFocus: true,
+    staleTime: STALE.medium,
   })
 
   const isStaff = currentSystemRole === 'admin' || currentSystemRole === 'moderator'

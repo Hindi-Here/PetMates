@@ -17,6 +17,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useSystemRole } from '../hooks/useSystemRole'
 import { canModerateTarget } from '../scripts/moderation'
 import { queryKeys } from '../scripts/query/queryKeys'
+import { invalidateModeration } from '../scripts/query/invalidate'
 import { projectsApi, type ProjectData } from '../services/project'
 import type { UserData } from '../services/users'
 import type { VacancyData } from '../services/vacancy'
@@ -112,6 +113,11 @@ export const ProjectPublicView = ({ data, team, vacancies, onBack, isPreview = f
       queryClient.setQueryData(queryKeys.projects.byId(data.projectId), (old: ProjectData | undefined) =>
         old ? { ...old, ratingCount: result.ratingCount } : old
       )
+
+      queryClient.invalidateQueries({ queryKey: queryKeys.vacancies.all })
+      if (userId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.projects.favorites(userId) })
+      }
     } catch (error) {
       console.error('Failed to toggle rating:', error)
     } finally {
@@ -212,8 +218,8 @@ export const ProjectPublicView = ({ data, team, vacancies, onBack, isPreview = f
           projectId={data.projectId}
           projectTitle={data.title}
           onClose={() => setShowDeleteForm(false)}
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: queryKeys.projects.all })
+          onSuccess={async () => {
+            await invalidateModeration(queryClient)
             onBack()
           }}
         />

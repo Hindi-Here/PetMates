@@ -54,7 +54,7 @@ export const usersApi = {
     if (params?.showStaffOnly !== undefined)
       query.set('showStaffOnly', String(params.showStaffOnly));
 
-    const response = await fetch(`${API_BASE}/api/users?${query.toString()}`, {
+    const response = await fetch(`${API_BASE}/api/user?${query.toString()}`, {
       headers: {
         'Authorization': `Bearer ${session?.access_token}`,
         'Content-Type': 'application/json'
@@ -68,7 +68,7 @@ export const usersApi = {
    getUserById: async (userId: string): Promise<UserData> => {
     const { data: { session } } = await supabase.auth.getSession();
     
-    const response = await fetch(`${API_BASE}/api/users/${userId}`, {
+    const response = await fetch(`${API_BASE}/api/user/${userId}`, {
       headers: { 
         'Authorization': `Bearer ${session?.access_token}`,
         'Content-Type': 'application/json' 
@@ -83,7 +83,7 @@ export const usersApi = {
   findByEmail: async (email: string): Promise<UserData | null> => {
     const { data: { session } } = await supabase.auth.getSession();
     
-    const response = await fetch(`${API_BASE}/api/projectmembers/find-by-email`, {
+    const response = await fetch(`${API_BASE}/api/projectmember/find-by-email`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${session?.access_token}`,
@@ -101,7 +101,7 @@ export const usersApi = {
   // Поиск пользователя
   searchUsers: async (query: string): Promise<UserSearchResult[]> => {
     const { data: { session } } = await supabase.auth.getSession();
-    const response = await fetch(`${API_BASE}/api/users/search?query=${encodeURIComponent(query)}`, {
+    const response = await fetch(`${API_BASE}/api/user/search?query=${encodeURIComponent(query)}`, {
       headers: { 'Authorization': `Bearer ${session?.access_token}`, 'Content-Type': 'application/json' },
     });
     if (!response.ok) throw new Error('Ошибка поиска пользователей');

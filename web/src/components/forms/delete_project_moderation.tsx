@@ -5,6 +5,8 @@ import { useBlockScroll } from '../scripts/function'
 import { moderationApi } from '../services/moderation'
 import { useState } from 'react'
 import { LIMITS } from '../scripts/limits'
+import { invalidateModeration } from '../scripts/query/invalidate'
+import { useQueryClient } from '@tanstack/react-query'
 
 interface DeleteProjectModerationFormProps {
   projectId: string
@@ -15,6 +17,7 @@ interface DeleteProjectModerationFormProps {
 
 // Компонент формы удаления проекта (модерация)
 const Form = ({ projectId, projectTitle, onClose, onSuccess }: DeleteProjectModerationFormProps) => {
+  const queryClient = useQueryClient()
   const [reason, setReason] = useState('')
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -23,6 +26,7 @@ const Form = ({ projectId, projectTitle, onClose, onSuccess }: DeleteProjectMode
     try {
       setIsDeleting(true)
       await moderationApi.deleteProject(projectId, reason.trim())
+      await invalidateModeration(queryClient)
       onSuccess?.()
       onClose()
     } catch (error) {

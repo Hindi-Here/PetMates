@@ -45,6 +45,8 @@ namespace api.Controllers
                     .Set(u => u.BannedBy!, currentUserId)
                     .Update();
 
+                await _SupMan.Cache.UserChangedAsync(targetUserId);
+
                 var (responders, invitees) = await _SupMan.GetPendingThirdParties(targetUserId);
 
                 foreach (var (responderId, projectName, vacancyName) in responders)
@@ -102,6 +104,8 @@ namespace api.Controllers
                     .Set(u => u.BannedReason!, null)
                     .Set(u => u.BannedBy!, null)
                     .Update();
+
+                await _SupMan.Cache.UserChangedAsync(targetUserId);
 
                 var (responders, invitees) = await _SupMan.GetPendingThirdParties(targetUserId);
 
@@ -164,6 +168,8 @@ namespace api.Controllers
                     .Where(u => u.UserId == targetUserId)
                     .Set(u => u.SystemRole!, dto.Role)
                     .Update();
+
+                await _SupMan.Cache.UserChangedAsync(targetUserId);
 
                 string targetEventType = dto.Role switch
                 {

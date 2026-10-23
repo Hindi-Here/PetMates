@@ -5,6 +5,8 @@ import { useBlockScroll } from '../scripts/function'
 import { eventApi } from '../services/event'
 import { useState } from 'react'
 import { LIMITS } from '../scripts/limits'
+import { invalidateModeration } from '../scripts/query/invalidate'
+import { useQueryClient } from '@tanstack/react-query'
 
 interface DeleteEventModerationFormProps {
   eventId: string
@@ -15,6 +17,7 @@ interface DeleteEventModerationFormProps {
 
 // Компонент формы удаления мероприятия (модерация)
 const Form = ({ eventId, eventTitle, onClose, onSuccess }: DeleteEventModerationFormProps) => {
+  const queryClient = useQueryClient()
   const [reason, setReason] = useState('')
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -23,6 +26,7 @@ const Form = ({ eventId, eventTitle, onClose, onSuccess }: DeleteEventModeration
     try {
       setIsDeleting(true)
       await eventApi.moderationDelete(eventId, reason.trim())
+      await invalidateModeration(queryClient)
       onSuccess?.()
       onClose()
     } catch (error) {

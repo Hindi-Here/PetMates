@@ -64,6 +64,8 @@ namespace api.Controllers
                     .Where(v => v.VacancyId == vacancyId)
                     .Delete();
 
+                await _SupMan.Cache.VacanciesChangedAsync();
+
                 if (!string.IsNullOrEmpty(ownerId))
                 {
                     await _SupMan.SendNotificationAsync(ownerId, "response", vacancyId, "vacancy_deleted_by_moderator", new Dictionary<string, object>

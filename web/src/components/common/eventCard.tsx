@@ -14,7 +14,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { useSystemRole } from '../hooks/useSystemRole'
 import { canModerateTarget } from '../scripts/moderation'
-import { queryKeys } from '../scripts/query/queryKeys'
+import { invalidateModeration } from '../scripts/query/invalidate'
 import type { EventData } from '../services/event'
 import DeleteEventModerationForm from '../forms/delete_event_moderation'
 
@@ -127,7 +127,7 @@ export const EventCard = ({ event, showModerationDelete = false }: EventCardProp
           eventId={event.eventId}
           eventTitle={event.title}
           onClose={() => setShowDeleteForm(false)}
-          onSuccess={() => queryClient.invalidateQueries({ queryKey: queryKeys.events.all })}
+          onSuccess={async() => await invalidateModeration(queryClient)}
         />
       )}
     </>

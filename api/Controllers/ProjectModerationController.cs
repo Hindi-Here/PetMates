@@ -63,6 +63,8 @@ namespace api.Controllers
                     .Where(p => p.ProjectId == projectId)
                     .Delete();
 
+                await _SupMan.Cache.ProjectChangedAsync(projectId);
+
                 await _SupMan.SendNotificationAsync(ownerId, "project", projectId, "project_deleted_by_moderator", new Dictionary<string, object>
                 {
                     { "projectName", projectTitle },

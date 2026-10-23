@@ -21,51 +21,9 @@ namespace api.Controllers
             {
                 var authHeader = Request.Headers.Authorization.ToString();
                 var userId = await _SupMan.GetUserIdAsync(authHeader);
-                if (!string.IsNullOrEmpty(userId))
-                {
-                    await _SupMan.UpdateLastOnlineAsync(userId);
-                }
+                if (!string.IsNullOrEmpty(userId)) await _SupMan.UpdateLastOnlineAsync(userId);
 
-                var comments = await _client.From<Comment>()
-                    .Where(c => c.ReferenceType == referenceType && c.ReferenceId == referenceId)
-                    .Order(c => c.CreatedAt!, Constants.Ordering.Ascending)
-                    .Get();
-
-                var result = new List<object>();
-                foreach (var c in comments.Models)
-                {
-                    string? nickname = null;
-                    string? avatarUrl = null;
-                    string? authorSystemRole = null;
-                    if (!string.IsNullOrEmpty(c.UserId))
-                    {
-                        var user = await _client.From<User>()
-                            .Where(u => u.UserId == c.UserId)
-                            .Get();
-                        var userData = user.Models.FirstOrDefault();
-                        nickname = userData?.Nickname;
-                        avatarUrl = userData?.AvatarUrl;
-                        authorSystemRole = userData?.SystemRole;
-                    }
-
-                    result.Add(new
-                    {
-                        c.CommentId,
-                        c.UserId,
-                        Nickname = nickname,
-                        AvatarUrl = avatarUrl,
-                        c.ParentCommentId,
-                        Content = c.IsDeleted ? null : c.Content,
-                        AuthorSystemRole = authorSystemRole,
-                        c.IsEdited,
-                        c.IsDeleted,
-                        c.DeletedByModerator,
-                        CreatedAt = c.CreatedAt?.ToString("o"),
-                        UpdatedAt = c.UpdatedAt?.ToString("o")
-                    });
-                }
-
-                return Ok(result);
+                return Ok(await _SupMan.GetCommentsAsync(referenceType, referenceId));
             }
             catch (Exception ex)
             {
@@ -111,6 +69,8 @@ namespace api.Controllers
                     newComment,
                     new QueryOptions { Returning = QueryOptions.ReturnType.Minimal }
                 );
+
+                await _SupMan.Cache.CommentsChangedAsync(dto.ReferenceType, dto.ReferenceId);
 
                 await _SupMan.ProcessMentions(newComment, userId);
 
@@ -165,6 +125,8 @@ namespace api.Controllers
                     .Set(c => c.UpdatedAt!, DateTime.UtcNow)
                     .Update();
 
+                await _SupMan.Cache.CommentsChangedAsync(comment.ReferenceType, comment.ReferenceId);
+
                 return Ok(new { message = "Комментарий обновлён" });
             }
             catch (Exception ex)
@@ -199,6 +161,8 @@ namespace api.Controllers
                     return Forbid();
 
                 await _SupMan.DeleteOrSoftDelete(comment, isModeratorDeleting);
+
+                await _SupMan.Cache.CommentsChangedAsync(comment.ReferenceType, comment.ReferenceId);
 
                 return Ok(new { message = "Комментарий удалён" });
             }

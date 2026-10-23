@@ -10,7 +10,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../hooks/useAuth'
 import { useSystemRole } from '../hooks/useSystemRole'
-import { queryKeys } from '../scripts/query/queryKeys'
+import { invalidateModeration } from '../scripts/query/invalidate'
 import { moderationApi } from '../services/moderation'
 import type { ThirdProfileData } from '../hooks/useThirdProfile'
 
@@ -70,15 +70,14 @@ export const ProfilePublicView = ({ user, isPreview = false }: ProfilePublicView
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [isMenuOpen])
 
-  const refreshUser = () => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.profile.byId(user.userId) })
-    queryClient.invalidateQueries({ queryKey: ['users', 'byId', user.userId] })
+  const refreshUser = async () => {
+    await invalidateModeration(queryClient)
   }
 
   const handleUnban = async () => {
     try {
       await moderationApi.unbanUser(user.userId)
-      refreshUser()
+      await refreshUser()
     } catch (error) {
       console.error('Ошибка разблокировки:', error)
     }
@@ -88,7 +87,7 @@ export const ProfilePublicView = ({ user, isPreview = false }: ProfilePublicView
   const handleSetRole = async (role: 'user' | 'moderator' | 'admin') => {
     try {
       await moderationApi.setRole(user.userId, role)
-      refreshUser()
+      await refreshUser()
     } catch (error) {
       console.error('Ошибка изменения роли:', error)
     }

@@ -22,6 +22,7 @@ import { usersApi } from '../services/users'
 import { useAuth } from '../hooks/useAuth'
 
 import { LIMITS, TIMING } from '../scripts/limits'
+import { STALE } from '../scripts/query/queryClient'
 
 type MessageStatus = 'wait' | 'sent' | 'read'
 
@@ -85,7 +86,7 @@ export const Chat = () => {
   const { data: conversations = [] } = useQuery({
     queryKey: queryKeys.conversations.all,
     queryFn: () => conversationApi.getConversations(),
-    staleTime: 0,
+    staleTime: STALE.none,
   })
 
   const currentConversation = conversations.find(c => c.conversationId === conversationId)
@@ -94,14 +95,14 @@ export const Chat = () => {
     queryKey: ['users', 'byId', currentConversation?.otherUserId],
     queryFn: () => usersApi.getUserById(currentConversation!.otherUserId),
     enabled: !!currentConversation?.otherUserId,
+    staleTime: STALE.none,
   })
 
   const { data: messagesResponse } = useQuery({
     queryKey: queryKeys.conversations.messages(conversationId!),
     queryFn: () => conversationApi.getMessages(conversationId!),
     enabled: !!conversationId,
-    staleTime: 0,
-    refetchOnMount: 'always',
+    staleTime: STALE.none,
   })
 
   const messages = messagesResponse?.messages || []

@@ -4,10 +4,11 @@ import CalendarIcon from '@icons/calendar.svg?react'
 import StarIcon from '@icons/star.svg?react'
 import RejectIcon from '@icons/reject.svg?react'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useSystemRole } from '../hooks/useSystemRole'
+import { useUser } from '../hooks/useUser'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '../scripts/query/queryKeys'
@@ -16,13 +17,12 @@ import { projectsApi } from '../services/project'
 import { projectMembersApi } from '../services/project_members'
 import { responseApi } from '../services/response'
 import { notificationApi } from '../services/notification'
-import { usersApi } from '../services/users'
 import type { VacancyData } from '../services/vacancy'
-import type { UserData } from '../services/users'
 import type { ProjectMemberData } from '../services/project_members'
 import DeleteVacancyModerationForm from '../forms/delete_vacancy_moderation'
+import { STALE } from '../scripts/query/queryClient'
 
-type NotificationContextData = Record<string, string | number | boolean | null | undefined>;
+type NotificationContextData = Record<string, string | number | boolean | null | undefined>
 
 // Функция для отправки уведомлений пользователю
 const sendNotification = (
@@ -36,10 +36,7 @@ const sendNotification = (
     userId,
     referenceType,
     referenceId,
-    contextData: {
-      ...contextData,
-      eventType,
-    }
+    contextData: { ...contextData, eventType },
   }).catch(err => console.error('Ошибка создания уведомления:', err))
 }
 
@@ -58,54 +55,39 @@ export const VacancyCard = ({
   const queryClient = useQueryClient()
   const currentSystemRole = useSystemRole()
   
-  const { data: responseStatus } = useQuery({
-    queryKey: ['response-status', vacancy.vacancyId, userId],
-    queryFn: () => userId ? responseApi.checkResponse(vacancy.vacancyId) : null,
-    enabled: !!userId,
-    staleTime: 1 * 60 * 1000,
-  })
-  
-  const hasResponded = responseStatus?.hasResponded || false
-  const [projectOwnerId, setProjectOwnerId] = useState<string | null>(null)
-  const [currentUserNickname, setCurrentUserNickname] = useState<string | null>(null)
-  const [projectOwnerRole, setProjectOwnerRole] = useState<string>('user')
-  const [ownerIsBanned, setOwnerIsBanned] = useState(false)
   const [showDeleteForm, setShowDeleteForm] = useState(false)
 
+  const { data: project } = useQuery({
+    queryKey: queryKeys.projects.byId(vacancy.projectId!),
+    queryFn: () => projectsApi.getProject(vacancy.projectId!),
+    enabled: !!vacancy.projectId,
+    staleTime: STALE.long,
+  })
+  const projectOwnerId = project?.ownerId ?? null
+
+  const { data: owner } = useUser(projectOwnerId)
+  const { data: me } = useUser(userId)
+
+  const projectOwnerRole = owner?.systemRole ?? 'user'
+  const ownerIsBanned = owner?.isBanned ?? false
+  const currentUserNickname = me?.nickname ?? null
+  const isOwner = !!userId && projectOwnerId === userId 
+
   const { data: projectMembers = [] } = useQuery<ProjectMemberData[]>({
-    queryKey: queryKeys.projects.memberProjects(vacancy.projectId!),
+    queryKey: queryKeys.projects.members(vacancy.projectId!),
     queryFn: () => projectMembersApi.getByProject(vacancy.projectId!),
     enabled: !!vacancy.projectId && !!userId,
-    staleTime: 5 * 60 * 1000,
+    staleTime: STALE.medium,
   })
-
   const isTeamMember = projectMembers.some((member: ProjectMemberData) => member.userId === userId)
 
-  useEffect(() => {
-    const checkOwner = async () => {
-      if (!vacancy.projectId) return
-      
-      try {
-        const project = await projectsApi.getProject(vacancy.projectId)
-        setProjectOwnerId(project.ownerId)
-        
-        const ownerUser = await usersApi.getUserById(project.ownerId) as UserData | null
-        
-        setProjectOwnerRole(ownerUser?.systemRole ?? 'user')
-        setOwnerIsBanned(ownerUser?.isBanned ?? false)
-        
-        if (userId) {
-          const currentUser = await usersApi.getUserById(userId) as UserData | null
-          setCurrentUserNickname(currentUser?.nickname ?? null)
-        }
-      } catch (error) {
-        console.error('Ошибка проверки владельца:', error)
-      }
-    }
-    checkOwner()
-  }, [vacancy.projectId, userId])
-
-  const isOwner = projectOwnerId === userId
+  const { data: outgoing = [] } = useQuery({
+    queryKey: queryKeys.responses.outgoing(userId!),
+    queryFn: () => responseApi.getOutgoing(userId!),
+    enabled: !!userId,
+    staleTime: STALE.short,
+  })
+  const hasResponded = outgoing.some((r: any) => r.vacancyId === vacancy.vacancyId)
 
   const canModerate = showModerationDelete && !isOwner && (
     currentSystemRole === 'admin' || 
@@ -124,9 +106,8 @@ export const VacancyCard = ({
       status: 'pending' 
     }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ 
-        queryKey: ['response-status', vacancy.vacancyId, userId] 
-      })
+      queryClient.invalidateQueries({ queryKey: queryKeys.responses.outgoing(userId!) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.responses.all })
       
       if (userId) {
         sendNotification(userId, 'response', vacancy.projectId!, 'response_sent', {
@@ -157,8 +138,7 @@ export const VacancyCard = ({
   }
 
   const handleCardClick = () => {
-    if (!clickable) return
-    if (!projectOwnerId) return
+    if (!clickable || !projectOwnerId) return
     navigate(`/profile/${projectOwnerId}/activity/project/${vacancy.projectId}`)
   }
 
@@ -166,10 +146,7 @@ export const VacancyCard = ({
     <>
       <div className={`vacancy-card-container ${ownerIsBanned ? 'banned-owner-card' : ''} ${!clickable ? 'no-active' : ''}`} onClick={handleCardClick}>
         {canModerate && (
-          <button
-            className='moderation-delete-btn'
-            onClick={handleModerationDelete}
-          >
+          <button className='moderation-delete-btn' onClick={handleModerationDelete}>
             <RejectIcon className='ico' />
           </button>
         )}
@@ -183,6 +160,7 @@ export const VacancyCard = ({
           </div>
           <p className='vacancy-description'>{vacancy.description}</p>
         </div>
+        
         {vacancy.requiredTags && vacancy.requiredTags.length > 0 && (
           <div className='tag-place-container'>
             {vacancy.requiredTags.map((tag, index) => (
@@ -192,6 +170,7 @@ export const VacancyCard = ({
             ))}
           </div>
         )}
+        
         <div className='vacancy-footer-container'>
           <div className='vacancy-left-group'>
             <button 

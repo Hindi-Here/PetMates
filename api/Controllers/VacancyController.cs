@@ -19,74 +19,33 @@ namespace api.Controllers
             try
             {
                 var viewer = await _SupMan.GetViewerAsync(Request.Headers.Authorization.ToString());
-                var currentUserId = viewer.UserId;
                 var isStaff = viewer.IsStaff;
 
-                var response = await _client.From<Vacancy>()
-                    .Where(v => v.IsOpen == true)
-                    .Get();
-
-                var enriched = new List<(Vacancy Vacancy, Project? Project, int MembersCount, string? OwnerNickname, bool OwnerBanned)>();
-
-                foreach (var v in response.Models)
-                {
-                    var project = await _client.From<Project>()
-                        .Where(p => p.ProjectId == v.ProjectId)
-                        .Get();
-
-                    var projectData = project.Models.FirstOrDefault();
-                    if (projectData == null || projectData.IsPrivate) continue;
-
-                    var ownerResponse = await _client.From<User>()
-                        .Where(u => u.UserId == projectData.OwnerId)
-                        .Get();
-
-                    var owner = ownerResponse.Models.FirstOrDefault();
-                    var ownerBanned = owner?.IsBanned == true;
-
-                    if (!isStaff && ownerBanned)
-                        continue;
-                    if (isStaff && showBannedOnly && !ownerBanned)
-                        continue;
-
-                    var membersResponse = await _client.From<ProjectMember>()
-                        .Where(pm => pm.ProjectId == v.ProjectId)
-                        .Get();
-
-                    enriched.Add((v, projectData, membersResponse.Models.Count, owner?.Nickname, ownerBanned));
-                }
+                var enriched = (await _SupMan.GetVacancyListAsync())
+                    .Where(e => isStaff ? (!showBannedOnly || e.OwnerIsBanned) : !e.OwnerIsBanned)
+                    .Select(e => (e.Vacancy, Project: (Project?)e.Project, e.MembersCount, e.OwnerNickname, e.OwnerIsBanned))
+                    .ToList();
 
                 var query = search?.Trim().ToLower();
                 if (!string.IsNullOrEmpty(query))
                 {
-                    enriched = [.. enriched.Where(e =>
-                    {
-                        return searchField switch
-                        {
-                            "name" => e.Vacancy.Title?.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase) == true,
-                            "tag" => SupportManager.ParseSkills(string.Join(" ", e.Vacancy.RequiredTags ?? []))
-                                                        .Any(t => t.Contains(query, StringComparison.CurrentCultureIgnoreCase)),
-                            "author" => e.OwnerNickname?.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase) == true,
-                            "project" => e.Project?.Title?.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase) == true,
-                            _ => true,
-                        };
-                    })];
+                    enriched = [.. enriched.Where(e => searchField switch
+            {
+                "name" => e.Vacancy.Title?.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase) == true,
+                "tag" => SupportManager.ParseSkills(string.Join(" ", e.Vacancy.RequiredTags ?? []))
+                                            .Any(t => t.Contains(query, StringComparison.CurrentCultureIgnoreCase)),
+                "author" => e.OwnerNickname?.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase) == true,
+                "project" => e.Project?.Title?.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase) == true,
+                _ => true,
+            })];
                 }
 
                 enriched = sortField switch
                 {
-                    "date" => sortAsc
-                        ? [.. enriched.OrderBy(e => e.Vacancy.PublishedAt)]
-                        : [.. enriched.OrderByDescending(e => e.Vacancy.PublishedAt)],
-                    "alphabet" => sortAsc
-                        ? [.. enriched.OrderBy(e => e.Vacancy.Title)]
-                        : [.. enriched.OrderByDescending(e => e.Vacancy.Title)],
-                    "count" => sortAsc
-                        ? [.. enriched.OrderBy(e => e.Project?.RatingCount ?? 0)]
-                        : [.. enriched.OrderByDescending(e => e.Project?.RatingCount ?? 0)],
-                    "activity" => sortAsc
-                        ? [.. enriched.OrderBy(e => e.MembersCount)]
-                        : [.. enriched.OrderByDescending(e => e.MembersCount)],
+                    "date" => sortAsc ? [.. enriched.OrderBy(e => e.Vacancy.PublishedAt)] : [.. enriched.OrderByDescending(e => e.Vacancy.PublishedAt)],
+                    "alphabet" => sortAsc ? [.. enriched.OrderBy(e => e.Vacancy.Title)] : [.. enriched.OrderByDescending(e => e.Vacancy.Title)],
+                    "count" => sortAsc ? [.. enriched.OrderBy(e => e.Project?.RatingCount ?? 0)] : [.. enriched.OrderByDescending(e => e.Project?.RatingCount ?? 0)],
+                    "activity" => sortAsc ? [.. enriched.OrderBy(e => e.MembersCount)] : [.. enriched.OrderByDescending(e => e.MembersCount)],
                     _ => enriched
                 };
 
@@ -103,7 +62,7 @@ namespace api.Controllers
                     PublishedAt = e.Vacancy.PublishedAt?.ToString("o"),
                     e.MembersCount,
                     RatingCount = e.Project?.RatingCount ?? 0,
-                    e.OwnerBanned
+                    e.OwnerIsBanned
                 });
 
                 return Ok(vacancies);
@@ -212,6 +171,9 @@ namespace api.Controllers
                 };
 
                 var response = await _client.From<Vacancy>().Insert(newVacancy);
+
+                await _SupMan.Cache.VacanciesChangedAsync();
+
                 var created = response.Models.FirstOrDefault();
 
                 if (created == null)
@@ -282,6 +244,8 @@ namespace api.Controllers
                     .Set(v => v.IsOpen, v.IsOpen)
                     .Update();
 
+                await _SupMan.Cache.VacanciesChangedAsync();
+
                 return Ok(new
                 {
                     v.VacancyId,
@@ -316,6 +280,8 @@ namespace api.Controllers
                 await _client.From<Vacancy>()
                     .Where(v => v.VacancyId == vacancyId)
                     .Delete();
+
+                await _SupMan.Cache.VacanciesChangedAsync();
 
                 return Ok(new { message = "Заявка удалена" });
             }

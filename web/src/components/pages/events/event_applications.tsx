@@ -10,6 +10,7 @@ import { useIsOpen } from '../../scripts/function'
 import { Dropdown } from '../../common/dropdown'
 import { eventApi, type ApplicationListItem, type ApplicationStatus } from '../../services/event'
 import { ApplicationStatusBadge } from './event_application_status'
+import { STALE } from '@/components/scripts/query/queryClient'
 
 type Filter = 'all' | ApplicationStatus
 
@@ -74,9 +75,7 @@ export const EventApplications = ({ eventId, basePath }: EventApplicationsProps)
   const { data: applications = [] } = useQuery({
     queryKey: queryKeys.events.applications(eventId),
     queryFn: () => eventApi.getApplications(eventId),
-    staleTime: 0,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
+    staleTime: STALE.short,
   })
 
   const visible = useMemo(

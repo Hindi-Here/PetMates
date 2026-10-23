@@ -5,6 +5,8 @@ import { useBlockScroll } from '../scripts/function'
 import { moderationApi } from '../services/moderation'
 import { useState } from 'react'
 import { LIMITS } from '../scripts/limits'
+import { invalidateModeration } from '../scripts/query/invalidate'
+import { useQueryClient } from '@tanstack/react-query'
 
 interface DeleteVacancyModerationFormProps {
   vacancyId: string
@@ -15,6 +17,7 @@ interface DeleteVacancyModerationFormProps {
 
 // Компонент формы удаления заявки (модерация)
 const Form = ({ vacancyId, vacancyTitle, onClose, onSuccess }: DeleteVacancyModerationFormProps) => {
+  const queryClient = useQueryClient()
   const [reason, setReason] = useState('')
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -23,6 +26,7 @@ const Form = ({ vacancyId, vacancyTitle, onClose, onSuccess }: DeleteVacancyMode
     try {
       setIsDeleting(true)
       await moderationApi.deleteVacancy(vacancyId, reason.trim())
+      await invalidateModeration(queryClient)
       onSuccess?.()
       onClose()
     } catch (error) {

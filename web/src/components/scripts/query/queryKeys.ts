@@ -7,8 +7,8 @@ export const queryKeys = {
   projects: {
     all: ['projects'] as const,
     byUser: (userId: string) => [...queryKeys.projects.all, 'byUser', userId] as const,
-    memberProjects: (userId: string) => [...queryKeys.projects.all, 'member', userId] as const,
     members: (projectId: string) => [...queryKeys.projects.all, 'members', projectId] as const,
+    team:    (projectId: string) => [...queryKeys.projects.all, 'team', projectId] as const, 
     favorites: (userId: string) => [...queryKeys.projects.all, 'favorites', userId] as const,
     byId: (projectId: string) => [...queryKeys.projects.all, 'byId', projectId] as const,
   },
@@ -17,8 +17,8 @@ export const queryKeys = {
     all: ['responses'] as const,
     byUser: (userId: string) => [...queryKeys.responses.all, 'byUser', userId] as const,
     byProject: (projectId: string) => [...queryKeys.responses.all, 'byProject', projectId] as const,
+    incoming: (userId: string) => [...queryKeys.responses.all, 'incoming', userId] as const,
     outgoing: (userId: string) => [...queryKeys.responses.all, 'outgoing', userId] as const,
-    status: (vacancyId: string, userId: string) => [...queryKeys.responses.all, 'status', vacancyId, userId] as const,
   },
   
   invites: {
@@ -36,13 +36,14 @@ export const queryKeys = {
   users: {
     all: ['users'] as const,
     allList: () => [...queryKeys.users.all, 'list'] as const,
+    search: (q: string) => [...queryKeys.users.all, 'search', q] as const,
     byId: (userId: string) => [...queryKeys.users.all, 'byId', userId] as const,
     activity: (userId: string) => [...queryKeys.users.all, 'activity', userId] as const,
   },
 
   notifications: {
-    all: ['notifications'],
-    byCategory: (category: string) => ['notifications', category],
+    all: ['notifications'] as const,                                                  
+    byCategory: (category: string) => ['notifications', category] as const,
   },
 
   conversations: {
@@ -62,5 +63,10 @@ export const queryKeys = {
     application: (eventId: string, applicationId: string) => [...queryKeys.events.all, 'application', eventId, applicationId] as const,
     draft: (eventId: string) => [...queryKeys.events.all, 'draft', eventId] as const,
     list: () => [...queryKeys.events.all, 'list'] as const,
+  },
+
+  comments: {  
+    all: ['comments'] as const,
+    byRef: (type: string, id: string) => ['comments', type, id] as const,
   },
 }

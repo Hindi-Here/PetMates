@@ -16,6 +16,7 @@ import { EventFooter } from './event_footer'
 import { EventTabs, EVENT_TABS, PUBLIC_EVENT_TABS } from './event_tabs'
 import { EventPublicView, toPublicData, type EventPublicData } from './event_public_view'
 import { EventPreviewContext } from './event_preview_context'
+import { STALE } from '@/components/scripts/query/queryClient'
 
 const DescriptionPane = memo(EventDescription)
 const FormPane = memo(EventForm)
@@ -64,9 +65,7 @@ const EventPageInner = () => {
     queryKey: queryKeys.events.byId(eventId!),
     queryFn: () => eventApi.getEvent(eventId!),
     enabled: !!eventId,
-    staleTime: 0,
-    refetchOnMount: 'always',
-    retry: false,
+    staleTime: STALE.none,
   })
 
   const isOwnerView = !!event && event.ownerId === userId
@@ -75,9 +74,7 @@ const EventPageInner = () => {
     queryKey: queryKeys.events.draft(eventId!),
     queryFn: () => eventApi.getDraft(eventId!),
     enabled: isOwnerView,
-    staleTime: 0,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: false,
+    staleTime: STALE.none,
   })
 
   const publicData = useMemo(

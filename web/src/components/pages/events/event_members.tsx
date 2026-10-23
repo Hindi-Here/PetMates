@@ -8,6 +8,7 @@ import { eventApi } from '../../services/event'
 import type { UserData } from '../../services/users'
 import { UserCard } from '../../common/userCard'
 import InviteForm from '../../forms/invite_user'
+import { STALE } from '@/components/scripts/query/queryClient'
 
 interface EventMembersProps {
   eventId: string
@@ -21,9 +22,7 @@ export const EventMembers = ({ eventId, participantLimit }: EventMembersProps) =
   const { data } = useQuery({
     queryKey: queryKeys.events.members(eventId),
     queryFn: () => eventApi.getMembers(eventId),
-    staleTime: 0,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
+    staleTime: STALE.short,
   })
 
   const organizer = data?.organizer

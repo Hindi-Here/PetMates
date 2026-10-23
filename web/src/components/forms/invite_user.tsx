@@ -15,7 +15,7 @@ import { usersApi, type UserData } from '../services/users'
 import { notificationApi } from '../services/notification'
 
 import { useQueryClient } from '@tanstack/react-query'
-import { queryKeys } from '../scripts/query/queryKeys'
+import { invalidateRelations } from '../scripts/query/invalidate'
 
 interface ProjectWithMembers extends ProjectData {
   memberCount: number;
@@ -199,10 +199,7 @@ const Form = ({ onClose, invitedUser }: FormProps) => {
         nickname: currentUserNickname || 'Пользователь',
       })
       
-      queryClient.invalidateQueries({ 
-        queryKey: queryKeys.notifications.all,
-        refetchType: 'active'
-      })
+      await invalidateRelations(queryClient)
       
       onClose()
     } catch (error: any) {

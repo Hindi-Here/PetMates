@@ -9,7 +9,7 @@ namespace api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class ProjectsController(Supabase.Client client, SupportManager SupMan) : ControllerBase
+    public class ProjectController(Supabase.Client client, SupportManager SupMan) : ControllerBase
     {
         private readonly Supabase.Client _client = client;
         private readonly SupportManager _SupMan = SupMan;
@@ -204,6 +204,8 @@ namespace api.Controllers
                 };
                 await _client.From<ProjectMember>().Insert(ownerMember);
 
+                await _SupMan.Cache.ProjectChangedAsync(created.ProjectId);
+
                 return Ok(new
                 {
                     created.ProjectId,
@@ -245,6 +247,8 @@ namespace api.Controllers
                     return NotFound();
 
                 await _client.From<Project>().Where(p => p.ProjectId == projectId).Delete();
+
+                await _SupMan.Cache.ProjectChangedAsync(projectId);
 
                 return Ok(new { message = "Проект успешно удалён" });
             }
@@ -310,6 +314,8 @@ namespace api.Controllers
                         .Update();
                 }
 
+                await _SupMan.Cache.ProjectChangedAsync(projectId);
+
                 return Ok(new { success = true, ratingCount = project.Models.First().RatingCount + 1 });
             }
             catch (Exception ex)
@@ -345,6 +351,8 @@ namespace api.Controllers
                         .Where(p => p.ProjectId == projectId)
                         .Set(p => p.RatingCount, updatedRatingCount)
                         .Update();
+
+                    await _SupMan.Cache.ProjectChangedAsync(projectId);
 
                     return Ok(new { success = true, ratingCount = updatedRatingCount });
                 }
@@ -660,7 +668,12 @@ namespace api.Controllers
                         if (bytes != null && bytes.Length > 0)
                         {
                             await _client.Storage.From("ProjectMedia")
-                                .Upload(bytes, draftPath, new Supabase.Storage.FileOptions { Upsert = false });
+                                .Upload(bytes, draftPath, new Supabase.Storage.FileOptions
+                                {
+                                    Upsert = false,
+                                    ContentType = draftPath.EndsWith(".gif") ? "image/gif" : "image/webp",
+                                    CacheControl = "31536000"
+                                });
 
                             var oldUrl = _client.Storage.From("ProjectMediaDraft").GetPublicUrl(draftPath);
                             var newUrl = _client.Storage.From("ProjectMedia").GetPublicUrl(draftPath);
@@ -688,6 +701,8 @@ namespace api.Controllers
                     .Update();
 
                 await _client.From<ProjectDraft>().Where(d => d.ProjectId == projectId).Delete();
+
+                await _SupMan.Cache.ProjectChangedAsync(projectId);
 
                 return Ok(new { message = "Проект сохранён", fullDescription = finalDescription });
             }
@@ -754,7 +769,7 @@ namespace api.Controllers
                         {
                             name = file.Name,
                             url = publicUrl,
-                            size = 0,
+                            size = SupportManager.GetFileSize(file),
                             uploadedAt = file.CreatedAt ?? DateTime.UtcNow,
                             isDraft = true
                         });
@@ -785,30 +800,30 @@ namespace api.Controllers
                     .Get();
                 if (project.Models.Count == 0) return Forbid();
 
-                if (file == null || file.Length == 0)
-                    return BadRequest(new { message = "Файл не передан" });
+                var (imageError, ext) = Validator.ValidateEventImage(file);
+                if (imageError != null) return BadRequest(new { message = imageError });
 
-                var allowedTypes = new[] { "image/png", "image/jpeg", "image/webp", "image/gif" };
-                if (!allowedTypes.Contains(file.ContentType))
-                    return BadRequest(new { message = "Недопустимый формат файла" });
+                using var input = file.OpenReadStream();
+                if (!ImageOptimizer.TryOptimize(input, ImageKind.Media, ext, out var optimized, out var optError))
+                    return BadRequest(new { message = optError });
 
                 var currentTotal = await _SupMan.GetTotalProjectMediaSize(projectId);
-                if (currentTotal + file.Length > Limits.Upload.MediaTotalMaxBytes)
+                if (currentTotal + optimized!.Bytes.Length > Limits.Upload.MediaTotalMaxBytes)
                     return BadRequest(new { message = $"Общий размер вложений не должен превышать {Limits.Upload.MediaTotalMaxBytes / Limits.MB} МБ" });
 
-                using var stream = new MemoryStream();
-                await file.CopyToAsync(stream);
-
-                var extension = Path.GetExtension(file.FileName);
-                var fileName = $"{Guid.NewGuid()}{extension}";
+                var fileName = $"{Guid.NewGuid()}{optimized.Extension}";
                 var path = $"{projectId}/{fileName}";
 
-                await _client.Storage.From("ProjectMediaDraft")
-                    .Upload(stream.ToArray(), path, new Supabase.Storage.FileOptions { Upsert = false });
+                await _client.Storage.From("ProjectMediaDraft").Upload(optimized.Bytes, path,
+                    new Supabase.Storage.FileOptions
+                    {
+                        Upsert = false,
+                        ContentType = optimized.ContentType,
+                        CacheControl = "31536000"
+                    });
 
                 var publicUrl = _client.Storage.From("ProjectMediaDraft").GetPublicUrl(path);
-
-                return Ok(new { url = publicUrl, fileName, size = file.Length });
+                return Ok(new { url = publicUrl, fileName, size = optimized.Bytes.Length });
             }
             catch (Exception ex)
             {

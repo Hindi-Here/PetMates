@@ -10,6 +10,7 @@ import { vacanciesApi, type VacancyData } from '../services/vacancy'
 import { VacancyCard } from '../common/vacancyCard'
 import Search from '../common/search'
 import { useSystemRole } from '../hooks/useSystemRole'
+import { STALE } from '../scripts/query/queryClient'
 
 type VacancyWithOwner = VacancyData & { ownerBanned?: boolean };
 
@@ -41,9 +42,7 @@ export default function Vacancy() {
       sortAsc: isSortUp,
       showBannedOnly,
     }),
-    staleTime: 0,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
+    staleTime: STALE.medium,
     placeholderData: keepPreviousData,
   })
 

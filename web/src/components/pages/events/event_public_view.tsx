@@ -14,6 +14,7 @@ import RejectIcon from '@icons/reject.svg?react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
+import { invalidateModeration } from '../../scripts/query/invalidate'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
@@ -155,6 +156,10 @@ export const EventPublicView = ({
       queryClient.setQueryData(queryKeys.events.byId(data.eventId), (old: EventDetails | undefined) =>
         old ? { ...old, ratingCount: result.ratingCount } : old
       )
+      queryClient.invalidateQueries({ queryKey: queryKeys.events.list() })
+      if (userId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.events.favorites(userId) })
+      }
     } catch (error) {
       console.error('Не удалось изменить оценку:', error)
     } finally {
@@ -311,8 +316,8 @@ export const EventPublicView = ({
           eventId={data.eventId}
           eventTitle={data.title}
           onClose={() => setShowDeleteForm(false)}
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: queryKeys.events.all })
+          onSuccess={async () => {
+            await invalidateModeration(queryClient)
             onBack()
           }}
         />

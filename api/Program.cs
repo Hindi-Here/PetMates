@@ -46,13 +46,24 @@ builder.Services.AddSingleton<ITelegramBotClient>(new TelegramBotClient(botToken
 
 builder.Services.AddControllers();
 
-builder.Services.AddHybridCache(options =>
-{
-    options.DefaultEntryOptions = new HybridCacheEntryOptions
+builder.Services.AddKeyedSingleton<Supabase.Client>("system", (_, _) =>
+    new Client(url!, key, new SupabaseOptions
     {
-        Expiration = TimeSpan.FromSeconds(60)
+        AutoRefreshToken = false,
+        AutoConnectRealtime = false
+    }));
+
+builder.Services.AddMemoryCache();
+builder.Services.AddHybridCache(o =>
+{
+    o.MaximumKeyLength = 256;
+    o.DefaultEntryOptions = new HybridCacheEntryOptions
+    {
+        Expiration = CacheStale.Short,
+        LocalCacheExpiration = CacheStale.Short
     };
 });
+builder.Services.AddSingleton<AppCache>();
 builder.Services.AddScoped<SupportManager>();
 
 builder.Services.AddEndpointsApiExplorer();

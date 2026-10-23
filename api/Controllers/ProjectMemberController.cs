@@ -8,13 +8,12 @@ namespace api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class ProjectMembersController(Client client, SupportManager SupMan) : ControllerBase
+    public class ProjectMemberController(Client client, SupportManager SupMan) : ControllerBase
     {
         private readonly Client _client = client;
         private readonly SupportManager _SupMan = SupMan;
 
         // Получить участников проекта (команды)
-
         [HttpGet("project/{projectId}")]
         public async Task<IActionResult> GetProjectMembers(string projectId)
         {
@@ -22,56 +21,9 @@ namespace api.Controllers
             {
                 var authHeader = Request.Headers.Authorization.ToString();
                 var userId = await _SupMan.GetUserIdAsync(authHeader);
-                if (!string.IsNullOrEmpty(userId))
-                {
-                    await _SupMan.UpdateLastOnlineAsync(userId);
-                }
+                if (!string.IsNullOrEmpty(userId)) await _SupMan.UpdateLastOnlineAsync(userId);
 
-                var response = await _client.From<ProjectMember>()
-                    .Where(pm => pm.ProjectId == projectId)
-                    .Get();
-
-                var membersWithDetails = new List<object>();
-
-                foreach (var m in response.Models)
-                {
-                    var rpcResult = await _client.Rpc("get_team_member_card", new Dictionary<string, object>
-                    {
-                        { "p_user_id", m.UserId }
-                    });
-
-                    var rows = JsonSerializer.Deserialize<List<TeamMemberCardRow>>(rpcResult.Content ?? "[]");
-                    var user = rows?.FirstOrDefault();
-
-                    if (user != null)
-                    {
-                        membersWithDetails.Add(new
-                        {
-                            m.MemberId,
-                            m.ProjectId,
-                            m.UserId,
-                            m.Role,
-                            JoinedAt = m.JoinedAt?.ToString("o"),
-
-                            user.Nickname,
-                            user.AvatarUrl,
-                            user.RealName,
-                            user.Age,
-                            user.City,
-                            user.Workplace,
-                            user.ProfileRole,
-                            user.SystemRole,
-                            user.IsBanned,
-                            user.HardSkills,
-                            user.SoftSkills,
-                            LastOnlineAt = user.LastOnlineAt?.ToString("o"),
-                            IsOnline = SupportManager.IsOnline(user.LastOnlineAt),
-                            LastSeen = SupportManager.FormatLastSeen(user.LastOnlineAt)
-                        });
-                    }
-                }
-
-                return Ok(membersWithDetails);
+                return Ok(await _SupMan.GetProjectMemberCardsAsync(projectId));
             }
             catch (Exception ex)
             {
@@ -114,6 +66,9 @@ namespace api.Controllers
                 };
 
                 var response = await _client.From<ProjectMember>().Insert(newMember);
+
+                await _SupMan.Cache.ProjectChangedAsync(dto.ProjectId);
+
                 var created = response.Models.FirstOrDefault();
 
                 if (created == null)
@@ -268,6 +223,8 @@ namespace api.Controllers
                     .Where(m => m.MemberId == memberId)
                     .Set(m => m.Role, dto.Role)
                     .Update();
+
+                await _SupMan.Cache.ProjectChangedAsync(memberData.ProjectId);
 
                 return Ok(new
                 {

@@ -62,49 +62,22 @@ export const Notifications = () => {
 
   const markAsReadMutation = useMutation({
     mutationFn: (notificationId: string) => notificationApi.markAsRead(notificationId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ 
-        queryKey: queryKeys.notifications.all,
-        refetchType: 'active'
-      })
-      if (selectedCategory !== 'all') {
-        queryClient.invalidateQueries({ 
-          queryKey: queryKeys.notifications.byCategory(selectedCategory),
-          refetchType: 'active'
-        })
-      }
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all })
     },
   })
 
   const markAllAsReadMutation = useMutation({
     mutationFn: () => notificationApi.markAllAsRead(),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ 
-        queryKey: queryKeys.notifications.all,
-        refetchType: 'active'
-      })
-      if (selectedCategory !== 'all') {
-        queryClient.invalidateQueries({ 
-          queryKey: queryKeys.notifications.byCategory(selectedCategory),
-          refetchType: 'active'
-        })
-      }
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all })
     },
   })
 
   const deleteNotificationMutation = useMutation({
     mutationFn: (notificationId: string) => notificationApi.delete(notificationId),
-    onSuccess: (_data, notificationId) => {
-      queryClient.invalidateQueries({ 
-        queryKey: queryKeys.notifications.all,
-        refetchType: 'active'
-      })
-      if (selectedCategory !== 'all') {
-        queryClient.invalidateQueries({ 
-          queryKey: queryKeys.notifications.byCategory(selectedCategory),
-          refetchType: 'active'
-        })
-      }
+    onSuccess: async (_data, notificationId) => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all })
       setSelectedNotifications(prev => {
         const newSet = new Set(prev)
         newSet.delete(notificationId)
@@ -117,17 +90,8 @@ export const Notifications = () => {
     mutationFn: async (notificationIds: string[]) => {
       await Promise.all(notificationIds.map(id => notificationApi.delete(id)))
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ 
-        queryKey: queryKeys.notifications.all,
-        refetchType: 'active'
-      })
-      if (selectedCategory !== 'all') {
-        queryClient.invalidateQueries({ 
-          queryKey: queryKeys.notifications.byCategory(selectedCategory),
-          refetchType: 'active'
-        })
-      }
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all })
       setSelectedNotifications(new Set())
       setIsSelectionMode(false)
     },

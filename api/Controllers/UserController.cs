@@ -7,10 +7,12 @@ namespace api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class UsersController(Supabase.Client client, SupportManager SupMan) : ControllerBase
+    public class UserController(Supabase.Client client, SupportManager SupMan, AppCache cache) : ControllerBase
     {
         private readonly Supabase.Client _client = client;
         private readonly SupportManager _SupMan = SupMan;
+
+        private readonly AppCache _cache = cache;
 
         // Получить пользователей с возможностью поиска и сортировки
         [HttpGet]
@@ -21,63 +23,26 @@ namespace api.Controllers
                 var viewer = await _SupMan.GetViewerAsync(Request.Headers.Authorization.ToString());
                 var isStaff = viewer.IsStaff;
 
-                var response = await _client.From<User>().Get();
-                var users = response.Models;
+                var users = await _SupMan.GetAllUsersAsync();
+                var counts = await _SupMan.GetUserCountsAsync();
+                var projectCounts = counts.ProjectCounts;
+                var ratingCounts = counts.RatingCounts;
 
-                if (showStaffOnly && showBannedOnly)
-                {
-                    users = [.. users.Where(u => Roles.IsStaff(u.SystemRole) && u.IsBanned == true)];
-                }
-                else if (showStaffOnly)
-                {
-                    users = [.. users.Where(u => Roles.IsStaff(u.SystemRole))];
-                }
-                else if (showBannedOnly && isStaff)
-                {
-                    users = [.. users.Where(u => u.IsBanned == true)];
-                }
-                else if (!isStaff)
-                {
-                    users = [.. users.Where(u => !u.IsBanned)];
-                }
+                if (showStaffOnly && showBannedOnly) users = [.. users.Where(u => Roles.IsStaff(u.SystemRole) && u.IsBanned == true)];
+                else if (showStaffOnly) users = [.. users.Where(u => Roles.IsStaff(u.SystemRole))];
+                else if (showBannedOnly && isStaff) users = [.. users.Where(u => u.IsBanned == true)];
+                else if (!isStaff) users = [.. users.Where(u => !u.IsBanned)];
 
                 var query = search?.Trim().ToLower();
                 if (!string.IsNullOrEmpty(query))
                 {
-                    users = [.. users.Where(u =>
-                    {
-                        return searchField switch
-                        {
-                            "name" => u.Nickname?.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase) == true || u.RealName?.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase) == true,
-                            "tag" => SupportManager.ParseSkills(u.HardSkills).Any(t => t.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase)),
-                            "role" => u.ProfileRole?.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase) == true,
-                            _ => true,
-                        };
-                    })];
-                }
-
-                Dictionary<string, int> projectCounts = [];
-                Dictionary<string, int> ratingCounts = [];
-
-                if (sortField == "project_count")
-                {
-                    foreach (var u in users)
-                    {
-                        if (string.IsNullOrEmpty(u.UserId)) continue;
-
-                        var owned = await _client.From<Project>().Where(p => p.OwnerId == u.UserId).Get();
-                        projectCounts[u.UserId] = owned.Models.Count;
-                    }
-                }
-                else if (sortField == "_count")
-                {
-                    foreach (var u in users)
-                    {
-                        if (string.IsNullOrEmpty(u.UserId)) continue;
-
-                        var ratings = await _client.From<ProjectRating>().Where(r => r.UserId == u.UserId).Get();
-                        ratingCounts[u.UserId] = ratings.Models.Count;
-                    }
+                    users = [.. users.Where(u => searchField switch
+            {
+                "name" => u.Nickname?.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase) == true || u.RealName?.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase) == true,
+                "tag" => SupportManager.ParseSkills(u.HardSkills).Any(t => t.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase)),
+                "role" => u.ProfileRole?.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase) == true,
+                _ => true,
+            })];
                 }
 
                 IEnumerable<User> sorted = sortField switch
@@ -85,12 +50,8 @@ namespace api.Controllers
                     "date" => sortAsc ? users.OrderBy(u => u.CreatedAt) : users.OrderByDescending(u => u.CreatedAt),
                     "alphabet" => sortAsc ? users.OrderBy(u => u.Nickname) : users.OrderByDescending(u => u.Nickname),
                     "activity" => sortAsc ? users.OrderBy(u => u.LastOnlineAt) : users.OrderByDescending(u => u.LastOnlineAt),
-                    "project_count" => sortAsc
-                        ? users.OrderBy(u => projectCounts.GetValueOrDefault(u.UserId ?? string.Empty, 0))
-                        : users.OrderByDescending(u => projectCounts.GetValueOrDefault(u.UserId ?? string.Empty, 0)),
-                    "_count" => sortAsc
-                        ? users.OrderBy(u => ratingCounts.GetValueOrDefault(u.UserId ?? string.Empty, 0))
-                        : users.OrderByDescending(u => ratingCounts.GetValueOrDefault(u.UserId ?? string.Empty, 0)),
+                    "project_count" => sortAsc ? users.OrderBy(u => projectCounts.GetValueOrDefault(u.UserId ?? "", 0)) : users.OrderByDescending(u => projectCounts.GetValueOrDefault(u.UserId ?? "", 0)),
+                    "_count" => sortAsc ? users.OrderBy(u => ratingCounts.GetValueOrDefault(u.UserId ?? "", 0)) : users.OrderByDescending(u => ratingCounts.GetValueOrDefault(u.UserId ?? "", 0)),
                     _ => users
                 };
 
@@ -128,16 +89,9 @@ namespace api.Controllers
             {
                 var authHeader = Request.Headers.Authorization.ToString();
                 var id = await _SupMan.GetUserIdAsync(authHeader);
-                if (!string.IsNullOrEmpty(id))
-                {
-                    await _SupMan.UpdateLastOnlineAsync(id);
-                }
+                if (!string.IsNullOrEmpty(id)) await _SupMan.UpdateLastOnlineAsync(id);
 
-                var response = await _client.From<User>()
-                    .Where(u => u.UserId == userId)
-                    .Get();
-
-                var user = response.Models.FirstOrDefault();
+                var user = await _SupMan.GetUserCachedAsync(userId);
                 if (user == null) return NotFound();
 
                 return Ok(new
@@ -165,10 +119,7 @@ namespace api.Controllers
                     lastSeen = SupportManager.FormatLastSeen(user.LastOnlineAt)
                 });
             }
-            catch (Exception)
-            {
-                return StatusCode(500);
-            }
+            catch (Exception) { return StatusCode(500); }
         }
 
         // Поиск пользователей по никнейму

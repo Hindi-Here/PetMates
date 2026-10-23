@@ -9,6 +9,7 @@ import { eventApi, type ApplicationDecision } from '../../services/event'
 import { ApplicationStatusBadge } from './event_application_status'
 
 import { LIMITS } from '../../scripts/limits'
+import { STALE } from '@/components/scripts/query/queryClient'
 
 interface EventApplicationDetailProps {
   eventId: string
@@ -31,8 +32,7 @@ export const EventApplicationDetail = ({ eventId, applicationId, basePath }: Eve
     queryKey: detailKey,
     queryFn: () => eventApi.getApplication(eventId, applicationId),
     retry: false,
-    staleTime: 0,
-    refetchOnMount: 'always',
+    staleTime: STALE.none,
   })
 
   const decideMutation = useMutation({

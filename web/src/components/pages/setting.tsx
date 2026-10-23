@@ -1,6 +1,6 @@
 import './setting.scss'
 import { Toggle } from '../common/toggle'
-import { useEffect, useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useChangeInput, validatorFormat, validatorRegex } from '../scripts/function'
 import { useAuth } from '../hooks/useAuth'
 import { useProfile } from '../hooks/useProfile'
@@ -11,6 +11,10 @@ import ImportantIcon from '@icons/important_warning.svg?react'
 import DeleteIcon from '@icons/delete.svg?react'
 
 import { LIMITS, TIMING } from '../scripts/limits'
+import { useTheme } from '../common/theme'
+
+import { useQueryClient } from '@tanstack/react-query'
+import { queryKeys } from '../scripts/query/queryKeys'
 
 // Валидация поля пароля и возврат сообщения об ошибке
 const checkPasswordFormat = (fieldName: string, value: string, newPassword: string): string | null => {
@@ -100,28 +104,11 @@ const renderEmailField = (
 
 // Компонент страницы настроек пользователя
 export const Setting = () => {
+  const queryClient = useQueryClient()
   const { isAuthenticated } = useAuth()
   const { data: user } = useProfile(isAuthenticated)
 
-  const [isDarkTheme, setIsDarkTheme] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('theme')
-      if (saved) return saved === 'dark'
-      return window.matchMedia('(prefers-color-scheme: dark)').matches
-    }
-    return false
-  })
-
-  useEffect(() => {
-    const root = document.documentElement
-    if (isDarkTheme) {
-      root.setAttribute('data-theme', 'dark')
-      localStorage.setItem('theme', 'dark')
-    } else {
-      root.setAttribute('data-theme', 'light')
-      localStorage.setItem('theme', 'light')
-    }
-  }, [isDarkTheme])
+  const { isDarkTheme, setIsDarkTheme } = useTheme()
 
   const { data: passData, touched: passTouched, dirty: passDirty, handleChange: handlePassChange, handleBlur: handlePassBlur } = useChangeInput(
     { oldPassword: '', newPassword: '', confirmPassword: '' },
@@ -168,13 +155,14 @@ export const Setting = () => {
     setEmailSuccess(false)
     try {
       await settingApi.changeEmail(emailData.newEmail, emailData.confirmCode)
+      await queryClient.invalidateQueries({ queryKey: queryKeys.profile.all })
       setEmailSuccess(true)
       setTimeout(() => setEmailSuccess(false), TIMING.toastMs)
     } catch (err: any) {
       setEmailError(err.message || 'Ошибка смены почты')
       setTimeout(() => setEmailError(null), TIMING.toastMs)
     }
-  }, [emailData])
+  }, [emailData, queryClient])
 
   const handleChangePassword = useCallback(async () => {
     setPassError(null)

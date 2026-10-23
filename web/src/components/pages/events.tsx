@@ -9,6 +9,7 @@ import { eventApi } from '../services/event'
 import { EventCard } from '../common/eventCard'
 import Search from '../common/search'
 import { useSystemRole } from '../hooks/useSystemRole'
+import { STALE } from '../scripts/query/queryClient'
 
 const FoundCount = ({ count }: { count: number }) => (
   <div className='content-item-count-container'>
@@ -38,9 +39,7 @@ export default function Events() {
       sortAsc: isSortUp,
       showBannedOnly,
     }),
-    staleTime: 0,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
+    staleTime: STALE.medium,
     placeholderData: keepPreviousData,
   })
 

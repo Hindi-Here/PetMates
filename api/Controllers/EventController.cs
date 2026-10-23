@@ -128,52 +128,26 @@ namespace api.Controllers
                 var viewer = await _SupMan.GetViewerAsync(Request.Headers.Authorization.ToString());
                 var isStaff = viewer.IsStaff;
 
-                var response = await _client.From<Event>().Where(e => e.IsPrivate == false).Get();
-
-                var owners = new Dictionary<string, User?>();
-                var items = new List<(Event Event, User Owner, int MembersCount)>();
-
-                foreach (var ev in response.Models)
-                {
-                    if (!owners.TryGetValue(ev.OwnerId, out var owner))
-                    {
-                        owner = await _SupMan.GetUserAsync(ev.OwnerId);
-                        owners[ev.OwnerId] = owner;
-                    }
-
-                    if (owner == null) continue;
-                    if (!isStaff && owner.IsBanned) continue;
-                    if (isStaff && showBannedOnly && !owner.IsBanned) continue;
-
-                    var members = await _client.From<EventMember>().Where(m => m.EventId == ev.EventId).Get();
-                    items.Add((ev, owner, members.Models.Count));
-                }
+                var items = (await _SupMan.GetPublicEventsAsync())
+                    .Where(i => isStaff ? (!showBannedOnly || i.Owner.IsBanned) : !i.Owner.IsBanned)
+                    .Select(i => (i.Event, i.Owner, i.MembersCount))
+                    .ToList();
 
                 var query = search?.Trim();
                 if (!string.IsNullOrEmpty(query))
                 {
                     items = [.. items.Where(i => searchField == "author"
-                        ? i.Owner.Nickname?.Contains(query, StringComparison.CurrentCultureIgnoreCase) == true
-                        : i.Event.Title.Contains(query, StringComparison.CurrentCultureIgnoreCase))];
+                ? i.Owner.Nickname?.Contains(query, StringComparison.CurrentCultureIgnoreCase) == true
+                : i.Event.Title.Contains(query, StringComparison.CurrentCultureIgnoreCase))];
                 }
 
                 items = sortField switch
                 {
-                    "event_date" => sortAsc
-                        ? [.. items.OrderBy(i => SupportManager.NormalizeDate(i.Event.EventStartDate))]
-                        : [.. items.OrderByDescending(i => SupportManager.NormalizeDate(i.Event.EventStartDate))],
-                    "alphabet" => sortAsc
-                        ? [.. items.OrderBy(i => i.Event.Title)]
-                        : [.. items.OrderByDescending(i => i.Event.Title)],
-                    "count" => sortAsc
-                        ? [.. items.OrderBy(i => i.Event.RatingCount)]
-                        : [.. items.OrderByDescending(i => i.Event.RatingCount)],
-                    "count_users" => sortAsc
-                        ? [.. items.OrderBy(i => i.MembersCount)]
-                        : [.. items.OrderByDescending(i => i.MembersCount)],
-                    _ => sortAsc
-                        ? [.. items.OrderBy(i => i.Event.CreatedAt)]
-                        : [.. items.OrderByDescending(i => i.Event.CreatedAt)],
+                    "event_date" => sortAsc ? [.. items.OrderBy(i => SupportManager.NormalizeDate(i.Event.EventStartDate))] : [.. items.OrderByDescending(i => SupportManager.NormalizeDate(i.Event.EventStartDate))],
+                    "alphabet" => sortAsc ? [.. items.OrderBy(i => i.Event.Title)] : [.. items.OrderByDescending(i => i.Event.Title)],
+                    "count" => sortAsc ? [.. items.OrderBy(i => i.Event.RatingCount)] : [.. items.OrderByDescending(i => i.Event.RatingCount)],
+                    "count_users" => sortAsc ? [.. items.OrderBy(i => i.MembersCount)] : [.. items.OrderByDescending(i => i.MembersCount)],
+                    _ => sortAsc ? [.. items.OrderBy(i => i.Event.CreatedAt)] : [.. items.OrderByDescending(i => i.Event.CreatedAt)],
                 };
 
                 return Ok(items.Select(i => Mappers.ToCard(i.Event, i.Owner, i.MembersCount)));
@@ -198,8 +172,9 @@ namespace api.Controllers
                 var ev = evResponse.Models.FirstOrDefault();
                 if (ev == null) return NotFound();
 
-                var owner = await _SupMan.GetUserAsync(ev.OwnerId);
-                if (owner == null || !await _SupMan.CanView(ev, owner, currentUserId, isStaff))
+                var owner = await _SupMan.GetUserCachedAsync(ev.OwnerId);
+
+                if (owner == null || !await _SupMan.CanView(ev, currentUserId, isStaff))
                     return NotFound();
 
                 var memberships = await _client.From<EventMember>().Where(m => m.EventId == eventId).Get();
@@ -207,7 +182,7 @@ namespace api.Controllers
                 var members = new List<object>();
                 foreach (var m in memberships.Models.OrderBy(m => m.JoinedAt))
                 {
-                    var u = await _SupMan.GetUserAsync(m.UserId);
+                    var u = await _SupMan.GetUserCachedAsync(m.UserId);
                     if (u == null || (u.IsBanned && !isStaff)) continue;
 
                     members.Add(Mappers.ToUserCard(u));
@@ -256,6 +231,8 @@ namespace api.Controllers
                 if (created == null)
                     return BadRequest("Не удалось создать мероприятие");
 
+                await _SupMan.Cache.EventsChangedAsync();
+
                 var cards = await _SupMan.BuildCards([created], userId, false);
                 return Ok(cards.FirstOrDefault());
             }
@@ -286,6 +263,8 @@ namespace api.Controllers
 
                 await _client.From<Event>().Where(e => e.EventId == eventId).Delete();
                 await _SupMan.DeleteEventMedia(eventId);
+
+                await _SupMan.Cache.EventsChangedAsync();
 
                 return Ok(new { message = "Мероприятие успешно удалено" });
             }
@@ -336,6 +315,8 @@ namespace api.Controllers
                     .Update();
 
                 await _SupMan.ClearDraft(eventId, "general");
+
+                await _SupMan.Cache.EventsChangedAsync();
 
                 var details = await _SupMan.LoadDetails(eventId, userId, false);
                 return details == null ? NotFound() : Ok(details);
@@ -469,6 +450,8 @@ namespace api.Controllers
                     new EventRating { EventId = eventId, UserId = userId, CreatedAt = DateTime.UtcNow },
                     new QueryOptions { Returning = QueryOptions.ReturnType.Minimal });
 
+                await _SupMan.Cache.EventsChangedAsync();
+
                 return Ok(new { success = true, ratingCount = await _SupMan.GetRatingCount(eventId) });
             }
             catch (Exception)
@@ -495,6 +478,8 @@ namespace api.Controllers
                 await _client.From<EventRating>()
                     .Where(r => r.EventId == eventId && r.UserId == userId)
                     .Delete();
+
+                await _SupMan.Cache.EventsChangedAsync();
 
                 return Ok(new { success = true, ratingCount = await _SupMan.GetRatingCount(eventId) });
             }
@@ -681,7 +666,7 @@ namespace api.Controllers
                 {
                     if (!users.TryGetValue(app.UserId, out var applicant))
                     {
-                        applicant = await _SupMan.GetUserAsync(app.UserId);
+                        applicant = await _SupMan.GetUserCachedAsync(app.UserId);
                         users[app.UserId] = applicant;
                     }
                     if (applicant == null) continue;
@@ -749,7 +734,7 @@ namespace api.Controllers
 
                 if (dto.Decision == "accept")
                 {
-                    var applicant = await _SupMan.GetUserAsync(app.UserId);
+                    var applicant = await _SupMan.GetAccessAsync(app.UserId);
                     if (applicant == null) return NotFound();
                     if (applicant.IsBanned)
                         return BadRequest(new { message = "Нельзя принять заблокированного пользователя" });
@@ -767,6 +752,8 @@ namespace api.Controllers
                             new EventMember { EventId = eventId, UserId = app.UserId, JoinedAt = DateTime.UtcNow },
                             new QueryOptions { Returning = QueryOptions.ReturnType.Minimal });
                     }
+
+                    await _SupMan.Cache.EventsChangedAsync();
                 }
 
                 var newStatus = dto.Decision switch
@@ -843,34 +830,29 @@ namespace api.Controllers
                 var (imageError, extension) = Validator.ValidateEventImage(file);
                 if (imageError != null) return BadRequest(new { message = imageError });
 
+                using var input = file.OpenReadStream();
+                if (!ImageOptimizer.TryOptimize(input, ImageKind.Media, extension, out var optimized, out var optError))
+                    return BadRequest(new { message = optError });
+
                 var folder = $"{eventId}/{section}";
 
                 var existing = await _client.Storage.From("EventMedia").List(folder);
                 var currentTotal = (existing ?? []).Sum(SupportManager.GetFileSize);
-                if (currentTotal + file.Length > Limits.Upload.MediaTotalMaxBytes)
+                if (currentTotal + optimized!.Bytes.Length > Limits.Upload.MediaTotalMaxBytes)
                     return BadRequest(new { message = $"Общий размер вложений не должен превышать {Limits.Upload.MediaTotalMaxBytes / Limits.MB} МБ" });
 
-                using var stream = new MemoryStream();
-                await file.CopyToAsync(stream);
-                var bytes = stream.ToArray();
-
-                var fileName = $"{Guid.NewGuid()}{extension}";
+                var fileName = $"{Guid.NewGuid()}{optimized.Extension}";
                 var path = $"{folder}/{fileName}";
 
-                await _client.Storage.From("EventMedia").Upload(bytes, path, new Supabase.Storage.FileOptions
+                await _client.Storage.From("EventMedia").Upload(optimized.Bytes, path, new Supabase.Storage.FileOptions
                 {
                     Upsert = false,
-                    ContentType = extension switch
-                    {
-                        ".png" => "image/png",
-                        ".jpg" => "image/jpeg",
-                        ".webp" => "image/webp",
-                        _ => "image/gif"
-                    }
+                    ContentType = optimized.ContentType,
+                    CacheControl = "31536000"
                 });
 
                 var url = _client.Storage.From("EventMedia").GetPublicUrl(path);
-                return Ok(new { url, fileName, size = bytes.Length });
+                return Ok(new { url, fileName, size = optimized.Bytes.Length });
             }
             catch (Exception)
             {
@@ -929,6 +911,8 @@ namespace api.Controllers
 
                 await _client.From<Event>().Where(e => e.EventId == eventId).Delete();
                 await _SupMan.DeleteEventMedia(eventId);
+
+                await _SupMan.Cache.EventsChangedAsync();
 
                 await _SupMan.SendNotificationAsync(ev.OwnerId, "system", eventId, "event_deleted_by_moderator", new Dictionary<string, object>
                 {

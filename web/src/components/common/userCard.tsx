@@ -6,12 +6,14 @@ import MoreIcon from '@icons/more.svg?react'
 import { useState, useEffect, useRef, Fragment, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
-import { useUserActivity } from '../hooks/useUserActivity'
 import { useSystemRole } from '../hooks/useSystemRole'
 import { canModerateTarget } from '../scripts/moderation'
 import { moderationApi } from '../services/moderation'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '../scripts/query/queryKeys'
+import { STALE } from '../scripts/query/queryClient'
+import { invalidateModeration } from '../scripts/query/invalidate'
+import { projectsApi } from '../services/project'
 import type { UserData } from '../services/users'
 import BanUserForm from '../forms/ban_user'
 
@@ -77,15 +79,13 @@ export const UserCard = ({
 
   const handleUnban = async () => {
     await moderationApi.unbanUser(user.userId)
-    queryClient.invalidateQueries({ queryKey: queryKeys.users.allList() })
-    queryClient.invalidateQueries({ queryKey: ['users', 'byId', user.userId] })
+    await invalidateModeration(queryClient)
     setIsMenuOpen(false)
   }
 
   const handleSetRole = async (newRole: 'user' | 'moderator' | 'admin') => {
     await moderationApi.setRole(user.userId, newRole)
-    queryClient.invalidateQueries({ queryKey: queryKeys.users.allList() })
-    queryClient.invalidateQueries({ queryKey: ['users', 'byId', user.userId] })
+    await invalidateModeration(queryClient)
     setIsMenuOpen(false)
   }
   
@@ -216,7 +216,17 @@ export const UserCard = ({
     }
   }, [skills])
 
-  const { activityCount, loading: activityLoading } = useUserActivity(user.userId)
+  const { data: activityCount = 0, isLoading: activityLoading } = useQuery({
+    queryKey: queryKeys.users.activity(user.userId),
+    queryFn: async () => {
+      const [owned, member] = await Promise.all([
+        projectsApi.getProjectsByUser(user.userId),
+        projectsApi.getUserMemberProjects(user.userId),
+      ])
+      return owned.length + member.length
+    },
+    staleTime: STALE.medium,
+  })
 
   return (
     <>
@@ -368,9 +378,8 @@ export const UserCard = ({
           userId={user.userId}
           nickname={user.nickname}
           onClose={() => setShowBanForm(false)}
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: queryKeys.users.allList() })
-            queryClient.invalidateQueries({ queryKey: ['users', 'byId', user.userId] })
+          onSuccess={async () => {
+            await invalidateModeration(queryClient)
           }}
         />
       )}

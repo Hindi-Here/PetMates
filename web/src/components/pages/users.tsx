@@ -13,6 +13,7 @@ import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { queryKeys } from '../scripts/query/queryKeys'
 import { usersApi } from '../services/users'
 import { useSystemRole } from '../hooks/useSystemRole'
+import { STALE } from '../scripts/query/queryClient'
 
 const FoundCount = ({ count }: { count: number }) => (
   <div className='content-item-count-container'>
@@ -46,9 +47,7 @@ export default function Users() {
       showBannedOnly,
       showStaffOnly,
     }),
-    staleTime: 0,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
+    staleTime: STALE.medium,
     placeholderData: keepPreviousData,
   })
 

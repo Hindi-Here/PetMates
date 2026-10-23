@@ -104,15 +104,7 @@ namespace api.Support
             return errors.Count > 0 ? errors[0] : null;
         }
 
-        // Разрешённые типы аватара
-        private static readonly Dictionary<string, (string Extension, byte[][] Signatures)> AllowedAvatarTypes = new()
-        {
-            ["image/png"] = (".png", [[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]]),
-            ["image/jpeg"] = (".jpg", [[0xFF, 0xD8, 0xFF]]),
-            ["image/webp"] = (".webp", [[0x52, 0x49, 0x46, 0x46]]),
-        };
-
-        // Валидация аватара
+        // Валидация автара
         public static (string? Error, string? Extension) ValidateAvatar(IFormFile? file)
         {
             if (file == null || file.Length == 0)
@@ -121,31 +113,22 @@ namespace api.Support
             if (file.Length > Limits.Upload.AvatarMaxBytes)
                 return ($"[Аватар] максимальный размер файла {Limits.Upload.AvatarMaxBytes / Limits.MB} МБ", null);
 
-            var contentType = file.ContentType?.ToLowerInvariant() ?? "";
-            if (!AllowedAvatarTypes.TryGetValue(contentType, out var typeInfo))
-                return ("[Аватар] допустимы только PNG, JPEG или WEBP", null);
-
             using var stream = file.OpenReadStream();
-            var header = new byte[12];
-            var read = stream.Read(header, 0, header.Length);
-            stream.Position = 0;
+            var h = new byte[12];
+            var read = stream.Read(h, 0, h.Length);
 
-            if (read < 4)
-                return ("[Аватар] повреждённый файл", null);
+            string? extension = null;
+            if (read >= 8 && h[0] == 0x89 && h[1] == 0x50 && h[2] == 0x4E && h[3] == 0x47)
+                extension = ".png";
+            else if (read >= 3 && h[0] == 0xFF && h[1] == 0xD8 && h[2] == 0xFF)
+                extension = ".jpg";
+            else if (read >= 12 && h[0] == 'R' && h[1] == 'I' && h[2] == 'F' && h[3] == 'F'
+                     && h[8] == 'W' && h[9] == 'E' && h[10] == 'B' && h[11] == 'P')
+                extension = ".webp";
 
-            var signatureMatches = typeInfo.Signatures.Any(sig =>
-                sig.Length <= read && sig.SequenceEqual(header.Take(sig.Length)));
-
-            if (!signatureMatches)
-                return ("[Аватар] содержимое файла не соответствует заявленному типу", null);
-
-            if (contentType == "image/webp")
-            {
-                if (read < 12 || header[8] != 0x57 || header[9] != 0x45 || header[10] != 0x42 || header[11] != 0x50)
-                    return ("[Аватар] содержимое файла не соответствует заявленному типу", null);
-            }
-
-            return (null, typeInfo.Extension);
+            return extension == null
+                ? ("[Аватар] допустимы только PNG, JPEG или WEBP", null)
+                : (null, extension);
         }
 
         // Валидация тегов

@@ -55,7 +55,7 @@ export const projectsApi = {
    // Получить проекты текущего пользователя
   getMyProjects: async (): Promise<ProjectData[]> => {
     const { data: { session } } = await supabase.auth.getSession();
-    const response = await fetch(`${API_BASE}/api/projects/my`, {
+    const response = await fetch(`${API_BASE}/api/project/my`, {
       headers: { 'Authorization': `Bearer ${session?.access_token}`, 'Content-Type': 'application/json' },
     });
     if (!response.ok) throw new Error(await response.text() || 'Ошибка загрузки проектов');
@@ -65,7 +65,7 @@ export const projectsApi = {
   // Получить информацию о конкретном проекте
   getProject: async (projectId: string): Promise<ProjectData> => {
     const { data: { session } } = await supabase.auth.getSession();
-    const response = await fetch(`${API_BASE}/api/projects/${projectId}`, {
+    const response = await fetch(`${API_BASE}/api/project/${projectId}`, {
       headers: { 'Authorization': `Bearer ${session?.access_token}`, 'Content-Type': 'application/json' },
     });
     if (!response.ok) throw new Error(await response.text() || 'Ошибка загрузки проекта');
@@ -75,7 +75,7 @@ export const projectsApi = {
   // Получить проекты конкретного пользователя
   getProjectsByUser: async (userId: string): Promise<ProjectData[]> => {
     const { data: { session } } = await supabase.auth.getSession();
-    const response = await fetch(`${API_BASE}/api/projects/by-user/${userId}`, {
+    const response = await fetch(`${API_BASE}/api/project/by-user/${userId}`, {
       headers: { 'Authorization': `Bearer ${session?.access_token}`, 'Content-Type': 'application/json' }
     });
     if (!response.ok) throw new Error(await response.text() || 'Ошибка загрузки проектов пользователя');
@@ -85,7 +85,7 @@ export const projectsApi = {
   // Создать новый проект
   createProject: async (dto: CreateProjectDto): Promise<ProjectData> => {
     const { data: { session } } = await supabase.auth.getSession();
-    const response = await fetch(`${API_BASE}/api/projects`, {
+    const response = await fetch(`${API_BASE}/api/project`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${session?.access_token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(dto),
@@ -97,7 +97,7 @@ export const projectsApi = {
   // Удалить проект
   deleteProject: async (projectId: string): Promise<void> => {
     const { data: { session } } = await supabase.auth.getSession();
-    const response = await fetch(`${API_BASE}/api/projects/${projectId}`, {
+    const response = await fetch(`${API_BASE}/api/project/${projectId}`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${session?.access_token}`, 'Content-Type': 'application/json' },
     });
@@ -107,7 +107,7 @@ export const projectsApi = {
   // Получить статус оценки проекта текущим пользователем
   getUserRating: async (projectId: string): Promise<{ hasRated: boolean }> => {
     const { data: { session } } = await supabase.auth.getSession();
-    const response = await fetch(`${API_BASE}/api/projects/${projectId}/rating`, {
+    const response = await fetch(`${API_BASE}/api/project/${projectId}/rating`, {
       headers: { 'Authorization': `Bearer ${session?.access_token}`, 'Content-Type': 'application/json' },
     });
     if (!response.ok) throw new Error('Ошибка получения статуса оценки');
@@ -117,7 +117,7 @@ export const projectsApi = {
   // Оценить проект
   addRating: async (projectId: string): Promise<{ success: boolean; ratingCount: number }> => {
     const { data: { session } } = await supabase.auth.getSession();
-    const response = await fetch(`${API_BASE}/api/projects/${projectId}/rating`, {
+    const response = await fetch(`${API_BASE}/api/project/${projectId}/rating`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${session?.access_token}`, 'Content-Type': 'application/json' },
     });
@@ -128,7 +128,7 @@ export const projectsApi = {
   // Отменить оценку проекта
   removeRating: async (projectId: string): Promise<{ success: boolean; ratingCount: number }> => {
     const { data: { session } } = await supabase.auth.getSession();
-    const response = await fetch(`${API_BASE}/api/projects/${projectId}/rating`, {
+    const response = await fetch(`${API_BASE}/api/project/${projectId}/rating`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${session?.access_token}`, 'Content-Type': 'application/json' },
     });
@@ -140,7 +140,7 @@ export const projectsApi = {
   toggleRating: async (projectId: string, currentHasRated: boolean): Promise<{ success: boolean; ratingCount: number; hasRated: boolean }> => {
     const { data: { session } } = await supabase.auth.getSession();
     if (currentHasRated) {
-      const response = await fetch(`${API_BASE}/api/projects/${projectId}/rating`, {
+      const response = await fetch(`${API_BASE}/api/project/${projectId}/rating`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${session?.access_token}`, 'Content-Type': 'application/json' },
       });
@@ -148,7 +148,7 @@ export const projectsApi = {
       const data = await response.json();
       return { ...data, hasRated: false };
     } else {
-      const response = await fetch(`${API_BASE}/api/projects/${projectId}/rating`, {
+      const response = await fetch(`${API_BASE}/api/project/${projectId}/rating`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${session?.access_token}`, 'Content-Type': 'application/json' },
       });
@@ -161,7 +161,7 @@ export const projectsApi = {
   // Получить избранные проекты пользователя
   getUserFavorites: async (userId: string): Promise<ProjectData[]> => {
     const { data: { session } } = await supabase.auth.getSession();
-    const response = await fetch(`${API_BASE}/api/projects/user/${userId}/favorites`, {
+    const response = await fetch(`${API_BASE}/api/project/user/${userId}/favorites`, {
       headers: { 'Authorization': `Bearer ${session?.access_token}`, 'Content-Type': 'application/json' },
     });
     if (!response.ok) throw new Error(await response.text() || 'Ошибка загрузки избранных');
@@ -171,7 +171,7 @@ export const projectsApi = {
   // Получить проекты, в которых пользователь является участником
   getUserMemberProjects: async (userId: string): Promise<ProjectData[]> => {
     const { data: { session } } = await supabase.auth.getSession();
-    const response = await fetch(`${API_BASE}/api/projects/user/${userId}/member`, {
+    const response = await fetch(`${API_BASE}/api/project/user/${userId}/member`, {
       headers: { 'Authorization': `Bearer ${session?.access_token}`, 'Content-Type': 'application/json' },
     });
     if (!response.ok) throw new Error(await response.text() || 'Ошибка загрузки проектов участника');
@@ -184,7 +184,7 @@ export const projectsApi = {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await fetch(`${API_BASE}/api/projects/${projectId}/media/draft`, {
+    const response = await fetch(`${API_BASE}/api/project/${projectId}/media/draft`, {
       method: 'POST',
       headers: {
         ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {}),
@@ -208,7 +208,7 @@ export const projectsApi = {
     isDraft: boolean;
   }>> => {
     const { data: { session } } = await supabase.auth.getSession();
-    const response = await fetch(`${API_BASE}/api/projects/${projectId}/media`, {
+    const response = await fetch(`${API_BASE}/api/project/${projectId}/media`, {
       headers: {
         ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {}),
         'Content-Type': 'application/json'
@@ -225,7 +225,7 @@ export const projectsApi = {
   // Удалить медиа
   deleteMedia: async (projectId: string, fileName: string): Promise<void> => {
     const { data: { session } } = await supabase.auth.getSession();
-    const response = await fetch(`${API_BASE}/api/projects/${projectId}/media/${encodeURIComponent(fileName)}`, {
+    const response = await fetch(`${API_BASE}/api/project/${projectId}/media/${encodeURIComponent(fileName)}`, {
       method: 'DELETE',
       headers: {
         ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {}),
@@ -243,7 +243,7 @@ export const projectDraftApi = {
   // Получить черновик проекта
   getDraft: async (projectId: string): Promise<ProjectDraftData | null> => {
     const { data: { session } } = await supabase.auth.getSession();
-    const response = await fetch(`${API_BASE}/api/projects/${projectId}/draft`, {
+    const response = await fetch(`${API_BASE}/api/project/${projectId}/draft`, {
       headers: { 
         'Authorization': `Bearer ${session?.access_token}`, 
         'Content-Type': 'application/json' 
@@ -269,7 +269,7 @@ export const projectDraftApi = {
   // Сохранить черновик проекта
   saveDraft: async (projectId: string, dto: ProjectDraftData): Promise<void> => {
     const { data: { session } } = await supabase.auth.getSession();
-    const response = await fetch(`${API_BASE}/api/projects/${projectId}/draft`, {
+    const response = await fetch(`${API_BASE}/api/project/${projectId}/draft`, {
       method: 'PUT',
       headers: { 'Authorization': `Bearer ${session?.access_token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(dto),
@@ -280,7 +280,7 @@ export const projectDraftApi = {
   // Отменить (удалить) черновик проекта
   discardDraft: async (projectId: string): Promise<void> => {
     const { data: { session } } = await supabase.auth.getSession();
-    const response = await fetch(`${API_BASE}/api/projects/${projectId}/draft`, {
+    const response = await fetch(`${API_BASE}/api/project/${projectId}/draft`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${session?.access_token}`, 'Content-Type': 'application/json' },
     });
@@ -290,7 +290,7 @@ export const projectDraftApi = {
   // Применить (сохранить) изменения из черновика в проект
   commitDraft: async (projectId: string, dto: CommitProjectDto): Promise<{ message: string; fullDescription?: string }> => {
     const { data: { session } } = await supabase.auth.getSession();
-    const response = await fetch(`${API_BASE}/api/projects/${projectId}/commit`, {
+    const response = await fetch(`${API_BASE}/api/project/${projectId}/commit`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${session?.access_token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(dto),
@@ -308,7 +308,7 @@ export const projectDraftApi = {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await fetch(`${API_BASE}/api/projects/${projectId}/media/draft`, {
+    const response = await fetch(`${API_BASE}/api/project/${projectId}/media/draft`, {
       method: 'POST',
       headers: {
         ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {}),
@@ -326,7 +326,7 @@ export const projectDraftApi = {
   // Удалить медиа черновика
   deleteMedia: async (projectId: string, fileName: string): Promise<void> => {
     const { data: { session } } = await supabase.auth.getSession();
-    const response = await fetch(`${API_BASE}/api/projects/${projectId}/media/${encodeURIComponent(fileName)}`, {
+    const response = await fetch(`${API_BASE}/api/project/${projectId}/media/${encodeURIComponent(fileName)}`, {
       method: 'DELETE',
       headers: {
         ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {}),

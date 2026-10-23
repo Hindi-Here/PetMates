@@ -57,7 +57,7 @@ uploadAvatar: async (file: File): Promise<{ avatarUrl: string }> => {
 // Получить чужой профиль
 getUserById: async (userId: string): Promise<ThirdProfileData> => {
     const { data: { session } } = await supabase.auth.getSession();
-    const response = await fetch(`${API_BASE}/api/users/${userId}`, {
+    const response = await fetch(`${API_BASE}/api/user/${userId}`, {
       headers: { 
         'Authorization': `Bearer ${session?.access_token}`,
         'Content-Type': 'application/json'

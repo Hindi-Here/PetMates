@@ -24,7 +24,7 @@ import { Chat } from './chat'
 import { EventPage } from './events/event_page'
 import { useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '../scripts/query/queryKeys'
-import { LIMITS, TIMING, maxChars, minChars } from '../scripts/limits'
+import { LIMITS, TIMING} from '../scripts/limits'
 
 interface ProfileFormData {
   nickname: string
@@ -66,7 +66,7 @@ const AuthorizedProfile = () => {
   const { profileId } = useParams<{ profileId: string }>()
   const profileKey = profileId || userId
   const queryClient = useQueryClient()
-  const { data: user, refresh } = useProfile(isAuthenticated)
+  const { data: user } = useProfile(isAuthenticated)
   
   const tabRoutes: Record<string, string> = {
     'Информация': 'info',
@@ -238,9 +238,9 @@ const AuthorizedProfile = () => {
         await profileApi.updateMe(changes as unknown as ProfileData)
       }
       if (profileKey) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.profile.me(profileKey) })
+        await queryClient.invalidateQueries({ queryKey: queryKeys.profile.me(profileKey) })
+        await queryClient.invalidateQueries({ queryKey: queryKeys.users.allList() })
       }
-      await refresh()
       setSaveSuccess(true)
       setTimeout(() => setSaveSuccess(false), TIMING.toastMs)
     }

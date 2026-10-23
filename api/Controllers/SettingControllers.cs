@@ -7,9 +7,10 @@ namespace api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class SettingController(Client client) : ControllerBase
+    public class SettingController(Client client, SupportManager SupMan) : ControllerBase
     {
         private readonly Client _client = client;
+        private readonly SupportManager _SupMan = SupMan;
 
         // Обновить пароль
         [HttpPut("password")]
@@ -130,6 +131,8 @@ namespace api.Controllers
 
                 if (!response.IsSuccessStatusCode)
                     return StatusCode(500, new { message = "Ошибка удаления аккаунта" });
+
+                await _SupMan.Cache.EverythingChangedAsync();
 
                 return Ok(new { message = "Аккаунт успешно удалён" });
             }

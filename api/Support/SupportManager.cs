@@ -1,9 +1,10 @@
 ﻿using api.Models;
+using Microsoft.Extensions.Caching.Hybrid;
 using Supabase.Postgrest;
+using System.ComponentModel;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using Microsoft.Extensions.Caching.Hybrid;
 
 namespace api.Support
 {
@@ -122,17 +123,14 @@ namespace api.Support
 
 
 
-    public partial class SupportManager(Supabase.Client client, HybridCache cache)
+    public partial class SupportManager(Supabase.Client client, AppCache cache)
     {
         private readonly Supabase.Client _client = client;
         private static readonly Regex MentionRegex = MyRegex();
 
-        private readonly HybridCache _cache = cache;
+        private readonly AppCache _cache = cache;
 
-        private static readonly HybridCacheEntryOptions AuthCacheOptions = new()
-        {
-            Expiration = TimeSpan.FromSeconds(60)
-        };
+        public AppCache Cache => _cache;
 
         // Получение токена пользователя
         public async Task<string?> GetUserIdAsync(string? authHeader)
@@ -144,25 +142,36 @@ namespace api.Support
             if (string.IsNullOrEmpty(token) || token == "undefined" || token == "null")
                 return null;
 
-            var tokenHash = ComputeTokenHash(token);
+            var key = CacheKeys.Token(ComputeTokenHash(token));
+            var id = await _cache.GetOrCreateAsync<string?>(key, async ct =>
+            {
+                try { return (await _client.Auth.GetUser(token))?.Id; }
+                catch { return null; }
+            }, CacheStale.Short);
 
-            return await _cache.GetOrCreateAsync<string?>(
-                tokenHash,
-                async (cancellationToken) =>
-                {
-                    try
-                    {
-                        var user = await _client.Auth.GetUser(token);
-                        return user?.Id;
-                    }
-                    catch
-                    {
-                        return null;
-                    }
-                },
-                AuthCacheOptions
-            );
+            if (id is null)
+                await _cache.RemoveAsync(key);
+
+            return id;
         }
+
+        // Роль и бан из кэша
+        public async Task<UserAccess> GetAccessAsync(string userId)
+        {
+            var key = CacheKeys.Access(userId);
+            var access = await _cache.GetOrCreateAsync(key, async ct =>
+            {
+                var r = await _client.From<User>().Where(u => u.UserId == userId).Get();
+                var u = r.Models.FirstOrDefault();
+                return new UserAccess(u?.SystemRole, u?.IsBanned ?? false, u != null);
+            }, CacheStale.Short, [CacheKeys.Tags.User(userId)]);
+
+            if (!access.Exists)
+                await _cache.RemoveAsync(key);
+
+            return access;
+        }
+
 
         // Вычисление хэша токена для ключа кэша
         private static string ComputeTokenHash(string token)
@@ -172,7 +181,15 @@ namespace api.Support
             return Convert.ToBase64String(bytes);
         }
 
-        // Получение id и роли
+        // Получить роль
+        public async Task<string?> GetRoleAsync(string? userId) =>
+            string.IsNullOrEmpty(userId) ? null : (await GetAccessAsync(userId)).Role;
+
+        // Является ли роль стафф?
+        public async Task<bool> IsStaffAsync(string? userId) =>
+            Roles.IsStaff(await GetRoleAsync(userId));
+
+        // Определение зрителя
         public async Task<Viewer> GetViewerAsync(string? authHeader)
         {
             var userId = await GetUserIdAsync(authHeader);
@@ -180,28 +197,10 @@ namespace api.Support
 
             await UpdateLastOnlineAsync(userId);
 
-            var user = await GetUserAsync(userId);
-            if (user == null || user.IsBanned) return new Viewer(null, null);
+            var access = await GetAccessAsync(userId);
+            if (!access.Exists || access.IsBanned) return new Viewer(null, null);
 
-            return new Viewer(userId, user.SystemRole);
-        }
-
-        // Роль пользователя
-        public async Task<string?> GetRoleAsync(string? userId)
-        {
-            if (string.IsNullOrEmpty(userId)) return null;
-            var response = await _client.From<User>().Where(u => u.UserId == userId).Get();
-            return response.Models.FirstOrDefault()?.SystemRole;
-        }
-
-        // Является ли пользователь администратором или модератором
-        public async Task<bool> IsStaffAsync(string? userId) => Roles.IsStaff(await GetRoleAsync(userId));
-
-        // Пользователь по идентификатору
-        public async Task<User?> GetUserAsync(string userId)
-        {
-            var response = await _client.From<User>().Where(u => u.UserId == userId).Get();
-            return response.Models.FirstOrDefault();
+            return new Viewer(userId, access.Role);
         }
 
         // Совпадает ли введённый никнейм с никнеймом в метаданных аккаунта
@@ -214,19 +213,19 @@ namespace api.Support
                    string.Equals(nickname.Trim(), currentNickname.Trim(), StringComparison.OrdinalIgnoreCase);
         }
 
-        // Обновление онлайна
+        // Обновление онлайна не чаще раза в 30 секунд (CacheTtl.Short)
         public async Task UpdateLastOnlineAsync(string userId)
         {
-            try
+            await _cache.GetOrCreateAsync(CacheKeys.OnlineTouch(userId), async ct =>
             {
-                await _client.From<User>()
-                    .Where(u => u.UserId == userId)
-                    .Set(u => u.LastOnlineAt!, DateTime.UtcNow)
-                    .Update();
-            }
-            catch (Exception)
-            {
-            }
+                try
+                {
+                    await _client.From<User>().Where(u => u.UserId == userId)
+                        .Set(u => u.LastOnlineAt!, DateTime.UtcNow).Update(cancellationToken: ct);
+                }
+                catch { }
+                return true;
+            }, CacheStale.Short);
         }
 
         // Склонение
@@ -451,12 +450,11 @@ namespace api.Support
         public static string GetReportTypeLabel(string? type) =>
             ReportTypeLabels.TryGetValue(type ?? "", out var label) ? label : "МНЕНИЕ";
 
-        // Проверка прав на просмотр проекта
+        // Проверка прав на просмотр проекта (используем GetAccessAsync)
         public async Task<bool> CanViewProject(Project project, string? currentUserId, bool isStaff)
         {
-            var owner = await GetUserAsync(project.OwnerId);
-
-            if (owner != null && owner.IsBanned && !isStaff)
+            var owner = await GetAccessAsync(project.OwnerId);
+            if (owner.IsBanned && !isStaff)
                 return false;
 
             if (!project.IsPrivate)
@@ -604,17 +602,17 @@ namespace api.Support
             if (ev == null) return null;
 
             var isStaff = await IsStaffAsync(userId);
-            var owner = await GetUserAsync(ev.OwnerId);
-            if (owner == null) return null;
-
-            return await CanView(ev, owner, userId, isStaff) ? ev : null;
+            return await CanView(ev, userId, isStaff) ? ev : null;
         }
 
         // Проверка прав на просмотр
-        public async Task<bool> CanView(Event ev, User owner, string? currentUserId, bool isStaff)
+        public async Task<bool> CanView(Event ev, string? currentUserId, bool isStaff)
         {
             if (isStaff) return true;
+
+            var owner = await GetAccessAsync(ev.OwnerId);
             if (owner.IsBanned && ev.OwnerId != currentUserId) return false;
+
             if (!ev.IsPrivate) return true;
             if (string.IsNullOrEmpty(currentUserId)) return false;
             if (ev.OwnerId == currentUserId) return true;
@@ -622,31 +620,28 @@ namespace api.Support
             var membership = await _client.From<EventMember>()
                 .Where(m => m.EventId == ev.EventId && m.UserId == currentUserId)
                 .Get();
+
             return membership.Models.Count > 0;
         }
 
         // Собрать карточки для списка (с фильтрацией по видимости)
         public async Task<List<object>> BuildCards(IEnumerable<Event> events, string? currentUserId, bool isStaff)
         {
-            var owners = new Dictionary<string, User?>();
+            var allUsers = await GetAllUsersAsync();
+            var usersDict = allUsers.Where(u => u.UserId != null).ToDictionary(u => u.UserId!);
+
             var result = new List<object>();
 
             foreach (var ev in events.OrderByDescending(e => e.CreatedAt))
             {
-                if (!owners.TryGetValue(ev.OwnerId, out var owner))
-                {
-                    owner = await GetUserAsync(ev.OwnerId);
-                    owners[ev.OwnerId] = owner;
-                }
+                if (!usersDict.TryGetValue(ev.OwnerId, out var owner)) continue;
 
-                if (owner == null || !await CanView(ev, owner, currentUserId, isStaff))
+                if (!await CanView(ev, currentUserId, isStaff))
                     continue;
 
                 var members = await _client.From<EventMember>().Where(m => m.EventId == ev.EventId).Get();
-
                 result.Add(Mappers.ToCard(ev, owner, members.Models.Count));
             }
-
             return result;
         }
 
@@ -662,10 +657,13 @@ namespace api.Support
         {
             var response = await _client.From<Event>().Where(e => e.EventId == eventId).Get();
             var ev = response.Models.FirstOrDefault();
-            if (ev == null) return null;
+            if (ev == null)
+                return null;
 
-            var owner = await GetUserAsync(ev.OwnerId);
-            if (owner == null || !await CanView(ev, owner, currentUserId, isStaff)) return null;
+            var owner = await GetUserCachedAsync(ev.OwnerId);
+            if (owner == null) return null;
+
+            if (!await CanView(ev, currentUserId, isStaff)) return null;
 
             var members = await _client.From<EventMember>().Where(m => m.EventId == eventId).Get();
 
@@ -675,6 +673,7 @@ namespace api.Support
             card["stages"] = ParseStages(ev.Stages);
             card["applicationForm"] = ParseFormFields(ev.ApplicationForm);
             card["results"] = ev.Results;
+
             return card;
         }
 
@@ -744,7 +743,7 @@ namespace api.Support
             var app = response.Models.FirstOrDefault();
             if (app == null) return null;
 
-            var applicant = await GetUserAsync(app.UserId);
+            var applicant = await GetUserCachedAsync(app.UserId);
             if (applicant == null) return null;
 
             var members = await _client.From<EventMember>().Where(m => m.EventId == ev.EventId).Get();
@@ -902,17 +901,17 @@ namespace api.Support
             if (matches.Count == 0) return;
 
             var nicknames = matches.Select(m => m.Groups[1].Value).Distinct().ToList();
-            var authorNickname = (await GetUserAsync(authorId))?.Nickname ?? "Пользователь";
+
+            var allUsers = await GetAllUsersAsync();
+            var usersByNickname = allUsers.Where(u => !string.IsNullOrEmpty(u.Nickname))
+                                          .ToDictionary(u => u.Nickname!, u => u, StringComparer.OrdinalIgnoreCase);
+
+            var authorNickname = usersByNickname.TryGetValue(authorId, out var author) ? (author.Nickname ?? "Пользователь") : "Пользователь";
 
             foreach (var nickname in nicknames)
             {
-                var userResponse = await _client.From<User>()
-                    .Where(u => u.Nickname == nickname)
-                    .Get();
-
-                var mentionedUser = userResponse.Models.FirstOrDefault();
-                if (mentionedUser == null || mentionedUser.UserId == authorId)
-                    continue;
+                if (!usersByNickname.TryGetValue(nickname, out var mentionedUser)) continue;
+                if (mentionedUser.UserId == authorId) continue;
 
                 var mention = new CommentMention
                 {
@@ -924,23 +923,13 @@ namespace api.Support
 
                 try
                 {
-                    await _client.From<CommentMention>().Insert(
-                        mention,
-                        new QueryOptions { Returning = QueryOptions.ReturnType.Minimal }
-                    );
+                    await _client.From<CommentMention>().Insert(mention, new QueryOptions { Returning = QueryOptions.ReturnType.Minimal });
                 }
-                catch
-                {
-                    continue;
-                }
+                catch { continue; }
 
                 await SendNotificationAsync(
                     mentionedUser.UserId!, "comment", comment.ReferenceId, "comment_mention",
-                    new Dictionary<string, object>
-                    {
-                        ["nickname"] = authorNickname,
-                        ["commentId"] = comment.CommentId
-                    });
+                    new Dictionary<string, object> { ["nickname"] = authorNickname, ["commentId"] = comment.CommentId });
             }
         }
 
@@ -996,6 +985,159 @@ namespace api.Support
             }
             catch { }
         }
+
+        // КЕШ
+
+        // Все пользователи: основа для списков, комментариев, профилей
+        public async Task<List<User>> GetAllUsersAsync() =>
+            (await _cache.SnapshotAsync(CacheKeys.UsersAll,
+                async () => (await _client.From<User>().Get()).Models,
+                CacheStale.Short, CacheKeys.Tags.Users)).Value;
+
+        // Профиль по id
+        public async Task<Models.User?> GetUserCachedAsync(string userId)
+        {
+            var u = (await GetAllUsersAsync()).FirstOrDefault(x => x.UserId == userId);
+            if (u != null) return u;
+
+            var r = await _client.From<User>().Where(x => x.UserId == userId).Get();
+            u = r.Models.FirstOrDefault();
+            if (u != null)
+            {
+                await _cache.InvalidateAsync(CacheKeys.Tags.Users);
+            }
+            return u;
+        }
+
+        // Счётчики для сортировки пользователей
+        public async Task<UserCounts> GetUserCountsAsync() =>
+            (await _cache.SnapshotAsync(CacheKeys.UserCounts, async () =>
+            {
+                var projects = (await _client.From<Project>().Get()).Models
+                    .GroupBy(p => p.OwnerId).ToDictionary(g => g.Key, g => g.Count());
+                var ratings = (await _client.From<ProjectRating>().Get()).Models
+                    .GroupBy(r => r.UserId).ToDictionary(g => g.Key, g => g.Count());
+                return new UserCounts(projects, ratings);
+            }, CacheStale.Medium, CacheKeys.Tags.Projects)).Value;
+
+        // Все открытые заявки публичных проектов
+        public async Task<List<VacancyListItem>> GetVacancyListAsync() =>
+            (await _cache.SnapshotAsync(CacheKeys.VacanciesAll, async () =>
+            {
+                var vacancies = (await _client.From<Vacancy>().Where(v => v.IsOpen == true).Get()).Models;
+                var projects = (await _client.From<Project>().Get()).Models
+                    .Where(p => !p.IsPrivate).ToDictionary(p => p.ProjectId);
+                var owners = (await GetAllUsersAsync())
+                    .Where(u => u.UserId != null).ToDictionary(u => u.UserId!);
+                var members = (await _client.From<ProjectMember>().Get()).Models 
+                    .GroupBy(m => m.ProjectId).ToDictionary(g => g.Key, g => g.Count());
+
+                var list = new List<VacancyListItem>();
+                foreach (var v in vacancies)
+                {
+                    if (!projects.TryGetValue(v.ProjectId, out var p)) continue;
+                    owners.TryGetValue(p.OwnerId, out var owner);
+                    list.Add(new VacancyListItem(v, p, members.GetValueOrDefault(p.ProjectId),
+                                 owner?.Nickname, owner?.IsBanned == true));
+                }
+                return list;
+            }, CacheStale.Medium, CacheKeys.Tags.Vacancies, CacheKeys.Tags.Projects, CacheKeys.Tags.Users)).Value;
+
+        // Все публичные мероприятия
+        public async Task<List<EventListItem>> GetPublicEventsAsync() =>
+            (await _cache.SnapshotAsync(CacheKeys.EventsAll, async () =>
+            {
+                var events = (await _client.From<Event>().Where(e => e.IsPrivate == false).Get()).Models;
+                var owners = (await GetAllUsersAsync())
+                    .Where(u => u.UserId != null).ToDictionary(u => u.UserId!);
+                var members = (await _client.From<EventMember>().Get()).Models
+                    .GroupBy(m => m.EventId).ToDictionary(g => g.Key, g => g.Count());
+
+                var list = new List<EventListItem>();
+                foreach (var ev in events)
+                    if (owners.TryGetValue(ev.OwnerId, out var o))
+                        list.Add(new EventListItem(ev, o, members.GetValueOrDefault(ev.EventId)));
+                return list;
+            }, CacheStale.Medium, CacheKeys.Tags.Events, CacheKeys.Tags.Users)).Value;
+
+        // Команда проекта
+        public async Task<List<object>> GetProjectMemberCardsAsync(string projectId) =>
+            (await _cache.SnapshotAsync(CacheKeys.ProjectMembers(projectId), async () =>
+            {
+                var response = await _client.From<ProjectMember>()
+                    .Where(pm => pm.ProjectId == projectId).Get();
+
+                var result = new List<object>();
+                foreach (var m in response.Models)
+                {
+                    var rpcResult = await _client.Rpc("get_team_member_card",
+                        new Dictionary<string, object> { { "p_user_id", m.UserId } });
+
+                    var rows = JsonSerializer.Deserialize<List<TeamMemberCardRow>>(rpcResult.Content ?? "[]");
+                    var user = rows?.FirstOrDefault();
+                    if (user == null) continue;
+
+                    result.Add(new
+                    {
+                        m.MemberId,
+                        m.ProjectId,
+                        m.UserId,
+                        m.Role,
+                        JoinedAt = m.JoinedAt?.ToString("o"),
+                        user.Nickname,
+                        user.AvatarUrl,
+                        user.RealName,
+                        user.Age,
+                        user.City,
+                        user.Workplace,
+                        user.ProfileRole,
+                        user.SystemRole,
+                        user.IsBanned,
+                        user.HardSkills,
+                        user.SoftSkills,
+                        LastOnlineAt = user.LastOnlineAt?.ToString("o"),
+                        IsOnline = IsOnline(user.LastOnlineAt),
+                        LastSeen = FormatLastSeen(user.LastOnlineAt)
+                    });
+                }
+                return result;
+            }, CacheStale.Short, CacheKeys.Tags.Project(projectId), CacheKeys.Tags.Users)).Value;
+
+        // Комментарии
+        public async Task<List<object>> GetCommentsAsync(string type, string id) =>
+            (await _cache.SnapshotAsync(CacheKeys.Comments(type, id), async () =>
+            {
+                var comments = await _client.From<Comment>() 
+                    .Where(c => c.ReferenceType == type && c.ReferenceId == id)
+                    .Order(c => c.CreatedAt!, Supabase.Postgrest.Constants.Ordering.Ascending).Get();
+
+                var users = (await GetAllUsersAsync())
+                    .Where(u => u.UserId != null).ToDictionary(u => u.UserId!);
+
+                var result = new List<object>();
+                foreach (var c in comments.Models)
+                {
+                    User? u = null;
+                    if (!string.IsNullOrEmpty(c.UserId)) users.TryGetValue(c.UserId, out u);
+                    result.Add(new
+                    {
+                        c.CommentId,
+                        c.UserId,
+                        u?.Nickname,
+                        u?.AvatarUrl,
+                        c.ParentCommentId,
+                        Content = c.IsDeleted ? null : c.Content,
+                        AuthorSystemRole = u?.SystemRole,
+                        c.IsEdited,
+                        c.IsDeleted,
+                        c.DeletedByModerator,
+                        CreatedAt = c.CreatedAt?.ToString("o"),
+                        UpdatedAt = c.UpdatedAt?.ToString("o")
+                    });
+                }
+                return result;
+            }, CacheStale.Medium, CacheKeys.Tags.Comments(type, id), CacheKeys.Tags.Users)).Value;
+
 
         [GeneratedRegex(@"@([a-zA-Z0-9_]+)", RegexOptions.Compiled)]
         private static partial Regex MyRegex();

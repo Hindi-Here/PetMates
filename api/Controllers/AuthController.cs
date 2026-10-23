@@ -33,6 +33,8 @@ namespace api.Controllers
                 };
 
                 var session = await _client.Auth.SignUp(request.Email, request.Password, options);
+                await _SupMan.Cache.InvalidateAsync(CacheKeys.Tags.Users);
+
                 return Ok(new
                 {
                     userId = session!.User?.Id,

@@ -8,9 +8,11 @@ namespace api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class ProfileController(Client client) : ControllerBase
+    public class ProfileController(Client client, SupportManager SupMan) : ControllerBase
     {
         private readonly Client _client = client;
+
+        private readonly SupportManager _SupMan = SupMan;
 
         // Получить профиль текущего пользователя
         [HttpGet("me")]
@@ -131,6 +133,8 @@ namespace api.Controllers
 
                 var updated = await query.Update();
 
+                await _SupMan.Cache.UserChangedAsync(userAuth.Id!);
+
                 if (updated.Models == null || updated.Models.Count == 0)
                 {
                     var current = await _client.From<User>().Where(x => x.UserId == userAuth.Id).Get();
@@ -156,7 +160,7 @@ namespace api.Controllers
 
             var token = authHeader["Bearer ".Length..];
 
-            var (error, extension) = Validator.ValidateAvatar(file);
+            var (error, _) = Validator.ValidateAvatar(file);
             if (error != null)
                 return BadRequest(new { message = error });
 
@@ -165,21 +169,29 @@ namespace api.Controllers
                 var userAuth = await _client.Auth.GetUser(token);
                 if (userAuth == null) return Unauthorized();
 
-                using var memoryStream = new MemoryStream();
-                using var stream = file.OpenReadStream();
-                await stream.CopyToAsync(memoryStream);
-                var bytes = memoryStream.ToArray();
+                using var input = file.OpenReadStream();
+                if (!ImageOptimizer.TryOptimize(input, ImageKind.Avatar, null, out var optimized, out var optError))
+                    return BadRequest(new { message = optError });
 
-                var fileName = $"{userAuth.Id}/avatar{extension}";
+                var fileName = $"{userAuth.Id}/avatar.webp";
 
                 await _client.Storage
                     .From("Avatar")
-                    .Upload(bytes, fileName, new Supabase.Storage.FileOptions { Upsert = true });
+                    .Upload(optimized!.Bytes, fileName, new Supabase.Storage.FileOptions
+                    {
+                        Upsert = true,
+                        ContentType = optimized.ContentType,
+                        CacheControl = "31536000"
+                    });
 
-                var publicUrl = _client.Storage
-                    .From("Avatar")
-                    .GetPublicUrl(fileName);
+                try
+                {
+                    await _client.Storage.From("Avatar").Remove(
+                        [$"{userAuth.Id}/avatar.png", $"{userAuth.Id}/avatar.jpg"]);
+                }
+                catch { }
 
+                var publicUrl = _client.Storage.From("Avatar").GetPublicUrl(fileName);
                 var urlWithCacheBuster = $"{publicUrl}?t={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
 
                 await _client.From<User>()
@@ -187,6 +199,7 @@ namespace api.Controllers
                     .Set(x => x.AvatarUrl!, urlWithCacheBuster)
                     .Update();
 
+                await _SupMan.Cache.UserChangedAsync(userAuth.Id!);
                 return Ok(new { avatarUrl = urlWithCacheBuster });
             }
             catch (Exception)

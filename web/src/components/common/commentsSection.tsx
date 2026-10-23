@@ -3,10 +3,11 @@ import Edit from '@icons/edit.svg?react'
 import Reject from '@icons/reject.svg?react'
 
 import { useState } from 'react'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { commentApi, type CommentData } from '../services/comment'
 import { useAuth } from '../hooks/useAuth'
-import {LIMITS} from '../scripts/limits'
+import { LIMITS } from '../scripts/limits'
+import { queryKeys } from '../scripts/query/queryKeys'
 
 interface CommentNode extends CommentData {
   replies: CommentNode[]
@@ -42,6 +43,7 @@ export const CommentsSection = ({
   canDeleteComment,
 }: CommentsSectionProps) => {
   const { userId, isAuthenticated } = useAuth()
+  const queryClient = useQueryClient()
 
   const [newComment, setNewComment] = useState('')
   const [replyingTo, setReplyingTo] = useState<string | null>(null)
@@ -50,19 +52,19 @@ export const CommentsSection = ({
   const [editContent, setEditContent] = useState('')
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
 
-  const { data: comments = [], refetch } = useQuery({
-    queryKey: ['comments', referenceType, referenceId],
+  const { data: comments = [] } = useQuery({
+    queryKey: queryKeys.comments.byRef(referenceType, referenceId),
     queryFn: () => commentApi.getComments(referenceType, referenceId),
     enabled: !!referenceId,
   })
 
-  const[_, setError] = useState<string | null>(null)
+  const [_, setError] = useState<string | null>(null)
 
   const createMutation = useMutation({
     mutationFn: (dto: { content: string; parentCommentId?: string }) =>
       commentApi.create({ referenceType, referenceId, ...dto }),
-    onSuccess: () => {
-      refetch()
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.comments.byRef(referenceType, referenceId) })
       setNewComment('')
       setReplyingTo(null)
       setReplyContent('')
@@ -73,8 +75,8 @@ export const CommentsSection = ({
 
   const updateMutation = useMutation({
     mutationFn: ({ commentId, content }: { commentId: string; content: string }) => commentApi.update(commentId, content),
-    onSuccess: () => {
-      refetch()
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.comments.byRef(referenceType, referenceId) })
       setEditingId(null)
       setEditContent('')
     },
@@ -82,7 +84,9 @@ export const CommentsSection = ({
 
   const deleteMutation = useMutation({
     mutationFn: (commentId: string) => commentApi.delete(commentId),
-    onSuccess: () => { refetch() },
+    onSuccess: async () => { 
+      await queryClient.invalidateQueries({ queryKey: queryKeys.comments.byRef(referenceType, referenceId) }) 
+    },
   })
 
   const toggleReplies = (id: string) =>

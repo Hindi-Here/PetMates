@@ -33,7 +33,7 @@ export const projectMembersApi = {
   // Получить всех участников проекта
   getByProject: async (projectId: string): Promise<ProjectMemberData[]> => {
     const { data: { session } } = await supabase.auth.getSession();
-    const response = await fetch(`${API_BASE}/api/projectmembers/project/${projectId}`, {
+    const response = await fetch(`${API_BASE}/api/projectmember/project/${projectId}`, {
       headers: {
         ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {}),
         'Content-Type': 'application/json'
@@ -47,7 +47,7 @@ export const projectMembersApi = {
   addMember: async (data: { projectId: string; userId: string; role: string }) => {
     const { data: { session } } = await supabase.auth.getSession()
     
-    const response = await fetch(`${API_BASE}/api/projectmembers`, {
+    const response = await fetch(`${API_BASE}/api/projectmember`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -73,7 +73,7 @@ export const projectMembersApi = {
   removeMember: async (memberId: string): Promise<void> => {
     const { data: { session } } = await supabase.auth.getSession();
     
-    const response = await fetch(`${API_BASE}/api/projectmembers/${memberId}`, {
+    const response = await fetch(`${API_BASE}/api/projectmember/${memberId}`, {
       method: 'DELETE',
       headers: { 
         'Authorization': `Bearer ${session?.access_token}`,
@@ -88,7 +88,7 @@ export const projectMembersApi = {
   updateMemberRole: async (memberId: string, newRole: string): Promise<ProjectMemberData> => {
     const { data: { session } } = await supabase.auth.getSession();
     
-    const response = await fetch(`${API_BASE}/api/projectmembers/${memberId}/role`, {
+    const response = await fetch(`${API_BASE}/api/projectmember/${memberId}/role`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${session?.access_token}`,

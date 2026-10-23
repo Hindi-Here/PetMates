@@ -13,6 +13,8 @@ import { inviteApi, type InviteData } from '../services/invite'
 import { projectsApi } from '../services/project'
 import { notificationApi } from '../services/notification'
 import { usersApi } from '../services/users'
+import { STALE } from '../scripts/query/queryClient'
+import { invalidateRelations } from '../scripts/query/invalidate'
 
 // Отправка уведомления пользователю
 const sendNotification = (
@@ -208,9 +210,7 @@ export const Responses = () => {
       ])
       return [...inc, ...out]
     },
-    staleTime: 0,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
+    staleTime: STALE.short,
   })
 
   const { data: incomingResponses = [] } = useQuery({
@@ -227,18 +227,14 @@ export const Responses = () => {
       return responsesArrays.flat()
     },
     enabled: !!userId,
-    staleTime: 0,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
+    staleTime: STALE.short,
   })
 
   const { data: outgoingResponses = [] } = useQuery({
     queryKey: ['responses', 'outgoing', userId],
     queryFn: () => responseApi.getOutgoing(userId!),
     enabled: !!userId,
-    staleTime: 0,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
+    staleTime: STALE.short,
   })
 
   const incomingInvites = useMemo(() =>
@@ -253,16 +249,15 @@ export const Responses = () => {
 
   const deleteResponseMutation = useMutation({
     mutationFn: (responseId: string) => responseApi.delete(responseId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['responses', 'incoming', userId] })
-      queryClient.invalidateQueries({ queryKey: ['responses', 'outgoing', userId] })
+    onSuccess: async () => {
+      await invalidateRelations(queryClient)
     },
   })
 
   const deleteInviteMutation = useMutation({
     mutationFn: (inviteId: string) => inviteApi.delete(inviteId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.invites.all })
+    onSuccess: async () => {
+      await invalidateRelations(queryClient)
     },
   })
 
@@ -277,13 +272,11 @@ export const Responses = () => {
         vacancyName: response.vacancyTitle || 'Заявка',
       })
 
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.notifications.all,
-        refetchType: 'active'
-      })
+      await invalidateRelations(queryClient)
+
     } catch (error) {
       console.error('Ошибка обработки отклика:', error)
-      queryClient.invalidateQueries({ queryKey: ['responses', 'incoming', userId] })
+      await invalidateRelations(queryClient)
     }
   }
 
@@ -304,10 +297,7 @@ export const Responses = () => {
         console.error('Ошибка получения проекта для уведомления:', error)
       }
 
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.notifications.all,
-        refetchType: 'active'
-      })
+      await invalidateRelations(queryClient)
     } catch (error) {
       console.error('Ошибка обработки приглашения:', error)
     }
@@ -324,10 +314,7 @@ export const Responses = () => {
           vacancyName: response.vacancyTitle || 'Заявка',
           nickname: currentUserNickname || 'Пользователь',
         })
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.notifications.all,
-          refetchType: 'active'
-        })
+        await invalidateRelations(queryClient)
       } catch (error) {
         console.error('Ошибка получения проекта для уведомления:', error)
       }
@@ -346,10 +333,7 @@ export const Responses = () => {
         nickname: currentUserNickname || 'Пользователь',
       })
 
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.notifications.all,
-        refetchType: 'active'
-      })
+      await invalidateRelations(queryClient)
     } catch (error) {
       console.error('Ошибка отмены приглашения:', error)
     }

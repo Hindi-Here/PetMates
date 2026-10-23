@@ -9,6 +9,7 @@ import type { EventPublicData } from './event_public_view'
 import './event_applications.scss'
 
 import { LIMITS } from '../../scripts/limits'
+import { STALE } from '@/components/scripts/query/queryClient'
 
 const BANNER_TEXT: Record<MyApplication['status'], string> = {
   pending: 'Заявка отправлена и ожидает решения организатора',
@@ -29,8 +30,7 @@ export const EventApplicationForm = ({ data }: { data: EventPublicData }) => {
     queryKey: myKey,
     queryFn: () => eventApi.getMyApplication(data.eventId),
     enabled: !!userId,
-    staleTime: 0,
-    refetchOnMount: 'always',
+    staleTime: STALE.none,
   })
 
   const [values, setValues] = useState<Record<string, string>>({})

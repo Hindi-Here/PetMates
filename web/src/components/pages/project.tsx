@@ -28,7 +28,6 @@ import { projectsApi, projectDraftApi, type ProjectDraftData } from '../services
 import { projectMembersApi } from '../services/project_members'
 import { usersApi, type UserData } from '../services/users'
 import { vacanciesApi, type VacancyData } from '../services/vacancy'
-import { commentApi, type CommentData } from '../services/comment'
 import { responseApi, type ResponseData } from '../services/response'
 import { inviteApi, type InviteData } from '../services/invite'
 import { notificationApi } from '../services/notification'
@@ -37,6 +36,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '../scripts/query/queryKeys'
 import { UserCard } from '../common/userCard'
 import { LIMITS, TIMING, maxChars, minChars } from '../scripts/limits'
+import { STALE } from '../scripts/query/queryClient'
+import { invalidateProjects, invalidateRelations } from '../scripts/query/invalidate'
+import { CommentsSection } from '../common/commentsSection'
 
 export interface TeamMemberWithUser {
   memberId: string
@@ -52,10 +54,6 @@ interface LocalVacancy extends VacancyData {
   createdAt?: string
   _isNew?: boolean
   _isModified?: boolean
-}
-
-interface CommentNode extends CommentData {
-  replies: CommentNode[]
 }
 
 const STATUS_OPTIONS = ['В процессе', 'Завершён', 'Приостановлен']
@@ -286,30 +284,13 @@ const notifyAllMembersExceptOwner = (
   })
 }
 
-const buildCommentTree = (commentsList: CommentData[]): CommentNode[] => {
-  const map = new Map<string, CommentNode>()
-  const roots: CommentNode[] = []
-  commentsList.forEach(c => {
-    map.set(c.commentId, { ...c, replies: [] })
-  })
-  commentsList.forEach(c => {
-    const node = map.get(c.commentId)!
-    if (c.parentCommentId && map.has(c.parentCommentId)) {
-      map.get(c.parentCommentId)!.replies.push(node)
-    } else {
-      roots.push(node)
-    }
-  })
-  return roots
-}
-
 interface ProjectProps { onCancel?: () => void }
 
 export const Project = ({ onCancel }: ProjectProps) => {
   const navigate = useNavigate()
   const { projectId, profileId } = useParams<{ projectId: string; profileId: string }>()
   const profilePath = profileId ? `/profile/${profileId}` : '/profile'
-  const { userId: currentUserId, isAuthenticated } = useAuth()
+  const { userId: currentUserId } = useAuth()
   const queryClient = useQueryClient()
 
   const [isPreview, setIsPreview] = useState(false)
@@ -323,11 +304,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
   const [hasTeamDraft, setHasTeamDraft] = useState(false)
   const [hasVacanciesDraft, setHasVacanciesDraft] = useState(false)
   const [loadedDraft, setLoadedDraft] = useState<ProjectDraftData | null | undefined>(undefined)
-  const [newComment, setNewComment] = useState('')
-  const [replyingTo, setReplyingTo] = useState<string | null>(null)
-  const [replyContent, setReplyContent] = useState('')
-  const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
-  const [editContent, setEditContent] = useState('')
   const [name, setName] = useState('Unnamed')
   const [shortDesc, setShortDesc] = useState('')
   const [status, setStatus] = useState(STATUS_OPTIONS[0])
@@ -357,7 +333,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
   const [editedRoles, setEditedRoles] = useState<Record<string, string>>({})
   const [initialTeamState, setInitialTeamState] = useState<TeamMemberWithUser[]>([])
   const teamInitializedRef = useRef(false)
-  const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set())
   const [currentUserNickname, setCurrentUserNickname] = useState<string | null>(null)
   const [showDeleteForm, setShowDeleteForm] = useState(false)
   const [isPreviewDescription, setIsPreviewDescription] = useState(false)
@@ -534,17 +509,22 @@ export const Project = ({ onCancel }: ProjectProps) => {
     queryKey: queryKeys.projects.byId(projectId!),
     queryFn: () => projectsApi.getProject(projectId!),
     enabled: !!projectId,
-    staleTime: 0,
+    staleTime: STALE.none,
   })
 
   const isOwner = project?.ownerId === currentUserId
 
   const { data: teamMembers = [] } = useQuery<TeamMemberWithUser[]>({
-    queryKey: queryKeys.projects.memberProjects(projectId!),
+    queryKey: queryKeys.projects.team(projectId!),
     queryFn: async () => {
       if (!projectId) return []
       const members = await projectMembersApi.getByProject(projectId)
-      const proj = await projectsApi.getProject(projectId)
+    
+      const proj = await queryClient.ensureQueryData({
+        queryKey: queryKeys.projects.byId(projectId),
+        queryFn: () => projectsApi.getProject(projectId),
+      })
+
       const membersWithUsers: TeamMemberWithUser[] = members.map((member) => ({
         memberId: member.memberId,
         projectId: member.projectId,
@@ -576,34 +556,28 @@ export const Project = ({ onCancel }: ProjectProps) => {
       })
     },
     enabled: !!projectId,
-    staleTime: 0,
+    staleTime: STALE.none,
   })
 
   const { data: vacanciesFromDb = [] } = useQuery({
     queryKey: queryKeys.vacancies.byProject(projectId!),
     queryFn: () => vacanciesApi.getByProject(projectId!),
     enabled: !!projectId,
-    staleTime: 0,
+    staleTime: STALE.none,
   })
 
   const { data: responses = [] } = useQuery({
     queryKey: queryKeys.responses.byProject(projectId!),
     queryFn: () => responseApi.getByProject(projectId!),
     enabled: !!projectId,
-    staleTime: 0,
+    staleTime: STALE.none,
   })
 
   const { data: allInvites = [] } = useQuery({
     queryKey: queryKeys.invites.outgoing(profileId || ''),
     queryFn: () => inviteApi.getOutgoing(),
     enabled: !!profileId,
-    staleTime: 0,
-  })
-
-  const { data: comments = [], refetch: refetchComments } = useQuery({
-    queryKey: ['comments', 'project', projectId],
-    queryFn: () => commentApi.getComments('project', projectId!),
-    enabled: !!projectId,
+    staleTime: STALE.none,
   })
 
   const projectInvites = useMemo(() =>
@@ -1062,10 +1036,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
         }, projectName)
       }
 
-      queryClient.invalidateQueries({ queryKey: queryKeys.projects.byId(projectId) })
-      queryClient.invalidateQueries({ queryKey: queryKeys.vacancies.byProject(projectId) })
-      queryClient.invalidateQueries({ queryKey: queryKeys.projects.memberProjects(projectId!) })
-      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all })
+      await invalidateProjects(queryClient)
 
       teamInitializedRef.current = false
       vacanciesSyncedRef.current = false
@@ -1146,7 +1117,10 @@ export const Project = ({ onCancel }: ProjectProps) => {
       setInviteMessageType('success')
       setTimeout(() => resetInviteMessage(), TIMING.toastMs)
       teamInitializedRef.current = false
-      await queryClient.invalidateQueries({ queryKey: queryKeys.projects.memberProjects(projectId!) })
+
+      await queryClient.invalidateQueries({ queryKey: queryKeys.projects.team(projectId!) })
+      await queryClient.invalidateQueries({ queryKey: queryKeys.projects.members(projectId!) })
+
       const projectName = name || project?.title || 'Проект'
       const nickname = targetUser.nickname || 'Пользователь'
       const role = inviteRole.trim()
@@ -1161,7 +1135,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
         projectName,
         role,
       }, projectName)
-      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all })
+      await invalidateRelations(queryClient)
     },
     onError: (error: any) => {
       const message = error?.message || error?.toString?.() || 'Не удалось добавить участника'
@@ -1312,7 +1286,9 @@ export const Project = ({ onCancel }: ProjectProps) => {
       }, projectName)
     })
 
-    queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all })
+    queryClient.removeQueries({ queryKey: queryKeys.projects.byId(projectId!) })
+    invalidateProjects(queryClient)
+
     navigate(`${profilePath}/activity`, { replace: true })
   }
 
@@ -1332,18 +1308,16 @@ export const Project = ({ onCancel }: ProjectProps) => {
             userId: response.userId,
             role: response.vacancyTitle || 'Участник'
           })
-          queryClient.invalidateQueries({ queryKey: queryKeys.projects.memberProjects(projectId!) })
+          await queryClient.invalidateQueries({ queryKey: queryKeys.projects.team(projectId!) })
+          await queryClient.invalidateQueries({ queryKey: queryKeys.projects.members(projectId!) })
+
           teamInitializedRef.current = false
         }
         catch (addError) {
           console.error('Ошибка добавления участника:', addError)
         }
       }
-      queryClient.invalidateQueries({ queryKey: queryKeys.responses.byProject(projectId!) })
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.notifications.all,
-        refetchType: 'active'
-      })
+      await invalidateRelations(queryClient)
     }
     catch (error) {
       console.error('Ошибка обработки отклика:', error)
@@ -1367,191 +1341,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
     catch (error) {
       console.error('Ошибка отмены приглашения:', error)
     }
-  }
-
-  const createCommentMutation = useMutation({
-  mutationFn: (dto: { referenceType: string; referenceId: string; content: string; parentCommentId?: string }) => commentApi.create(dto),
-    onSuccess: () => {
-      refetchComments()
-      setNewComment('')
-      setReplyingTo(null)
-      setReplyContent('')
-    },
-  })
-
-  const updateCommentMutation = useMutation({
-    mutationFn: ({ commentId, content }: { commentId: string, content: string }) => commentApi.update(commentId, content),
-    onSuccess: () => {
-      refetchComments()
-      setEditingCommentId(null)
-      setEditContent('')
-    },
-  })
-
-  const deleteCommentMutation = useMutation({
-    mutationFn: (commentId: string) => commentApi.delete(commentId),
-    onSuccess: () => {
-      refetchComments()
-    },
-  })
-
-  const toggleReplies = (commentId: string) => {
-    setExpandedComments(prev => {
-      const newSet = new Set(prev)
-      if (newSet.has(commentId)) {
-        newSet.delete(commentId)
-      } else {
-        newSet.add(commentId)
-      }
-      return newSet
-    })
-  }
-
-  const isExpanded = (commentId: string) => expandedComments.has(commentId)
-
-  const renderCommentNode = (node: CommentNode, depth = 0) => {
-    const isAuthor = node.userId === currentUserId
-    const canDelete = isAuthor || isOwner
-    const canEdit = isAuthor
-    const hasReplies = node.replies.length > 0
-    const expanded = isExpanded(node.commentId)
-
-    return (
-      <div key={node.commentId} className={`comment-item ${depth > 0 ? 'comment-reply' : ''}`}>
-        <div className='comment-wrapper'>
-          <div className='comment-avatar'>
-            <img src={node.avatarUrl || '/default-avatar.png'} alt={node.nickname || 'User'} />
-          </div>
-          <div className='comment-body'>
-            <div className='comment-header'>
-              <div className='comment-meta'>
-                <span className='comment-author'>@{node.nickname || 'deleted_user'}</span>
-                <span className='comment-date'>{new Date(node.createdAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })}, {new Date(node.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</span>
-                {node.isEdited && <span className='comment-edited'>• изменено</span>}
-              </div>
-              {!node.isDeleted && (
-                <div className='comment-actions-right'>
-                  {canEdit && (
-                    <button
-                      className='comment-edit-badge'
-                      onClick={() => {
-                        setReplyingTo(null)
-                        setReplyContent('')
-                        setEditingCommentId(node.commentId)
-                        setEditContent(node.content || '')
-                      }}
-                    >
-                      <Edit className='ico' />
-                    </button>
-                  )}
-                  {canDelete && (
-                    <button
-                      className='comment-remove-badge'
-                      onClick={() => { deleteCommentMutation.mutate(node.commentId) }}
-                    >
-                      <Reject className='ico' />
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-            {node.isDeleted ? (
-              <div className='comment-content deleted'>Комментарий удален</div>
-            ) : (
-              <div className='comment-content'>{node.content}</div>
-            )}
-            <div className='comment-actions-left'>
-              {!node.isDeleted && (
-                <button
-                  className='comment-action-text'
-                  onClick={() => {
-                    setEditingCommentId(null)
-                    setEditContent('')
-                    setReplyingTo(replyingTo === node.commentId ? null : node.commentId)
-                  }}
-                >
-                  Ответить
-                </button>
-              )}
-              {hasReplies && (
-                <button
-                  className='comment-action-text expand-replies'
-                  onClick={() => toggleReplies(node.commentId)}
-                >
-                  {expanded ? 'Скрыть ответы' : `${node.replies.length} ${node.replies.length === 1 ? 'ответ' : node.replies.length < 5 ? 'ответа' : 'ответов'}`}
-                  <span className={`expand-icon ${expanded ? 'expanded' : ''}`}>▾</span>
-                </button>
-              )}
-            </div>
-            {replyingTo === node.commentId && (
-              <div className='comment-reply-input'>
-                <textarea
-                  className='comment-textarea small'
-                  placeholder={`Ответ для @${node.nickname}...`}
-                  value={replyContent}
-                  onChange={(e) => setReplyContent(e.target.value)}
-                />
-                <div className='comment-form-actions'>
-                  <button
-                    className='comment-btn confirm'
-                    onClick={() => createCommentMutation.mutate({
-                      referenceType: 'project',
-                      referenceId: projectId!,
-                      content: replyContent,
-                      parentCommentId: node.commentId
-                    })}
-                    disabled={!replyContent.trim() || createCommentMutation.isPending}
-                  >
-                    Ответить
-                  </button>
-                  <button
-                    className='comment-btn cancel'
-                    onClick={() => {
-                      setReplyingTo(null)
-                      setReplyContent('')
-                    }}
-                  >
-                    Отмена
-                  </button>
-                </div>
-              </div>
-            )}
-            {editingCommentId === node.commentId && (
-              <div className='comment-edit-input'>
-                <textarea
-                  className='comment-textarea small'
-                  value={editContent}
-                  onChange={(e) => setEditContent(e.target.value)}
-                />
-                <div className='comment-form-actions'>
-                  <button
-                    className='comment-btn confirm'
-                    onClick={() => updateCommentMutation.mutate({ commentId: node.commentId, content: editContent })}
-                    disabled={!editContent.trim() || updateCommentMutation.isPending}
-                  >
-                    Изменить
-                  </button>
-                  <button
-                    className='comment-btn cancel'
-                    onClick={() => {
-                      setEditingCommentId(null)
-                      setEditContent('')
-                    }}
-                  >
-                    Отмена
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-        {hasReplies && expanded && (
-          <div className='comment-replies'>
-            {node.replies.map(reply => renderCommentNode(reply, depth + 1))}
-          </div>
-        )}
-      </div>
-    )
   }
 
   return (
@@ -1931,33 +1720,11 @@ export const Project = ({ onCancel }: ProjectProps) => {
             </div>
           </section>
 
-          <section className='project-section'>
-            <h2 className='project-section-title'>
-              Комментарии: <span className='project-count'>{comments.length}</span>
-            </h2>
-            <div className='comment-input-wrapper'>
-              <textarea
-                className='comment-textarea'
-                placeholder='Место для твоего коммментария...'
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-              />
-              <button
-                className='comment-btn send'
-                onClick={() => createCommentMutation.mutate({ referenceType: 'project', referenceId: projectId!, content: newComment })}
-                disabled={!newComment.trim() || createCommentMutation.isPending || !isAuthenticated}
-              >
-                Отправить
-              </button>
-            </div>
-            <div className='comments-list'>
-              {comments.length === 0 ? (
-                <p className='no-comments-text'>Пока нет комментариев. Будьте первым!</p>
-              ) : (
-                buildCommentTree(comments).map(node => renderCommentNode(node))
-              )}
-            </div>
-          </section>
+          <CommentsSection 
+            referenceType="project" 
+            referenceId={projectId!} 
+            isOwner={isOwner} 
+          />
         </>
       )}
 
