@@ -1,7 +1,27 @@
 import { API_BASE } from './cfg';
 import { supabase } from './cfg';
 import type { ProfileData } from '../hooks/useProfile';
-import type { ThirdProfileData } from '../hooks/useThirdProfile'; 
+
+export interface ThirdProfileData {
+  userId: string;
+  nickname: string;
+  avatarUrl?: string;
+  realName?: string;
+  age?: number;
+  gender?: string;
+  country?: string;
+  city?: string;
+  workplace?: string;
+  profileRole?: string;
+  description?: string;
+  hardSkills?: string[];
+  softSkills?: string[];
+  contacts?: string; 
+  lastOnlineAt?: string;
+  createdAt?: string;
+  isOnline: boolean;
+  lastSeen: string;
+}
 
 export const profileApi = {
   // Получить свой профиль

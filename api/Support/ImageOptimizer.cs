@@ -20,7 +20,6 @@ namespace api.Support
         public static bool TryOptimize(
             Stream input,
             ImageKind kind,
-            string? sourceExtension,
             out OptimizedImage? result,
             out string? error)
         {
@@ -29,14 +28,6 @@ namespace api.Support
 
             try
             {
-                if (sourceExtension == ".gif")
-                {
-                    using var ms = new MemoryStream();
-                    input.CopyTo(ms);
-                    result = new OptimizedImage(ms.ToArray(), ".gif", "image/gif");
-                    return true;
-                }
-
                 if (input.CanSeek) input.Position = 0;
 
                 using (var probe = Image.NewFromStream(input, access: Enums.Access.Sequential))

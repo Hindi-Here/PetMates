@@ -35,7 +35,7 @@ export const useProfile = (isAuth: boolean | null) => {
     queryKey: queryKeys.profile.me(userId),
     queryFn: profileApi.getMe,
     enabled: isAuth === true && !!userId,
-    staleTime: STALE.medium,
+    staleTime: STALE.short,
     retry: false,
   })
 

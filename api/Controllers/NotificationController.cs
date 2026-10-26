@@ -14,6 +14,16 @@ namespace api.Controllers
         private readonly Supabase.Client _client = client;
         private readonly SupportManager _SupMan = SupMan;
 
+        private static readonly HashSet<string> ClientTypes = ["project", "response", "invite"];
+        private static readonly HashSet<string> ClientEvents =
+        [
+            "added", "added_self", "removed", "removed_self", "role_changed", "role_changed_self", "status_changed",
+            "project_deleted", "response_sent", "response_received", "response_accepted", "response_rejected",
+            "response_cancelled", "responses_revoked_project_deleted", "responses_revoked_vacancy_deleted",
+            "invite_sent", "invite_received", "invite_accepted", "invite_rejected", "invite_cancelled",
+            "invites_revoked_project_deleted", "invites_revoked_vacancy_deleted"
+        ];
+
         // Получить уведомления
         [HttpGet]
         public async Task<IActionResult> GetNotifications([FromQuery] string? referenceType)
@@ -101,17 +111,10 @@ namespace api.Controllers
 
                 await _SupMan.UpdateLastOnlineAsync(userId);
 
-                var notifications = await _client.From<Notification>()
+                await _client.From<Notification>()
                     .Where(n => n.UserId == userId && n.IsRead == false)
-                    .Get();
-
-                foreach (var notification in notifications.Models)
-                {
-                    await _client.From<Notification>()
-                        .Where(n => n.NotificationId == notification.NotificationId)
-                        .Set(n => n.IsRead, true)
-                        .Update();
-                }
+                    .Set(n => n.IsRead, true)
+                    .Update();
 
                 return Ok(new { message = "Все уведомления отмечены как прочитанные" });
             }
@@ -128,13 +131,21 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = await _SupMan.GetUserIdAsync(authHeader);
-                if (string.IsNullOrEmpty(userId))
-                    return Unauthorized();
+                var actor = await _SupMan.GetActorAsync(authHeader);
+                if (actor == null) return Unauthorized();
+
+                if (!ClientTypes.Contains(dto.ReferenceType))
+                    return BadRequest(new { message = "Недопустимый тип уведомления" });
+
+                if (!dto.ContextData.TryGetValue("eventType", out var ev) || !ClientEvents.Contains(ev?.ToString() ?? ""))
+                    return BadRequest(new { message = "Недопустимое событие" });
+
+                if (dto.ContextData.Count > 10 || dto.ContextData.Values.Any(v => (v?.ToString()?.Length ?? 0) > 300))
+                    return BadRequest(new { message = "Слишком большие данные в контексте" });
 
                 var contextDataJson = JsonSerializer.Serialize(
                     dto.ContextData,
-                    Support.JsonOptions.Default
+                    Support.JsonOptions.Default 
                 );
 
                 var newNotification = new Notification
@@ -164,9 +175,9 @@ namespace api.Controllers
                     CreatedAt = newNotification.CreatedAt.ToString("o")
                 });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                return StatusCode(500, new { message = ex.Message });
+                return StatusCode(500, new { error = "Не удалось создать уведомление" });
             }
         }
 

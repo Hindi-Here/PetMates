@@ -93,9 +93,8 @@ const NotificationPanel = ({
     queryKey: queryKeys.notifications.all,
     queryFn: () => notificationApi.getAll(),
     staleTime: 30 * 1000,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
-    enabled: isOpen,
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: false,
   })
 
   const recentNotifications = notifications.slice(0, LAYOUT.notificationsPreview)
@@ -258,8 +257,8 @@ const Profile = ({ user }: { user: ProfileData | null }) => {
     queryKey: queryKeys.notifications.all,
     queryFn: () => notificationApi.getAll(),
     staleTime: 30 * 1000,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: false,
   })
 
   const unreadCount = notifications.filter(n => !n.isRead).length

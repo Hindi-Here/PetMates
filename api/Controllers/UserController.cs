@@ -28,22 +28,31 @@ namespace api.Controllers
                 var projectCounts = counts.ProjectCounts;
                 var ratingCounts = counts.RatingCounts;
 
-                if (showStaffOnly && showBannedOnly) users = [.. users.Where(u => Roles.IsStaff(u.SystemRole) && u.IsBanned == true)];
-                else if (showStaffOnly) users = [.. users.Where(u => Roles.IsStaff(u.SystemRole))];
-                else if (showBannedOnly && isStaff) users = [.. users.Where(u => u.IsBanned == true)];
-                else if (!isStaff) users = [.. users.Where(u => !u.IsBanned)];
+                if (!isStaff)
+                {
+                    users = [.. users.Where(u => !u.IsBanned)];
+                }
+                else if (showBannedOnly)
+                {
+                    users = [.. users.Where(u => u.IsBanned)];
+                }
+
+                if (showStaffOnly)
+                {
+                    users = [.. users.Where(u => Roles.IsStaff(u.SystemRole))];
+                }
 
                 var query = search?.Trim().ToLower();
                 if (!string.IsNullOrEmpty(query))
                 {
                     users = [.. users.Where(u => searchField switch
-            {
-                "name" => u.Nickname?.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase) == true || u.RealName?.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase) == true,
-                "tag" => SupportManager.ParseSkills(u.HardSkills).Any(t => t.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase)),
-                "role" => u.ProfileRole?.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase) == true,
-                _ => true,
-            })];
-                }
+                    {
+                        "name" => u.Nickname?.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase) == true || u.RealName?.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase) == true,
+                        "tag" => SupportManager.ParseSkills(u.HardSkills).Any(t => t.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase)),
+                        "role" => u.ProfileRole?.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase) == true,
+                        _ => true,
+                    })];
+                        }
 
                 IEnumerable<User> sorted = sortField switch
                 {
@@ -71,6 +80,7 @@ namespace api.Controllers
                     lastOnlineAt = u.LastOnlineAt?.ToString("o"),
                     isOnline = SupportManager.IsOnline(u.LastOnlineAt),
                     lastSeen = SupportManager.FormatLastSeen(u.LastOnlineAt),
+                    activityCount = counts.ActivityCounts.GetValueOrDefault(u.UserId ?? "", 0)
                 }).ToList();
 
                 return Ok(result);
@@ -83,16 +93,26 @@ namespace api.Controllers
 
         // Получить профиль пользователя по его идентификатору
         [HttpGet("{userId}")]
+        [AllowBanned]
         public async Task<IActionResult> GetUserProfile(string userId)
         {
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var id = await _SupMan.GetUserIdAsync(authHeader);
-                if (!string.IsNullOrEmpty(id)) await _SupMan.UpdateLastOnlineAsync(id);
+                var viewer = await _SupMan.GetViewerAsync(authHeader);
+                var selfId = await _SupMan.GetUserIdAsync(authHeader);
+
+                if (!string.IsNullOrEmpty(selfId)) await _SupMan.UpdateLastOnlineAsync(selfId);
 
                 var user = await _SupMan.GetUserCachedAsync(userId);
                 if (user == null) return NotFound();
+
+                var canSeeAll = viewer.IsStaff || selfId == userId;
+
+                if (user.IsBanned && !canSeeAll)
+                {
+                    return Ok(new { user.UserId, isBanned = true });
+                }
 
                 return Ok(new
                 {
@@ -109,7 +129,7 @@ namespace api.Controllers
                     user.Description,
                     systemRole = user.SystemRole,
                     isBanned = user.IsBanned,
-                    bannedReason = user.BannedReason,
+                    bannedReason = canSeeAll ? user.BannedReason : null,
                     hardSkills = SupportManager.ParseSkills(user.HardSkills),
                     softSkills = SupportManager.ParseSkills(user.SoftSkills),
                     lastOnlineAt = user.LastOnlineAt?.ToString("o"),
@@ -119,7 +139,10 @@ namespace api.Controllers
                     lastSeen = SupportManager.FormatLastSeen(user.LastOnlineAt)
                 });
             }
-            catch (Exception) { return StatusCode(500); }
+            catch (Exception)
+            {
+                return StatusCode(500);
+            }
         }
 
         // Поиск пользователей по никнейму
@@ -136,13 +159,15 @@ namespace api.Controllers
                 if (string.IsNullOrWhiteSpace(query) || query.Trim().Length < Limits.Search.UserQueryMin)
                     return Ok(new List<object>());
 
+                var safeQuery = query.Trim().Replace("%", "").Replace("_", "");
+
                 var users = await _client.From<User>()
-                    .Filter("nickname", Constants.Operator.ILike, $"%{query.Trim()}%")
+                    .Filter("nickname", Constants.Operator.ILike, $"%{safeQuery}%")
                     .Limit(Limits.Search.UserResultsMax)
                     .Get();
 
                 var result = users.Models
-                    .Where(u => u.UserId != currentUserId)
+                    .Where(u => u.UserId != currentUserId && !u.IsBanned)
                     .Select(u => new
                     {
                         u.UserId,
@@ -152,9 +177,9 @@ namespace api.Controllers
 
                 return Ok(result);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                return StatusCode(500, ex.Message);
+                return StatusCode(500, new { error = "Ошибка поиска пользователей" });
             }
         }
     }

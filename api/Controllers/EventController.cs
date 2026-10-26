@@ -246,32 +246,15 @@ namespace api.Controllers
         [HttpDelete("{eventId}")]
         public async Task<IActionResult> DeleteEvent(string eventId)
         {
-            try
-            {
-                var userId = await _SupMan.GetUserIdAsync(Request.Headers.Authorization.ToString());
-                if (string.IsNullOrEmpty(userId))
-                    return Unauthorized();
+            var userId = await _SupMan.GetUserIdAsync(Request.Headers.Authorization.ToString());
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
-                await _SupMan.UpdateLastOnlineAsync(userId);
+            if (!await _SupMan.IsOwner(eventId, userId))
+                return Forbid();
 
-                var response = await _client.From<Event>()
-                    .Where(e => e.EventId == eventId && e.OwnerId == userId)
-                    .Get();
+            await _SupMan.DeleteEventCoreAsync(eventId, reason: null, isModeration: false);
 
-                if (response.Models.Count == 0)
-                    return NotFound();
-
-                await _client.From<Event>().Where(e => e.EventId == eventId).Delete();
-                await _SupMan.DeleteEventMedia(eventId);
-
-                await _SupMan.Cache.EventsChangedAsync();
-
-                return Ok(new { message = "Мероприятие успешно удалено" });
-            }
-            catch (Exception)
-            {
-                return StatusCode(500);
-            }
+            return Ok(new { message = "Мероприятие успешно удалено" });
         }
 
         // Сохранить подраздел «Общее» (только владелец)
@@ -794,7 +777,8 @@ namespace api.Controllers
                 if (sectionError != null) return BadRequest(new { message = sectionError });
 
                 var folder = $"{eventId}/{section}";
-                var files = await _client.Storage.From("EventMedia").List(folder);
+
+                var files = await _SupMan.ListAllAsync("EventMedia", folder);
                 var result = (files ?? [])
                     .Where(f => !string.IsNullOrEmpty(f.Name))
                     .Select(f => new
@@ -831,12 +815,12 @@ namespace api.Controllers
                 if (imageError != null) return BadRequest(new { message = imageError });
 
                 using var input = file.OpenReadStream();
-                if (!ImageOptimizer.TryOptimize(input, ImageKind.Media, extension, out var optimized, out var optError))
+                if (!ImageOptimizer.TryOptimize(input, ImageKind.Media, out var optimized, out var optError))
                     return BadRequest(new { message = optError });
 
                 var folder = $"{eventId}/{section}";
 
-                var existing = await _client.Storage.From("EventMedia").List(folder);
+                var existing = await _SupMan.ListAllAsync("EventMedia", folder);
                 var currentTotal = (existing ?? []).Sum(SupportManager.GetFileSize);
                 if (currentTotal + optimized!.Bytes.Length > Limits.Upload.MediaTotalMaxBytes)
                     return BadRequest(new { message = $"Общий размер вложений не должен превышать {Limits.Upload.MediaTotalMaxBytes / Limits.MB} МБ" });
@@ -888,50 +872,24 @@ namespace api.Controllers
         [HttpDelete("{eventId}/moderation")]
         public async Task<IActionResult> ModerationDeleteEvent(string eventId, [FromBody] DeleteEventWithReasonDto dto)
         {
-            try
-            {
-                var currentUserId = await _SupMan.GetUserIdAsync(Request.Headers.Authorization.ToString());
-                if (string.IsNullOrEmpty(currentUserId))
-                    return Unauthorized();
+            var actor = await _SupMan.GetActorAsync(Request.Headers.Authorization.ToString());
+            if (actor == null || !actor.IsStaff) return Forbid();
 
-                var currentRole = await _SupMan.GetRoleAsync(currentUserId);
-                if (currentRole != Roles.Moderator && currentRole != Roles.Admin)
-                    return Forbid();
+            var error = Validator.ValidateModerationReason(dto.Reason);
+            if (error != null) return BadRequest(new { message = error });
 
-                var response = await _client.From<Event>().Where(e => e.EventId == eventId).Get();
-                var ev = response.Models.FirstOrDefault();
-                if (ev == null || ev.IsPrivate)
-                    return NotFound();
+            var ev = (await _client.From<Event>().Where(e => e.EventId == eventId).Get()).Models.FirstOrDefault();
+            if (ev == null) return NotFound();
 
-                var ownerRole = await _SupMan.GetRoleAsync(ev.OwnerId);
-                if (currentRole == Roles.Moderator && (ownerRole ?? Roles.User) != Roles.User)
-                    return Forbid();
+            if (ev.OwnerId == actor.UserId)
+                return BadRequest(new { message = "Своё мероприятие удаляйте обычным способом" });
 
-                var reason = string.IsNullOrWhiteSpace(dto.Reason) ? "не указана" : dto.Reason.Trim();
+            if (!RoleRules.CanModerate(actor.Role, await _SupMan.GetRoleAsync(ev.OwnerId)))
+                return Forbid();
 
-                await _client.From<Event>().Where(e => e.EventId == eventId).Delete();
-                await _SupMan.DeleteEventMedia(eventId);
+            await _SupMan.DeleteEventCoreAsync(eventId, reason: dto.Reason!.Trim(), isModeration: true);
 
-                await _SupMan.Cache.EventsChangedAsync();
-
-                await _SupMan.SendNotificationAsync(ev.OwnerId, "system", eventId, "event_deleted_by_moderator", new Dictionary<string, object>
-                {
-                    { "eventName", ev.Title },
-                    { "reason", reason }
-                });
-
-                await _SupMan.SendNotificationAsync(currentUserId, "system", eventId, "moderator_deleted_event", new Dictionary<string, object>
-                {
-                    { "eventName", ev.Title },
-                    { "reason", reason }
-                });
-
-                return Ok(new { message = "Мероприятие удалено модератором" });
-            }
-            catch (Exception)
-            {
-                return StatusCode(500);
-            }
+            return Ok(new { message = "Мероприятие удалено модератором" });
         }
 
         // ЧЕРНОВИКИ ПОДРАЗДЕЛОВ

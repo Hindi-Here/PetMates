@@ -1,5 +1,6 @@
 ﻿using api.Models;
 using api.Support;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Supabase;
 
@@ -19,43 +20,27 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = await _SupMan.GetUserIdAsync(authHeader);
-                if (!string.IsNullOrEmpty(userId))
-                {
-                    await _SupMan.UpdateLastOnlineAsync(userId);
-                }
+                var actor = await _SupMan.GetActorAsync(authHeader);
+                if (actor == null)
+                    return Unauthorized();
 
-                var vacancies = await _client.From<Vacancy>()
-                    .Where(v => v.ProjectId == projectId)
-                    .Get();
+                if (!await _SupMan.IsProjectOwnerAsync(projectId, actor.UserId))
+                    return Forbid();
 
+                var vacancies = await _client.From<Vacancy>().Where(v => v.ProjectId == projectId).Get();
                 var vacancyIds = vacancies.Models.Select(v => v.VacancyId).ToList();
-
                 if (vacancyIds.Count == 0)
                     return Ok(new List<object>());
 
-                var allResponses = await _client.From<Response>().Get();
-                var responses = allResponses.Models
-                    .Where(r => vacancyIds.Contains(r.VacancyId))
-                    .ToList();
+                var responses = (await _client.From<Response>().Filter("vacancy_id", Supabase.Postgrest.Constants.Operator.In, vacancyIds).Get()).Models;
+                var projectData = (await _client.From<Project>().Where(p => p.ProjectId == projectId).Get()).Models.FirstOrDefault();
+                var users = (await _SupMan.GetAllUsersAsync()).Where(u => u.UserId != null).ToDictionary(u => u.UserId!);
 
-                var result = new List<object>();
-
-                foreach (var response in responses)
+                var result = responses.Select(response =>
                 {
-                    var user = await _client.From<User>()
-                        .Where(u => u.UserId == response.UserId)
-                        .Get();
-                    var userData = user.Models.FirstOrDefault();
-
+                    users.TryGetValue(response.UserId, out var userData);
                     var vacancy = vacancies.Models.FirstOrDefault(v => v.VacancyId == response.VacancyId);
-
-                    var project = await _client.From<Project>()
-                        .Where(p => p.ProjectId == projectId)
-                        .Get();
-                    var projectData = project.Models.FirstOrDefault();
-
-                    result.Add(new
+                    return new
                     {
                         response.ResponseId,
                         response.UserId,
@@ -66,14 +51,14 @@ namespace api.Controllers
                         ProjectTitle = projectData?.Title ?? "Unknown",
                         response.Status,
                         CreatedAt = response.CreatedAt.ToString("o")
-                    });
-                }
+                    };
+                }).ToList();
 
                 return Ok(result);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                return StatusCode(500, ex.Message);
+                return StatusCode(500, new { error = "Не удалось загрузить отклики" });
             }
         }
 
@@ -84,49 +69,40 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var currentUserId = await _SupMan.GetUserIdAsync(authHeader);
-
-                if (string.IsNullOrEmpty(currentUserId))
+                var actor = await _SupMan.GetActorAsync(authHeader);
+                if (actor == null)
                     return Unauthorized();
 
-                var responses = await _client.From<Response>()
-                    .Where(r => r.UserId == userId)
-                    .Get();
+                if (userId != actor.UserId)
+                    return Forbid();
 
+                var responses = await _client.From<Response>().Where(r => r.UserId == userId).Get();
                 var result = new List<object>();
 
                 foreach (var response in responses.Models)
                 {
-                    var vacancy = await _client.From<Vacancy>()
-                        .Where(v => v.VacancyId == response.VacancyId)
-                        .Get();
-                    var vacancyData = vacancy.Models.FirstOrDefault();
+                    var vacancy = (await _client.From<Vacancy>().Where(v => v.VacancyId == response.VacancyId).Get()).Models.FirstOrDefault();
+                    if (vacancy == null) continue;
 
-                    var vacancyProjectId = vacancyData?.ProjectId;
-                    var project = string.IsNullOrEmpty(vacancyProjectId)
-                        ? await _client.From<Project>().Get()
-                        : await _client.From<Project>()
-                            .Where(p => p.ProjectId == vacancyProjectId)
-                            .Get();
-                    var projectData = project.Models.FirstOrDefault();
+                    var project = (await _client.From<Project>().Where(p => p.ProjectId == vacancy.ProjectId).Get()).Models.FirstOrDefault();
 
                     result.Add(new
                     {
                         response.ResponseId,
                         response.UserId,
                         response.VacancyId,
-                        VacancyTitle = vacancyData?.Title ?? "Unknown",
-                        ProjectId = projectData?.ProjectId ?? "Unknown",
-                        ProjectTitle = projectData?.Title ?? "Unknown",
+                        VacancyTitle = vacancy.Title ?? "Unknown",
+                        ProjectId = project?.ProjectId ?? "Unknown",
+                        ProjectTitle = project?.Title ?? "Unknown",
                         response.Status,
                         CreatedAt = response.CreatedAt.ToString("o")
                     });
                 }
                 return Ok(result);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                return StatusCode(500, ex.Message);
+                return StatusCode(500, new { error = "Не удалось загрузить исходящие отклики" });
             }
         }
 
@@ -141,15 +117,12 @@ namespace api.Controllers
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 
-                var allResponses = await _client.From<Response>().Get();
-                var hasResponded = allResponses.Models
-                    .Any<Response>(r => r.VacancyId == vacancyId && r.UserId == userId);
-
-                return Ok(new { hasResponded });
+                var existing = await _client.From<Response>().Where(r => r.VacancyId == vacancyId && r.UserId == userId).Get();
+                return Ok(new { hasResponded = existing.Models.Count != 0 });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                return StatusCode(500, ex.Message);
+                return StatusCode(500, new { error = "Ошибка проверки отклика" });
             }
         }
 
@@ -160,67 +133,51 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = await _SupMan.GetUserIdAsync(authHeader);
-                if (string.IsNullOrEmpty(userId))
+                var actor = await _SupMan.GetActorAsync(authHeader);
+                if (actor == null)
                     return Unauthorized();
 
-                await _SupMan.UpdateLastOnlineAsync(userId);
+                var vacancy = (await _client.From<Vacancy>().Where(v => v.VacancyId == dto.VacancyId).Get()).Models.FirstOrDefault();
+                if (vacancy == null)
+                    return NotFound(new { message = "Вакансия не найдена" });
 
-                var vacancy = await _client.From<Vacancy>()
-                    .Where(v => v.VacancyId == dto.VacancyId)
-                    .Get();
+                var projectData = (await _client.From<Project>().Where(p => p.ProjectId == vacancy.ProjectId).Get()).Models.FirstOrDefault();
+                if (projectData == null)
+                    return NotFound(new { message = "Проект не найден" });
 
-                if (vacancy.Models.Count == 0)
-                    return NotFound("Вакансия не найдена");
-
-                var vacancyData = vacancy.Models.First();
-
-                var project = await _client.From<Project>()
-                    .Where(p => p.ProjectId == vacancyData.ProjectId)
-                    .Get();
-
-                if (project.Models.Count == 0)
-                    return NotFound("Проект не найден");
-
-                var projectData = project.Models.First();
-
-                if (projectData.OwnerId == userId)
+                if (!vacancy.IsOpen) return BadRequest(new { message = "Заявка закрыта" });
+                if (!await _SupMan.CanViewProject(projectData, actor.UserId, false))
+                    return NotFound(new { message = "Проект недоступен" });
+                if (projectData.OwnerId == actor.UserId)
                     return BadRequest(new { message = "Нельзя откликнуться на свой проект" });
 
-                var allResponses = await _client.From<Response>().Get();
-                var existingResponse = allResponses.Models
-                    .Find(r => r.VacancyId == dto.VacancyId && r.UserId == dto.UserId);
+                var alreadyMember = await _client.From<ProjectMember>().Where(pm => pm.ProjectId == projectData.ProjectId && pm.UserId == actor.UserId).Get();
+                if (alreadyMember.Models.Count > 0)
+                    return BadRequest(new { message = "Вы уже в команде проекта" });
 
-                if (existingResponse != null)
+                var existingResponse = await _client.From<Response>().Where(r => r.VacancyId == dto.VacancyId && r.UserId == actor.UserId).Get();
+                if (existingResponse.Models.Count != 0)
                     return BadRequest(new { message = "Вы уже откликнулись на эту вакансию" });
 
                 var newResponse = new Response
                 {
                     ResponseId = Guid.NewGuid().ToString(),
-                    UserId = dto.UserId,
+                    UserId = actor.UserId, 
                     VacancyId = dto.VacancyId,
-                    Status = dto.Status,
+                    Status = "pending", 
                     CreatedAt = DateTime.UtcNow
                 };
 
                 var response = await _client.From<Response>().Insert(newResponse);
                 var created = response.Models.FirstOrDefault();
-
                 if (created == null)
-                    return BadRequest("Не удалось создать отклик");
+                    return BadRequest(new { message = "Не удалось создать отклик" });
 
-                return Ok(new
-                {
-                    created.ResponseId,
-                    created.UserId,
-                    created.VacancyId,
-                    created.Status,
-                    CreatedAt = created.CreatedAt.ToString("o")
-                });
+                return Ok(new { created.ResponseId, created.UserId, created.VacancyId, created.Status, CreatedAt = created.CreatedAt.ToString("o") });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                return StatusCode(500, ex.Message);
+                return StatusCode(500, new { error = "Не удалось создать отклик" });
             }
         }
 
@@ -231,21 +188,26 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = await _SupMan.GetUserIdAsync(authHeader);
-                if (string.IsNullOrEmpty(userId))
+                var actor = await _SupMan.GetActorAsync(authHeader);
+                if (actor == null)
                     return Unauthorized();
 
-                await _SupMan.UpdateLastOnlineAsync(userId);
+                var resp = (await _client.From<Response>().Where(r => r.ResponseId == responseId).Get()).Models.FirstOrDefault();
+                if (resp == null)
+                    return NotFound();
 
-                await _client.From<Response>()
-                    .Where(r => r.ResponseId == responseId)
-                    .Delete();
+                var vac = (await _client.From<Vacancy>().Where(v => v.VacancyId == resp.VacancyId).Get()).Models.FirstOrDefault();
+                var ownerId = vac == null ? null : (await _client.From<Project>().Where(p => p.ProjectId == vac.ProjectId).Get()).Models.FirstOrDefault()?.OwnerId;
 
+                if (resp.UserId != actor.UserId && ownerId != actor.UserId)
+                    return Forbid();
+
+                await _client.From<Response>().Where(r => r.ResponseId == responseId).Delete();
                 return Ok(new { message = "Отклик удален" });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                return StatusCode(500, ex.Message);
+                return StatusCode(500, new { error = "Не удалось удалить отклик" });
             }
         }
     }

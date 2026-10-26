@@ -18,57 +18,65 @@ namespace api.Controllers
         {
             try
             {
-                var currentUserId = await _SupMan.GetUserIdAsync(Request.Headers.Authorization.ToString());
-                if (string.IsNullOrEmpty(currentUserId))
-                    return Unauthorized();
-
-                var currentRole = await _SupMan.GetRoleAsync(currentUserId);
-                if (currentRole != Roles.Moderator && currentRole != Roles.Admin)
-                    return Forbid();
+                var actor = await _SupMan.GetActorAsync(Request.Headers.Authorization.ToString());
+                if (actor == null) return Unauthorized();
+                if (!actor.IsStaff) return Forbid();
 
                 var error = Validator.ValidateModerationReason(dto.Reason);
-                if (error != null)
-                    return BadRequest(new { message = error });
+                if (error != null) return BadRequest(new { message = error });
 
                 var vacancyResponse = await _client.From<Vacancy>().Where(v => v.VacancyId == vacancyId).Get();
                 var vacancy = vacancyResponse.Models.FirstOrDefault();
-                if (vacancy == null)
-                    return NotFound();
+                if (vacancy == null) return NotFound();
 
                 var project = await _client.From<Project>().Where(p => p.ProjectId == vacancy.ProjectId).Get();
                 var projectData = project.Models.FirstOrDefault();
-                var ownerId = projectData?.OwnerId;
+
+                if (projectData == null || projectData.IsPrivate) return NotFound();
+
+                if (projectData.OwnerId == actor.UserId)
+                    return BadRequest(new { message = "Свою заявку удаляйте обычным способом" });
+
+                if (!RoleRules.CanModerate(actor.Role, await _SupMan.GetRoleAsync(projectData.OwnerId)))
+                    return Forbid();
+
+                var reason = dto.Reason!.Trim();
                 var vacancyTitle = vacancy.Title;
-                var reason = dto.Reason ?? "не указана";
 
                 var ownerNickname = "Пользователь";
-                if (!string.IsNullOrEmpty(ownerId))
+                if (!string.IsNullOrEmpty(projectData.OwnerId))
                 {
-                    var ownerUser = await _client.From<User>().Where(u => u.UserId == ownerId).Get();
-                    ownerNickname = ownerUser.Models.FirstOrDefault()?.Nickname ?? "П aльзователь";
+                    var ownerUser = await _client.From<User>().Where(u => u.UserId == projectData.OwnerId).Get();
+                    ownerNickname = ownerUser.Models.FirstOrDefault()?.Nickname ?? "Пользователь";
                 }
 
                 var vacancyResponses = await _client.From<Response>().Where(r => r.VacancyId == vacancyId).Get();
                 var affectedResponders = vacancyResponses.Models.Select(r => r.UserId).Distinct().ToList();
 
                 var affectedInvitees = new List<string>();
-                if (!string.IsNullOrEmpty(ownerId))
+                var invitesToDelete = new List<string>();
+
+                if (!string.IsNullOrEmpty(projectData.OwnerId))
                 {
                     var invites = await _client.From<Invite>()
                         .Where(i => i.ProjectId == vacancy.ProjectId && i.Role == vacancyTitle && i.Status == "pending")
                         .Get();
                     affectedInvitees = [.. invites.Models.Select(i => i.UserId).Distinct()];
+                    invitesToDelete = [.. invites.Models.Select(i => i.InviteId)];
                 }
 
-                await _client.From<Vacancy>()
-                    .Where(v => v.VacancyId == vacancyId)
-                    .Delete();
+                await _client.From<Vacancy>().Where(v => v.VacancyId == vacancyId).Delete();
+
+                if (invitesToDelete.Count > 0)
+                {
+                    await _client.From<Invite>().Where(i => invitesToDelete.Contains(i.InviteId)).Delete();
+                }
 
                 await _SupMan.Cache.VacanciesChangedAsync();
 
-                if (!string.IsNullOrEmpty(ownerId))
+                if (!string.IsNullOrEmpty(projectData.OwnerId))
                 {
-                    await _SupMan.SendNotificationAsync(ownerId, "response", vacancyId, "vacancy_deleted_by_moderator", new Dictionary<string, object>
+                    await _SupMan.SendNotificationAsync(projectData.OwnerId, "response", vacancyId, "vacancy_deleted_by_moderator", new Dictionary<string, object>
                     {
                         { "vacancyName", vacancyTitle },
                         { "reason", reason }
@@ -92,7 +100,7 @@ namespace api.Controllers
                     });
                 }
 
-                await _SupMan.SendNotificationAsync(currentUserId, "response", vacancyId, "moderator_deleted_vacancy", new Dictionary<string, object>
+                await _SupMan.SendNotificationAsync(actor.UserId, "response", vacancyId, "moderator_deleted_vacancy", new Dictionary<string, object>
                 {
                     { "vacancyName", vacancyTitle },
                     { "reason", reason }

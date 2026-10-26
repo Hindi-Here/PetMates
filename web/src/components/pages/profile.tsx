@@ -22,9 +22,11 @@ import { Responses } from './response'
 import { Messages } from './message'
 import { Chat } from './chat'
 import { EventPage } from './events/event_page'
-import { useQueryClient } from '@tanstack/react-query'
-import { queryKeys } from '../scripts/query/queryKeys'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { LIMITS, TIMING} from '../scripts/limits'
+import { invalidateProfile } from '../scripts/query/invalidate'
+import { queryKeys } from '../scripts/query/queryKeys'
+import { STALE } from '../scripts/query/queryClient'
 
 interface ProfileFormData {
   nickname: string
@@ -237,10 +239,7 @@ const AuthorizedProfile = () => {
       if (Object.keys(changes).length > 0) {
         await profileApi.updateMe(changes as unknown as ProfileData)
       }
-      if (profileKey) {
-        await queryClient.invalidateQueries({ queryKey: queryKeys.profile.me(profileKey) })
-        await queryClient.invalidateQueries({ queryKey: queryKeys.users.allList() })
-      }
+      await invalidateProfile(queryClient)
       setSaveSuccess(true)
       setTimeout(() => setSaveSuccess(false), TIMING.toastMs)
     }
@@ -618,29 +617,17 @@ const AuthorizedProfile = () => {
 const ProjectOrThirdSide = () => {
   const { projectId } = useParams<{ projectId: string }>()
   const { userId } = useAuth()
-  const [ownerId, setOwnerId] = useState<string | null>(null)
-  const [isChecking, setIsChecking] = useState(true)
-  
-  useEffect(() => {
-    if (!projectId) return
-    setIsChecking(true)
-    projectsApi.getProject(projectId)
-      .then(projectData => {
-        setOwnerId(projectData.ownerId)
-      })
-      .catch(err => {
-        console.error('Project load error:', err)
-      })
-      .finally(() => {
-        setIsChecking(false)
-      })
-  }, [projectId])
-  
-  if (isChecking) {
-    return <div className='project-page' />
-  }
-  
-  return ownerId === userId && ownerId !== null ? <Project /> : <ProjectViewer />
+
+  const { data: project, isLoading } = useQuery({
+    queryKey: queryKeys.projects.byId(projectId!),
+    queryFn: () => projectsApi.getProject(projectId!),
+    enabled: !!projectId,
+    staleTime: STALE.short,
+  })
+
+  if (isLoading) return <div className='project-page' />
+
+  return project && project.ownerId === userId ? <Project /> : <ProjectViewer />
 }
 
 export default function Profile() {

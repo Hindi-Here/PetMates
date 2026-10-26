@@ -120,6 +120,22 @@ namespace api.Controllers
                 if (!SupportManager.IsNicknameValid(userAuth, request.Nickname))
                     return BadRequest(new { message = "[Никнейм] введённый никнейм не совпадает с текущим" });
 
+                var uid = userAuth.Id!;
+
+                var ownedProjects = await _client.From<Project>().Where(p => p.OwnerId == uid).Get();
+                foreach (var p in ownedProjects.Models)
+                {
+                    await _SupMan.DeleteFolderAsync("ProjectMedia", p.ProjectId);
+                    await _SupMan.DeleteFolderAsync("ProjectMediaDraft", p.ProjectId);
+                }
+
+                var ownedEvents = await _client.From<Event>().Where(e => e.OwnerId == uid).Get();
+                foreach (var e in ownedEvents.Models)
+                {
+                    await _SupMan.DeleteEventMedia(e.EventId);
+                }
+                await _SupMan.DeleteFolderAsync("Avatar", uid);
+
                 var supabaseUrl = Environment.GetEnvironmentVariable("SUPABASE_URL");
                 var serviceKey = Environment.GetEnvironmentVariable("SUPABASE_KEY");
 
@@ -127,10 +143,10 @@ namespace api.Controllers
                 http.DefaultRequestHeaders.Add("Authorization", $"Bearer {serviceKey}");
                 http.DefaultRequestHeaders.Add("apikey", serviceKey);
 
-                var response = await http.DeleteAsync($"{supabaseUrl}/auth/v1/admin/users/{userAuth.Id}");
+                var response = await http.DeleteAsync($"{supabaseUrl}/auth/v1/admin/users/{uid}");
 
                 if (!response.IsSuccessStatusCode)
-                    return StatusCode(500, new { message = "Ошибка удаления аккаунта" });
+                    return StatusCode(500, new { message = "Ошибка удаления аккаунта в Supabase" });
 
                 await _SupMan.Cache.EverythingChangedAsync();
 

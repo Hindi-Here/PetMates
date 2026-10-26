@@ -2,7 +2,7 @@ import './response.scss'
 
 import InfoIcon from '@icons/info.svg?react'
 import UsersIcon from '@icons/users.svg?react'
-import { useEffect, useState, useMemo } from 'react'
+import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 
@@ -12,9 +12,9 @@ import { responseApi, type ResponseData } from '../services/response'
 import { inviteApi, type InviteData } from '../services/invite'
 import { projectsApi } from '../services/project'
 import { notificationApi } from '../services/notification'
-import { usersApi } from '../services/users'
 import { STALE } from '../scripts/query/queryClient'
 import { invalidateRelations } from '../scripts/query/invalidate'
+import { useUser } from '../hooks/useUser'
 
 // Отправка уведомления пользователю
 const sendNotification = (
@@ -186,20 +186,8 @@ export const Responses = () => {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  const [currentUserNickname, setCurrentUserNickname] = useState<string | null>(null)
-
-  useEffect(() => {
-    const fetchNickname = async () => {
-      if (!userId) return
-      try {
-        const user = await usersApi.getUserById(userId)
-        setCurrentUserNickname(user?.nickname || null)
-      } catch (error) {
-        console.error('Ошибка получения никнейма:', error)
-      }
-    }
-    fetchNickname()
-  }, [userId])
+  const { data: me } = useUser(userId) 
+  const currentUserNickname = me?.nickname ?? null
 
   const { data: allInvites = [] } = useQuery({
     queryKey: queryKeys.invites.all,

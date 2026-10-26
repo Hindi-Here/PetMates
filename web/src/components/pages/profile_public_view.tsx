@@ -12,7 +12,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useSystemRole } from '../hooks/useSystemRole'
 import { invalidateModeration } from '../scripts/query/invalidate'
 import { moderationApi } from '../services/moderation'
-import type { ThirdProfileData } from '../hooks/useThirdProfile'
+import type { ThirdProfileData } from '../services/profile'
 
 import InviteForm from '../forms/invite_user'
 import BanUserForm from '../forms/ban_user'

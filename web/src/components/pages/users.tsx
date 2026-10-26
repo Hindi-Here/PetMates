@@ -3,7 +3,7 @@ import './users.scss'
 
 import NotFoundContentIcon from '@icons/not_found_content.svg?react'
 
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import InviteForm from '../forms/invite_user'
 import type { UserData } from '../services/users'
 import { UserCard } from '../common/userCard'
@@ -51,42 +51,7 @@ export default function Users() {
     placeholderData: keepPreviousData,
   })
 
-  const filteredUsers = useMemo(() => {
-    let result = [...users]
-
-    const query = appliedSearch.trim().toLowerCase()
-    if (query) {
-      result = result.filter(u => {
-        if (searchField === 'name') {
-          return (u.nickname?.toLowerCase().includes(query)) ||
-                 (u.realName?.toLowerCase().includes(query))
-        }
-        if (searchField === 'tag') {
-          return (u.hardSkills as unknown as string[] | undefined)?.some(tag => tag.toLowerCase().includes(query))
-        }
-        if (searchField === 'role') {
-          return u.profileRole?.toLowerCase().includes(query)
-        }
-        return true
-      })
-    }
-
-    result.sort((a: UserData, b: UserData) => {
-      let compare = 0
-      if (sortField === 'date') {
-        compare = new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime()
-      }
-      else if (sortField === 'alphabet') {
-        compare = (a.nickname || '').localeCompare(b.nickname || '')
-      }
-      else if (sortField === 'activity') {
-        compare = new Date(a.lastOnlineAt ?? 0).getTime() - new Date(b.lastOnlineAt ?? 0).getTime()
-      }
-      return isSortUp ? compare : -compare
-    })
-
-    return result
-  }, [users, appliedSearch, searchField, sortField, isSortUp])
+  const filteredUsers = users
 
   return (
     <>

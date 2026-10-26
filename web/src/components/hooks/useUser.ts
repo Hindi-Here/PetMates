@@ -8,6 +8,6 @@ export const useUser = (userId?: string | null) => {
     queryKey: queryKeys.users.byId(userId!),
     queryFn: () => usersApi.getUserById(userId!),
     enabled: !!userId,
-    staleTime: STALE.medium,
+    staleTime: STALE.short
   })
 }

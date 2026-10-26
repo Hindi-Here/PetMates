@@ -288,7 +288,7 @@ namespace api.Support
         [GeneratedRegex(@"^[A-Za-z0-9_\-]{1,40}$")]
         private static partial Regex FormFieldIdRegex();
 
-        [GeneratedRegex(@"^[A-Za-z0-9\-]+\.(png|jpg|webp|gif)$")]
+        [GeneratedRegex(@"^[A-Za-z0-9\-]+\.(png|jpg|webp)$")]
         private static partial Regex EventMediaFileNameRegex();
 
         // Валидация создания мероприятия
@@ -447,11 +447,9 @@ namespace api.Support
             else if (read >= 12 && h[0] == 'R' && h[1] == 'I' && h[2] == 'F' && h[3] == 'F'
                      && h[8] == 'W' && h[9] == 'E' && h[10] == 'B' && h[11] == 'P')
                 extension = ".webp";
-            else if (read >= 6 && h[0] == 'G' && h[1] == 'I' && h[2] == 'F' && h[3] == '8')
-                extension = ".gif";
 
             return extension == null
-                ? ("[Изображение] допустимы только PNG, JPEG, WEBP или GIF", null)
+                ? ("[Изображение] допустимы только PNG, JPEG или WEBP", null)
                 : (null, extension);
         }
 
@@ -533,6 +531,82 @@ namespace api.Support
 
         // Валидация причины модерации
         public static string? ValidateModerationReason(string? reason) =>
-            ValidateOptionalText(reason, Limits.Moderation.ReasonMax, "Причина");
+            ValidateRequiredText(reason, Limits.Moderation.ReasonMax, "Причина");
+
+
+        // Определение типа вложения по сигнатуре (ContentType подделывается)
+        private static string? DetectReportFileKind(IFormFile file)
+        {
+            using var stream = file.OpenReadStream();
+            var h = new byte[12];
+            var read = stream.Read(h, 0, h.Length);
+
+            if (read >= 8 && h[0] == 0x89 && h[1] == 0x50 && h[2] == 0x4E && h[3] == 0x47) return "photo"; // PNG
+            if (read >= 3 && h[0] == 0xFF && h[1] == 0xD8 && h[2] == 0xFF) return "photo";               // JPEG
+            if (read >= 12 && h[4] == 'f' && h[5] == 't' && h[6] == 'y' && h[7] == 'p') return "video";  // MP4/MOV
+            return null;
+        }
+
+        // Ограничения Telegram на фото: размер, сумма сторон, соотношение сторон
+        private static string? ValidatePhotoForTelegram(IFormFile file)
+        {
+            if (file.Length > Limits.Report.PhotoMaxBytes)
+                return $"[ограничение API] фото не может быть больше {Limits.Report.PhotoMaxBytes / Limits.MB} МБ";
+
+            try
+            {
+                using var stream = file.OpenReadStream();
+                using var img = NetVips.Image.NewFromStream(stream, access: NetVips.Enums.Access.Sequential);
+                int w = img.Width, h = img.Height;
+
+                if (w + h > Limits.Report.PhotoMaxSidesSum)
+                    return $"[ограничение API] сумма ширины и высоты фото не может быть больше {Limits.Report.PhotoMaxSidesSum} px";
+
+                if (Math.Max(w, h) / (double)Math.Min(w, h) > Limits.Report.PhotoMaxAspectRatio)
+                    return $"[ограничение API] соотношение сторон фото не может превышать {Limits.Report.PhotoMaxAspectRatio}:1";
+            }
+            catch (NetVips.VipsException)
+            {
+                return "[Вложения] не удалось прочитать фото (файл повреждён)";
+            }
+            return null;
+        }
+
+        // Валидация вложений репорта
+        public static string? ValidateReportAttachments(IReadOnlyList<IFormFile> files)
+        {
+            if (files.Count > Limits.Report.AlbumMaxItems)
+                return $"[ограничение API] не более {Limits.Report.AlbumMaxItems} вложений";
+
+            if (files.Sum(f => f.Length) > Limits.Report.AttachmentsMaxBytes)
+                return $"[Вложения] общий размер вложений не должен превышать {Limits.Report.AttachmentsMaxBytes / Limits.MB} МБ";
+
+            foreach (var file in files)
+            {
+                switch (DetectReportFileKind(file))
+                {
+                    case "photo":
+                        var photoError = ValidatePhotoForTelegram(file);
+                        if (photoError != null) return photoError;
+                        break;
+                    case "video":
+                        if (file.Length > Limits.Report.VideoMaxBytes)
+                            return $"[ограничение API] видео не может быть больше {Limits.Report.VideoMaxBytes / Limits.MB} МБ";
+                        break;
+                    default:
+                        return "[Вложения] допустимы только фото (PNG, JPEG) и видео (MP4, MOV)";
+                }
+            }
+            return null;
+        }
+
+        // Длина итогового текста: подпись к медиа короче обычного сообщения
+        public static string? ValidateReportText(string plainText, bool hasAttachments)
+        {
+            var max = hasAttachments ? Limits.Report.CaptionMax : Limits.Report.TextMax;
+            return plainText.Length > max
+                ? $"[ограничение API] сообщение{(hasAttachments ? " с вложениями" : "")} вместе с заголовком не может быть длиннее {max} символов"
+                : null;
+        }
     }
 }

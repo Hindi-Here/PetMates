@@ -6,35 +6,22 @@ using System.ComponentModel;
 
 namespace api.Support
 {
-    public class UserCounts(Dictionary<string, int> projects, Dictionary<string, int> ratings)
+    public class UserCounts(Dictionary<string, int> projects, Dictionary<string, int> ratings, Dictionary<string, int> activity)
     {
         public Dictionary<string, int> ProjectCounts { get; set; } = projects;
         public Dictionary<string, int> RatingCounts { get; set; } = ratings;
+        public Dictionary<string, int> ActivityCounts { get; set; } = activity;
     }
 
-    public class VacancyListItem(Models.Vacancy v, Models.Project p, int count, string? nick, bool banned)
+    public class VacancyListItem(Models.Vacancy v, Models.Project p, int count, string? nick, bool banned, string? ownerRole)
     {
         public Models.Vacancy Vacancy { get; set; } = v; public Models.Project Project { get; set; } = p; public int MembersCount { get; set; } = count; public string? OwnerNickname { get; set; } = nick; public bool OwnerIsBanned { get; set; } = banned;
+        public string? OwnerSystemRole { get; set; } = ownerRole;
     }
 
     public class EventListItem(Models.Event e, Models.User o, int count)
     {
         public Models.Event Event { get; set; } = e; public Models.User Owner { get; set; } = o; public int MembersCount { get; set; } = count;
-    }
-    public class TeamMemberCardRow
-    {
-        public string? Nickname { get; set; }
-        public string? AvatarUrl { get; set; }
-        public string? RealName { get; set; }
-        public int? Age { get; set; }
-        public string? City { get; set; }
-        public string? Workplace { get; set; }
-        public string? ProfileRole { get; set; }
-        public string? SystemRole { get; set; }
-        public bool IsBanned { get; set; }
-        public string? HardSkills { get; set; }
-        public string? SoftSkills { get; set; }
-        public DateTimeOffset? LastOnlineAt { get; set; }
     }
 
     // Режимы
@@ -48,7 +35,6 @@ namespace api.Support
     // Ключи
     public static class CacheKeys
     {
-        public static string Token(string hash) => $"auth:token:{hash}";
         public static string Access(string userId) => $"user:{userId}:access";
         public static string OnlineTouch(string userId) => $"user:{userId}:online";
         public static string ProjectMembers(string projectId) => $"project:{projectId}:members";

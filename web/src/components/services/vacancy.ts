@@ -14,6 +14,9 @@ export interface VacancyData {
   publishedAt?: string;
   membersCount?: number;
   ratingCount?: number;
+  ownerId?: string
+  ownerSystemRole?: string
+  ownerIsBanned?: boolean
 }
 
 export interface VacancySearchParams {

@@ -6,7 +6,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useSystemRole } from '../hooks/useSystemRole'
 import { queryKeys } from '../scripts/query/queryKeys'
 import { usersApi, type UserData } from '../services/users'
-import type { ThirdProfileData } from '../hooks/useThirdProfile'
+import type { ThirdProfileData } from '../services/profile'
 import { ProfilePublicView, type ProfilePublicData } from './profile_public_view'
 import { STALE } from '../scripts/query/queryClient'
 
@@ -15,7 +15,7 @@ export default function ProfileViewer() {
   const currentSystemRole = useSystemRole()
 
   const { data: user, isLoading } = useQuery<ThirdProfileData>({
-    queryKey: queryKeys.profile.me(profileId!),
+    queryKey: queryKeys.users.byId(profileId!),
     queryFn: () => usersApi.getUserById(profileId!),
     enabled: !!profileId,
     staleTime: STALE.medium,

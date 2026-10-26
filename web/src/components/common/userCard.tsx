@@ -216,7 +216,7 @@ export const UserCard = ({
     }
   }, [skills])
 
-  const { data: activityCount = 0, isLoading: activityLoading } = useQuery({
+  const { data: fetchedCount = 0, isLoading: fetching } = useQuery({
     queryKey: queryKeys.users.activity(user.userId),
     queryFn: async () => {
       const [owned, member] = await Promise.all([
@@ -226,7 +226,10 @@ export const UserCard = ({
       return owned.length + member.length
     },
     staleTime: STALE.medium,
+    enabled: user.activityCount === undefined, 
   })
+  const activityCount = user.activityCount ?? fetchedCount
+  const activityLoading = user.activityCount === undefined && fetching
 
   return (
     <>

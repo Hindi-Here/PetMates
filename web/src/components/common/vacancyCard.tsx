@@ -13,14 +13,12 @@ import { useUser } from '../hooks/useUser'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '../scripts/query/queryKeys'
 import { canModerateTarget } from '../scripts/moderation'
-import { projectsApi } from '../services/project'
-import { projectMembersApi } from '../services/project_members'
 import { responseApi } from '../services/response'
 import { notificationApi } from '../services/notification'
 import type { VacancyData } from '../services/vacancy'
-import type { ProjectMemberData } from '../services/project_members'
 import DeleteVacancyModerationForm from '../forms/delete_vacancy_moderation'
 import { STALE } from '../scripts/query/queryClient'
+import { useMyProjectIds } from '../hooks/useMyProjectIds'
 
 type NotificationContextData = Record<string, string | number | boolean | null | undefined>
 
@@ -57,29 +55,16 @@ export const VacancyCard = ({
   
   const [showDeleteForm, setShowDeleteForm] = useState(false)
 
-  const { data: project } = useQuery({
-    queryKey: queryKeys.projects.byId(vacancy.projectId!),
-    queryFn: () => projectsApi.getProject(vacancy.projectId!),
-    enabled: !!vacancy.projectId,
-    staleTime: STALE.long,
-  })
-  const projectOwnerId = project?.ownerId ?? null
-
-  const { data: owner } = useUser(projectOwnerId)
   const { data: me } = useUser(userId)
+  const { data: myProjectIds } = useMyProjectIds(userId)
 
-  const projectOwnerRole = owner?.systemRole ?? 'user'
-  const ownerIsBanned = owner?.isBanned ?? false
+  const projectOwnerId = vacancy.ownerId ?? null
+  const projectOwnerRole = vacancy.ownerSystemRole ?? 'user'
+  const ownerIsBanned = vacancy.ownerIsBanned ?? false
+  const isOwner = !!userId && projectOwnerId === userId
+  const isTeamMember = !!vacancy.projectId && !!myProjectIds?.has(vacancy.projectId)
+
   const currentUserNickname = me?.nickname ?? null
-  const isOwner = !!userId && projectOwnerId === userId 
-
-  const { data: projectMembers = [] } = useQuery<ProjectMemberData[]>({
-    queryKey: queryKeys.projects.members(vacancy.projectId!),
-    queryFn: () => projectMembersApi.getByProject(vacancy.projectId!),
-    enabled: !!vacancy.projectId && !!userId,
-    staleTime: STALE.medium,
-  })
-  const isTeamMember = projectMembers.some((member: ProjectMemberData) => member.userId === userId)
 
   const { data: outgoing = [] } = useQuery({
     queryKey: queryKeys.responses.outgoing(userId!),

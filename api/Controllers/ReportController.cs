@@ -1,5 +1,7 @@
 ﻿using api.Support;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Net;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -17,6 +19,7 @@ namespace api.Controllers
 
         // Отправить сообщение в Telegram
         [HttpPost("send")]
+        [EnableRateLimiting("report")]
         [RequestSizeLimit(Limits.Report.RequestBytes)]
         public async Task<IActionResult> SendReport([FromForm] ReportFormRequest request)
         {
@@ -29,26 +32,27 @@ namespace api.Controllers
                 return BadRequest(new { error = nicknameError });
 
             var validFiles = request.Files?.Where(f => f.Length > 0).ToList() ?? [];
-            var totalSize = validFiles.Sum(f => f.Length);
-            if (totalSize > Limits.Report.AttachmentsMaxBytes)
-                return BadRequest(new { error = $"[Вложения] Общий размер вложений не должен превышать {Limits.Report.AttachmentsMaxBytes / Limits.MB} МБ" });
 
-            var allowedTypes = new[] { "image/", "video/" };
-            if (validFiles.Any(f => string.IsNullOrEmpty(f.ContentType) || !allowedTypes.Any(t => f.ContentType.StartsWith(t))))
-                return BadRequest(new { error = "[Вложения] Допустимы только изображения и видео" });
+            var filesError = Validator.ValidateReportAttachments(validFiles);
+            if (filesError != null)
+                return BadRequest(new { error = filesError });
 
             var sender = request.IsAnonymous || string.IsNullOrWhiteSpace(request.Nickname)
                 ? "Аноним"
                 : request.Nickname;
-
             var typeLabel = SupportManager.GetReportTypeLabel(request.Type);
-            var text = $"*[{typeLabel}]* от {sender}\n{request.Message}";
+
+            var textError = Validator.ValidateReportText($"[{typeLabel}] от {sender}\n{request.Message}", validFiles.Count > 0);
+            if (textError != null)
+                return BadRequest(new { error = textError });
+
+            var text = $"<b>[{typeLabel}]</b> от {WebUtility.HtmlEncode(sender)}\n{WebUtility.HtmlEncode(request.Message)}";
 
             try
             {
                 if (validFiles.Count == 0)
                 {
-                    await _bot.SendMessage(_chatId, text, parseMode: ParseMode.Markdown);
+                    await _bot.SendMessage(_chatId, text, parseMode: ParseMode.Html);
                 }
                 else if (validFiles.Count == 1)
                 {
@@ -60,9 +64,9 @@ namespace api.Controllers
 
                     var contentType = file.ContentType?.ToLowerInvariant() ?? "";
                     if (contentType.StartsWith("video/"))
-                        await _bot.SendVideo(_chatId, inputFile, caption: text, parseMode: ParseMode.Markdown);
+                        await _bot.SendVideo(_chatId, inputFile, caption: text, parseMode: ParseMode.Html);
                     else
-                        await _bot.SendPhoto(_chatId, inputFile, caption: text, parseMode: ParseMode.Markdown);
+                        await _bot.SendPhoto(_chatId, inputFile, caption: text, parseMode: ParseMode.Html);
                 }
                 else
                 {
@@ -79,7 +83,7 @@ namespace api.Controllers
 
                         var inputFile = InputFile.FromStream(stream, file.FileName);
                         var caption = i == 0 ? text : null;
-                        var parseMode = i == 0 ? ParseMode.Markdown : (ParseMode?)null;
+                        var parseMode = i == 0 ? ParseMode.Html : (ParseMode?)null;
 
                         var contentType = file.ContentType?.ToLowerInvariant() ?? "";
 
@@ -111,9 +115,9 @@ namespace api.Controllers
 
                 return Ok(new { success = true });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                return StatusCode(500, new { error = ex.Message });
+                return StatusCode(500, new { error = "Не удалось отправить сообщение" });
             }
         }
     }

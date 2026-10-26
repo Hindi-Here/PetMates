@@ -23,21 +23,21 @@ namespace api.Controllers
 
                 var enriched = (await _SupMan.GetVacancyListAsync())
                     .Where(e => isStaff ? (!showBannedOnly || e.OwnerIsBanned) : !e.OwnerIsBanned)
-                    .Select(e => (e.Vacancy, Project: (Project?)e.Project, e.MembersCount, e.OwnerNickname, e.OwnerIsBanned))
+                    .Select(e => (e.Vacancy, Project: (Project?)e.Project, e.MembersCount, e.OwnerNickname, e.OwnerIsBanned, e.OwnerSystemRole))
                     .ToList();
 
                 var query = search?.Trim().ToLower();
                 if (!string.IsNullOrEmpty(query))
                 {
                     enriched = [.. enriched.Where(e => searchField switch
-            {
-                "name" => e.Vacancy.Title?.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase) == true,
-                "tag" => SupportManager.ParseSkills(string.Join(" ", e.Vacancy.RequiredTags ?? []))
-                                            .Any(t => t.Contains(query, StringComparison.CurrentCultureIgnoreCase)),
-                "author" => e.OwnerNickname?.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase) == true,
-                "project" => e.Project?.Title?.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase) == true,
-                _ => true,
-            })];
+                    {
+                        "name" => e.Vacancy.Title?.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase) == true,
+                        "tag" => SupportManager.ParseSkills(string.Join(" ", e.Vacancy.RequiredTags ?? []))
+                                                    .Any(t => t.Contains(query, StringComparison.CurrentCultureIgnoreCase)),
+                        "author" => e.OwnerNickname?.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase) == true,
+                        "project" => e.Project?.Title?.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase) == true,
+                        _ => true,
+                    })];
                 }
 
                 enriched = sortField switch
@@ -62,14 +62,16 @@ namespace api.Controllers
                     PublishedAt = e.Vacancy.PublishedAt?.ToString("o"),
                     e.MembersCount,
                     RatingCount = e.Project?.RatingCount ?? 0,
+                    e.Project?.OwnerId,
+                    e.OwnerSystemRole,
                     e.OwnerIsBanned
                 });
 
                 return Ok(vacancies);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                return StatusCode(500, ex.Message);
+                return StatusCode(500, new { error = "Не удалось загрузить заявки" });
             }
         }
 
@@ -81,64 +83,39 @@ namespace api.Controllers
             {
                 var authHeader = Request.Headers.Authorization.ToString();
                 var currentUserId = await _SupMan.GetUserIdAsync(authHeader);
+                if (!string.IsNullOrEmpty(currentUserId)) await _SupMan.UpdateLastOnlineAsync(currentUserId);
 
-                if (!string.IsNullOrEmpty(currentUserId))
+                var proj = (await _client.From<Project>().Where(p => p.ProjectId == projectId).Get()).Models.FirstOrDefault();
+                if (proj == null || !await _SupMan.CanViewProject(proj, currentUserId, await _SupMan.IsStaffAsync(currentUserId)))
+                    return NotFound();
+
+                var response = await _client.From<Vacancy>().Where(v => v.ProjectId == projectId).Get();
+
+                var vacancies = response.Models.Select(v => new
                 {
-                    await _SupMan.UpdateLastOnlineAsync(currentUserId);
-                }
-
-                bool isStaff = await _SupMan.IsStaffAsync(currentUserId);
-
-                var response = await _client.From<Vacancy>()
-                    .Where(v => v.ProjectId == projectId)
-                    .Get();
-
-                var vacancies = new List<object>();
-                int hiddenCount = 0;
-
-                foreach (var v in response.Models)
-                {
-                    var project = await _client.From<Project>()
-                        .Where(p => p.ProjectId == v.ProjectId)
-                        .Get();
-
-                    var projectData = project.Models.FirstOrDefault();
-                    if (projectData == null) continue;
-
-                    var ownerResponse = await _client.From<User>()
-                        .Where(u => u.UserId == projectData.OwnerId)
-                        .Get();
-
-                    var owner = ownerResponse.Models.FirstOrDefault();
-
-                    if (owner == null || (owner.IsBanned == true && !isStaff))
-                    {
-                        hiddenCount++;
-                        continue;
-                    }
-
-                    vacancies.Add(new
-                    {
-                        v.VacancyId,
-                        v.ProjectId,
-                        ProjectTitle = projectData?.Title ?? "Unknown",
-                        v.Title,
-                        v.Role,
-                        v.Description,
-                        v.RequiredTags,
-                        v.IsOpen,
-                        PublishedAt = v.PublishedAt?.ToString("o"),
-                        RatingCount = projectData?.RatingCount ?? 0
-                    });
-                }
+                    v.VacancyId,
+                    v.ProjectId,
+                    ProjectTitle = proj.Title,
+                    v.Title,
+                    v.Role,
+                    v.Description,
+                    v.RequiredTags,
+                    v.IsOpen,
+                    PublishedAt = v.PublishedAt?.ToString("o"),
+                    proj.RatingCount,
+                    proj.OwnerId,
+                    OwnerSystemRole = proj.OwnerId != null ? "user" : null,
+                    OwnerIsBanned = false
+                }).ToList();
 
                 return Ok(vacancies);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                return StatusCode(500, ex.Message);
+                return StatusCode(500, new { error = "Не удалось загрузить заявки проекта" });
             }
         }
+
 
         // Создать заявку
         [HttpPost]
@@ -147,16 +124,16 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = await _SupMan.GetUserIdAsync(authHeader);
-                if (string.IsNullOrEmpty(userId))
+                var actor = await _SupMan.GetActorAsync(authHeader);
+                if (actor == null)
                     return Unauthorized();
+
+                if (!await _SupMan.IsProjectOwnerAsync(dto.ProjectId, actor.UserId)) return Forbid();
 
                 var tagsJoined = dto.RequiredTags != null ? string.Join(" ", dto.RequiredTags) : null;
                 var error = Validator.ValidateVacancy(dto.Title, dto.Description, tagsJoined);
                 if (error != null)
                     return BadRequest(new { message = error });
-
-                await _SupMan.UpdateLastOnlineAsync(userId);
 
                 var newVacancy = new Vacancy
                 {
@@ -171,29 +148,17 @@ namespace api.Controllers
                 };
 
                 var response = await _client.From<Vacancy>().Insert(newVacancy);
-
                 await _SupMan.Cache.VacanciesChangedAsync();
 
                 var created = response.Models.FirstOrDefault();
-
                 if (created == null)
-                    return BadRequest("Не удалось создать заявку");
+                    return BadRequest(new { message = "Не удалось создать заявку" });
 
-                return Ok(new
-                {
-                    created.VacancyId,
-                    created.ProjectId,
-                    created.Title,
-                    created.Role,
-                    created.Description,
-                    created.RequiredTags,
-                    created.IsOpen,
-                    PublishedAt = created.PublishedAt?.ToString("o")
-                });
+                return Ok(new { created.VacancyId, created.ProjectId, created.Title, created.Role, created.Description, created.RequiredTags, created.IsOpen, PublishedAt = created.PublishedAt?.ToString("o") });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                return StatusCode(500, ex.Message);
+                return StatusCode(500, new { error = "Не удалось создать заявку" });
             }
         }
 
@@ -204,63 +169,41 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = await _SupMan.GetUserIdAsync(authHeader);
-                if (string.IsNullOrEmpty(userId))
+                var actor = await _SupMan.GetActorAsync(authHeader);
+                if (actor == null)
                     return Unauthorized();
 
-                var tagsJoined = dto.RequiredTags != null ? string.Join(" ", dto.RequiredTags) : null;
-                var error = Validator.ValidateVacancy(dto.Title, dto.Description, tagsJoined);
+                var v = (await _client.From<Vacancy>().Where(x => x.VacancyId == vacancyId).Get()).Models.FirstOrDefault();
+                if (v == null)
+                    return NotFound();
+
+                if (!await _SupMan.IsProjectOwnerAsync(v.ProjectId, actor.UserId))
+                    return Forbid();
+
+                var titleToValidate = dto.Title ?? v.Title;
+                var descToValidate = dto.Description ?? v.Description;
+                var tagsToValidate = dto.RequiredTags != null ? string.Join(" ", dto.RequiredTags) : (v.RequiredTags != null ? string.Join(" ", v.RequiredTags) : null);
+
+                var error = Validator.ValidateVacancy(titleToValidate, descToValidate, tagsToValidate);
                 if (error != null)
                     return BadRequest(new { message = error });
 
-                await _SupMan.UpdateLastOnlineAsync(userId);
-
-                var vacancy = await _client.From<Vacancy>()
-                    .Where(v => v.VacancyId == vacancyId)
-                    .Get();
-
-                if (vacancy.Models.Count == 0)
-                    return NotFound();
-
-                var v = vacancy.Models.First();
-
-                if (dto.Title != null)
-                    v.Title = dto.Title;
-                if (dto.Role != null)
-                    v.Role = dto.Role;
-                if (dto.Description != null)
-                    v.Description = dto.Description;
-                if (dto.RequiredTags != null)
-                    v.RequiredTags = dto.RequiredTags;
-                if (dto.IsOpen.HasValue)
-                    v.IsOpen = dto.IsOpen.Value;
-
                 await _client.From<Vacancy>()
-                    .Where(v => v.VacancyId == vacancyId)
-                    .Set(v => v.Title, v.Title)
-                    .Set(v => v.Role, v.Role)
-                    .Set(v => v.Description, v.Description)
-                    .Set(v => v.RequiredTags, v.RequiredTags)
-                    .Set(v => v.IsOpen, v.IsOpen)
+                    .Where(x => x.VacancyId == vacancyId)
+                    .Set(x => x.Title, titleToValidate)
+                    .Set(x => x.Role, dto.Role ?? v.Role)
+                    .Set(x => x.Description, descToValidate)
+                    .Set(x => x.RequiredTags, dto.RequiredTags ?? v.RequiredTags)
+                    .Set(x => x.IsOpen, dto.IsOpen ?? v.IsOpen)
                     .Update();
 
                 await _SupMan.Cache.VacanciesChangedAsync();
 
-                return Ok(new
-                {
-                    v.VacancyId,
-                    v.ProjectId,
-                    v.Title,
-                    v.Role,
-                    v.Description,
-                    v.RequiredTags,
-                    v.IsOpen,
-                    PublishedAt = v.PublishedAt?.ToString("o")
-                });
+                return Ok(new { v.VacancyId, v.ProjectId, Title = titleToValidate, Role = dto.Role ?? v.Role, Description = descToValidate, RequiredTags = dto.RequiredTags ?? v.RequiredTags, IsOpen = dto.IsOpen ?? v.IsOpen, PublishedAt = v.PublishedAt?.ToString("o") });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                return StatusCode(500, ex.Message);
+                return StatusCode(500, new { error = "Не удалось обновить заявку" });
             }
         }
 
@@ -271,23 +214,25 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = await _SupMan.GetUserIdAsync(authHeader);
-                if (string.IsNullOrEmpty(userId))
+                var actor = await _SupMan.GetActorAsync(authHeader);
+                if (actor == null)
                     return Unauthorized();
 
-                await _SupMan.UpdateLastOnlineAsync(userId);
+                var v = (await _client.From<Vacancy>().Where(x => x.VacancyId == vacancyId).Get()).Models.FirstOrDefault();
+                if (v == null)
+                    return NotFound();
 
-                await _client.From<Vacancy>()
-                    .Where(v => v.VacancyId == vacancyId)
-                    .Delete();
+                if (!await _SupMan.IsProjectOwnerAsync(v.ProjectId, actor.UserId))
+                    return Forbid();
 
+                await _client.From<Vacancy>().Where(x => x.VacancyId == vacancyId).Delete();
                 await _SupMan.Cache.VacanciesChangedAsync();
 
                 return Ok(new { message = "Заявка удалена" });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                return StatusCode(500, ex.Message);
+                return StatusCode(500, new { error = "Не удалось удалить заявку" });
             }
         }
     }

@@ -64,6 +64,23 @@ namespace api.Models
         public string? ParentCommentId { get; set; }
     }
 
+    public class CommentDto
+    {
+        public string CommentId { get; set; } = string.Empty;
+        public string? UserId { get; set; }
+        public string? Nickname { get; set; }
+        public string? AvatarUrl { get; set; }
+        public string? ParentCommentId { get; set; }
+        public string? Content { get; set; }
+        public string? AuthorSystemRole { get; set; }
+        public bool AuthorIsBanned { get; set; }
+        public bool IsEdited { get; set; }
+        public bool IsDeleted { get; set; }
+        public bool DeletedByModerator { get; set; }
+        public string? CreatedAt { get; set; }
+        public string? UpdatedAt { get; set; }
+    }
+
     public class UpdateCommentDto
     {
         public string Content { get; set; } = string.Empty;

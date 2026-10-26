@@ -39,6 +39,7 @@ import { LIMITS, TIMING, maxChars, minChars } from '../scripts/limits'
 import { STALE } from '../scripts/query/queryClient'
 import { invalidateProjects, invalidateRelations } from '../scripts/query/invalidate'
 import { CommentsSection } from '../common/commentsSection'
+import { useUser } from '../hooks/useUser'
 
 export interface TeamMemberWithUser {
   memberId: string
@@ -333,7 +334,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
   const [editedRoles, setEditedRoles] = useState<Record<string, string>>({})
   const [initialTeamState, setInitialTeamState] = useState<TeamMemberWithUser[]>([])
   const teamInitializedRef = useRef(false)
-  const [currentUserNickname, setCurrentUserNickname] = useState<string | null>(null)
   const [showDeleteForm, setShowDeleteForm] = useState(false)
   const [isPreviewDescription, setIsPreviewDescription] = useState(false)
   const [initialState, setInitialState] = useState(() => ({
@@ -510,6 +510,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
     queryFn: () => projectsApi.getProject(projectId!),
     enabled: !!projectId,
     staleTime: STALE.none,
+    refetchOnWindowFocus: false,
   })
 
   const isOwner = project?.ownerId === currentUserId
@@ -585,19 +586,8 @@ export const Project = ({ onCancel }: ProjectProps) => {
     [allInvites, projectId]
   )
 
-  useEffect(() => {
-    const fetchNickname = async () => {
-      if (!currentUserId) return
-      try {
-        const user = await usersApi.getUserById(currentUserId)
-        setCurrentUserNickname(user?.nickname || null)
-      }
-      catch (error) {
-        console.error('Ошибка получения никнейма:', error)
-      }
-    }
-    fetchNickname()
-  }, [currentUserId])
+  const { data: me } = useUser(currentUserId)    
+  const currentUserNickname = me?.nickname ?? null
 
   useEffect(() => {
     setLoadedDraft(undefined)
@@ -1461,7 +1451,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
               <input
                 type='file'
                 ref={mediaInputRef}
-                accept='image/*'
+                accept='image/png,image/jpeg,image/webp'
                 hidden
                 onChange={handleMediaUpload}
                 disabled={isUploadingMedia || isPreviewDescription}

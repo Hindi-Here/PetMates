@@ -99,10 +99,12 @@ export const Chat = () => {
   })
 
   const { data: messagesResponse } = useQuery({
-    queryKey: queryKeys.conversations.messages(conversationId!),
+    queryKey: queryKeys.messages.byConversation(conversationId!),
     queryFn: () => conversationApi.getMessages(conversationId!),
     enabled: !!conversationId,
     staleTime: STALE.none,
+    refetchInterval: 4000,
+    refetchIntervalInBackground: false,
   })
 
   const messages = messagesResponse?.messages || []
@@ -112,6 +114,7 @@ export const Chat = () => {
     if (messagesResponse && !hasCapturedUnreadRef.current) {
       setUnreadDividerTimestamp((messagesResponse as MessagesResponse)?.previousLastReadAt ?? null)
       hasCapturedUnreadRef.current = true
+      queryClient.invalidateQueries({ queryKey: queryKeys.conversations.all })
     }
   }, [messagesResponse])
 
@@ -192,8 +195,8 @@ export const Chat = () => {
   const sendMutation = useMutation({
     mutationFn: (content: string) => conversationApi.sendMessage(conversationId!, content, replyingTo?.messageId),
     onMutate: async (content: string) => {
-      await queryClient.cancelQueries({ queryKey: queryKeys.conversations.messages(conversationId!) })
-      const previous = queryClient.getQueryData<MessagesResponse>(queryKeys.conversations.messages(conversationId!))
+      await queryClient.cancelQueries({ queryKey: queryKeys.messages.byConversation(conversationId!) })
+      const previous = queryClient.getQueryData<MessagesResponse>(queryKeys.messages.byConversation(conversationId!))
 
       const optimisticMessage: MessageData = {
         messageId: `temp-${Date.now()}`,
@@ -211,7 +214,7 @@ export const Chat = () => {
         createdAt: new Date().toISOString(),
       }
 
-      queryClient.setQueryData(queryKeys.conversations.messages(conversationId!), (old: MessagesResponse | undefined) => ({
+      queryClient.setQueryData(queryKeys.messages.byConversation(conversationId!), (old: MessagesResponse | undefined) => ({
         ...old,
         messages: [...(old?.messages || []), optimisticMessage],
       }))
@@ -220,7 +223,7 @@ export const Chat = () => {
     },
     onError: (_err, _vars, context) => {
       if (context?.previous) {
-        queryClient.setQueryData(queryKeys.conversations.messages(conversationId!), context.previous)
+        queryClient.setQueryData(queryKeys.messages.byConversation(conversationId!), context.previous)
       }
     },
     onSuccess: () => {
@@ -229,7 +232,7 @@ export const Chat = () => {
       setUnreadDismissed(true)
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.conversations.messages(conversationId!) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.messages.byConversation(conversationId!) })
       queryClient.invalidateQueries({ queryKey: queryKeys.conversations.all })
     },
   })
@@ -240,14 +243,14 @@ export const Chat = () => {
     onSuccess: () => {
       setEditingMessageId(null)
       setNewMessage('')
-      queryClient.invalidateQueries({ queryKey: queryKeys.conversations.messages(conversationId!) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.messages.byConversation(conversationId!) })
     },
   })
 
   const deleteMutation = useMutation({
     mutationFn: (messageId: string) => conversationApi.deleteMessage(messageId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.conversations.messages(conversationId!) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.messages.byConversation(conversationId!) })
       queryClient.invalidateQueries({ queryKey: queryKeys.conversations.all })
     },
   })
@@ -255,7 +258,7 @@ export const Chat = () => {
   const deleteForMeMutation = useMutation({
     mutationFn: (messageId: string) => conversationApi.deleteMessageForMe(messageId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.conversations.messages(conversationId!) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.messages.byConversation(conversationId!) })
     },
   })
 

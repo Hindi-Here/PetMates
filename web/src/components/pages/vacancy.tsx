@@ -3,16 +3,14 @@ import './vacancy.scss'
 
 import NotFoundContentIcon from '@icons/not_found_content.svg?react'
 
-import { useState, useMemo } from 'react'
+import { useState,  } from 'react'
 import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { queryKeys } from '../scripts/query/queryKeys'
-import { vacanciesApi, type VacancyData } from '../services/vacancy'
+import { vacanciesApi } from '../services/vacancy'
 import { VacancyCard } from '../common/vacancyCard'
 import Search from '../common/search'
 import { useSystemRole } from '../hooks/useSystemRole'
 import { STALE } from '../scripts/query/queryClient'
-
-type VacancyWithOwner = VacancyData & { ownerBanned?: boolean };
 
 const FoundCount = ({ count }: { count: number }) => (
   <div className='content-item-count-container'>
@@ -46,50 +44,7 @@ export default function Vacancy() {
     placeholderData: keepPreviousData,
   })
 
-  const filteredVacancies = useMemo(() => {
-    let result = [...vacancies]
-
-    if (!isStaff) {
-      result = result.filter(v => !(v as VacancyWithOwner).ownerBanned)
-    } else if (isStaff && showBannedOnly) {
-      result = result.filter(v => (v as VacancyWithOwner).ownerBanned === true)
-    }
-
-    const query = appliedSearch.trim().toLowerCase()
-    if (query) {
-      result = result.filter(v => {
-        if (searchField === 'name') {
-          return v.title?.toLowerCase().includes(query)
-        }
-        if (searchField === 'tag') {
-          return v.requiredTags?.some(tag => tag.toLowerCase().includes(query))
-        }
-        if (searchField === 'project') {
-          return v.projectTitle?.toLowerCase().includes(query)
-        }
-        return true
-      })
-    }
-
-    result.sort((a, b) => {
-      let compare = 0
-      if (sortField === 'date') {
-        compare = new Date(a.publishedAt ?? 0).getTime() - new Date(b.publishedAt ?? 0).getTime()
-      }
-      else if (sortField === 'alphabet') {
-        compare = (a.title || '').localeCompare(b.title || '')
-      }
-      else if (sortField === 'count') {
-        compare = (a.ratingCount ?? 0) - (b.ratingCount ?? 0)
-      }
-      else if (sortField === 'activity') {
-        compare = (a.membersCount ?? 0) - (b.membersCount ?? 0)
-      }
-      return isSortUp ? compare : -compare
-    })
-
-    return result
-  }, [vacancies, appliedSearch, searchField, sortField, isSortUp, showBannedOnly, isStaff])
+  const filteredVacancies = vacancies
 
   return (
     <>

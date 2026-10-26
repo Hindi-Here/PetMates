@@ -137,7 +137,7 @@ export const EventMarkdownEditor = ({
         <input
           type='file'
           ref={mediaInputRef}
-          accept='image/png,image/jpeg,image/webp,image/gif'
+          accept='image/png,image/jpeg,image/webp'
           hidden
           onChange={handleUpload}
         />

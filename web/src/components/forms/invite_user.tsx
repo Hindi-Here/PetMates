@@ -11,11 +11,12 @@ import { vacanciesApi, type VacancyData } from '../services/vacancy'
 import { projectMembersApi, type ProjectMemberData } from '../services/project_members'
 import { useAuth } from '../hooks/useAuth'
 import { inviteApi, type InviteData } from '../services/invite'
-import { usersApi, type UserData } from '../services/users'
+import { type UserData } from '../services/users'
 import { notificationApi } from '../services/notification'
 
 import { useQueryClient } from '@tanstack/react-query'
 import { invalidateRelations } from '../scripts/query/invalidate'
+import { useUser } from '../hooks/useUser'
 
 interface ProjectWithMembers extends ProjectData {
   memberCount: number;
@@ -57,42 +58,16 @@ const Form = ({ onClose, invitedUser }: FormProps) => {
   const [existingMembers, setExistingMembers] = useState<Set<string>>(new Set())
   const [existingInvites, setExistingInvites] = useState<Set<string>>(new Set())
   const [error, setError] = useState<string>('')
-  const [currentUserNickname, setCurrentUserNickname] = useState<string | null>(null)
 
-  useEffect(() => {
-    const fetchNickname = async () => {
-      if (!userId) return
-      try {
-        const user = await usersApi.getUserById(userId)
-        setCurrentUserNickname(user?.nickname || null)
-      } catch (error) {
-        console.error('Ошибка получения никнейма:', error)
-      }
-    }
-    fetchNickname()
-  }, [userId])
+  const { data: me } = useUser(userId)
+  const currentUserNickname = me?.nickname ?? null
 
   useEffect(() => {
     const fetchProjects = async () => {
       if (!userId) return
       try {
-        const userProjects = await projectsApi.getProjectsByUser(userId)
-        
-        const projectsWithMembers = await Promise.all(
-          userProjects.map(async (project: ProjectData) => {
-            try {
-              const members = await projectMembersApi.getByProject(project.projectId)
-              return {
-                ...project,
-                memberCount: members.length
-              }
-            } catch {
-              return { ...project, memberCount: 0 }
-            }
-          })
-        )
-        
-        setProjects(projectsWithMembers)
+        const userProjects = await projectsApi.getProjectsByUser(userId)   
+        setProjects(userProjects.map((p: ProjectData) => ({ ...p, memberCount: p.membersCount ?? 0 })))
       } catch (error) {
         console.error('Ошибка загрузки проектов:', error)
       } finally {

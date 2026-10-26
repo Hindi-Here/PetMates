@@ -48,7 +48,10 @@ export const queryKeys = {
 
   conversations: {
     all: ['conversations'] as const,
-    messages: (conversationId: string) => ['conversations', 'messages', conversationId] as const,
+  },
+
+  messages: {
+    byConversation: (conversationId: string) => ['messages', conversationId] as const,
   },
 
   events: {

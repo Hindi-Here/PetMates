@@ -230,32 +230,15 @@ namespace api.Controllers
         [HttpDelete("{projectId}")]
         public async Task<IActionResult> DeleteProject(string projectId)
         {
-            try
-            {
-                var authHeader = Request.Headers.Authorization.ToString();
-                var userId = await _SupMan.GetUserIdAsync(authHeader);
-                if (string.IsNullOrEmpty(userId))
-                    return Unauthorized();
+            var userId = await _SupMan.GetUserIdAsync(Request.Headers.Authorization.ToString());
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
-                await _SupMan.UpdateLastOnlineAsync(userId);
+            if (!await _SupMan.IsProjectOwnerAsync(projectId, userId))
+                return Forbid();
 
-                var response = await _client.From<Project>()
-                    .Where(p => p.ProjectId == projectId && p.OwnerId == userId)
-                    .Get();
+            await _SupMan.DeleteProjectCoreAsync(projectId, reason: null, isModeration: false);
 
-                if (response.Models.Count == 0)
-                    return NotFound();
-
-                await _client.From<Project>().Where(p => p.ProjectId == projectId).Delete();
-
-                await _SupMan.Cache.ProjectChangedAsync(projectId);
-
-                return Ok(new { message = "Проект успешно удалён" });
-            }
-            catch (Exception)
-            {
-                return StatusCode(500);
-            }
+            return Ok(new { message = "Проект успешно удалён" });
         }
 
         // Получить рейтинг
@@ -290,12 +273,19 @@ namespace api.Controllers
                 var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
+                var proj = (await _client.From<Project>().Where(p => p.ProjectId == projectId).Get()).Models.FirstOrDefault();
+                if (proj == null || !await _SupMan.CanViewProject(proj, userId, await _SupMan.IsStaffAsync(userId)))
+                    return NotFound();
+
+                if (proj.OwnerId == userId)
+                    return BadRequest(new { message = "Нельзя оценить собственный проект" });
+
                 var existingRating = await _client.From<ProjectRating>()
                     .Where(r => r.ProjectId == projectId && r.UserId == userId)
                     .Get();
 
                 if (existingRating.Models.Count != 0)
-                    return BadRequest("Вы уже оценили этот проект");
+                    return BadRequest(new { message = "Вы уже оценили этот проект" });
 
                 await _client.From<ProjectRating>().Insert(new ProjectRating
                 {
@@ -303,24 +293,17 @@ namespace api.Controllers
                     UserId = userId,
                     ProjectId = projectId,
                     CreatedAt = DateTime.UtcNow
-                });
-
-                var project = await _client.From<Project>().Where(p => p.ProjectId == projectId).Get();
-                if (project.Models.Count != 0)
-                {
-                    await _client.From<Project>()
-                        .Where(p => p.ProjectId == projectId)
-                        .Set(p => p.RatingCount, project.Models.First().RatingCount + 1)
-                        .Update();
-                }
+                }, new QueryOptions { Returning = QueryOptions.ReturnType.Minimal });
 
                 await _SupMan.Cache.ProjectChangedAsync(projectId);
 
-                return Ok(new { success = true, ratingCount = project.Models.First().RatingCount + 1 });
+                var updatedProject = (await _client.From<Project>().Where(p => p.ProjectId == projectId).Get()).Models.FirstOrDefault();
+
+                return Ok(new { success = true, ratingCount = updatedProject?.RatingCount ?? 0 });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                return StatusCode(500, ex.Message);
+                return StatusCode(500, new { error = "Не удалось оценить проект" });
             }
         }
 
@@ -670,8 +653,8 @@ namespace api.Controllers
                             await _client.Storage.From("ProjectMedia")
                                 .Upload(bytes, draftPath, new Supabase.Storage.FileOptions
                                 {
-                                    Upsert = false,
-                                    ContentType = draftPath.EndsWith(".gif") ? "image/gif" : "image/webp",
+                                    Upsert = true,
+                                    ContentType = "image/webp",
                                     CacheControl = "31536000"
                                 });
 
@@ -737,7 +720,7 @@ namespace api.Controllers
 
                 var result = new List<object>();
 
-                var cleanFiles = await _client.Storage.From("ProjectMedia").List(projectId);
+                var cleanFiles = await _SupMan.ListAllAsync("ProjectMedia", projectId);
                 if (cleanFiles != null)
                 {
                     foreach (var file in cleanFiles)
@@ -757,7 +740,7 @@ namespace api.Controllers
                     }
                 }
 
-                var draftFiles = await _client.Storage.From("ProjectMediaDraft").List(projectId);
+                var draftFiles = await _SupMan.ListAllAsync("ProjectMediaDraft", projectId);
                 if (draftFiles != null)
                 {
                     foreach (var file in draftFiles)
@@ -804,7 +787,7 @@ namespace api.Controllers
                 if (imageError != null) return BadRequest(new { message = imageError });
 
                 using var input = file.OpenReadStream();
-                if (!ImageOptimizer.TryOptimize(input, ImageKind.Media, ext, out var optimized, out var optError))
+                if (!ImageOptimizer.TryOptimize(input, ImageKind.Media, out var optimized, out var optError))
                     return BadRequest(new { message = optError });
 
                 var currentTotal = await _SupMan.GetTotalProjectMediaSize(projectId);

@@ -67,6 +67,20 @@ export default function Bug() {
 
   const handleFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(e.target.files || [])
+
+    if (attachments.length + selected.length > LIMITS.report.maxFiles) {
+      setSendError(`[ограничение API] не более ${LIMITS.report.maxFiles} вложений`)
+      setTimeout(() => setSendError(null), TIMING.toastMs)
+      e.target.value = ''
+      return
+    }
+    const bigPhoto = selected.find(f => f.type.startsWith('image/') && f.size > LIMITS.report.photoMaxBytes)
+    if (bigPhoto) {
+      setSendError(`[ограничение API] фото «${bigPhoto.name}» не может быть больше ${LIMITS.report.photoMaxBytes / 1024 / 1024} МБ`)
+      setTimeout(() => setSendError(null), TIMING.toastMs)
+      e.target.value = ''
+      return
+}
     
     const currentSize = attachments.reduce((acc, file) => acc + file.size, 0)
     const newSize = selected.reduce((acc, file) => acc + file.size, 0)
@@ -205,7 +219,7 @@ export default function Bug() {
             type='file'
             ref={fileInputRef}
             multiple
-            accept='image/*,video/*'
+            accept='image/png,image/jpeg,video/mp4,video/quicktime'
             hidden
             onChange={handleFilesSelected}
             disabled={isSending}

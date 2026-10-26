@@ -16,19 +16,15 @@ namespace api.Controllers
 
         // Получить профиль текущего пользователя
         [HttpGet("me")]
+        [AllowBanned]
         public async Task<IActionResult> GetProfile()
         {
             var authHeader = Request.Headers.Authorization.ToString();
-            if (string.IsNullOrWhiteSpace(authHeader) || !authHeader.StartsWith("Bearer "))
-                return Unauthorized();
-
-            var token = authHeader["Bearer ".Length..];
+            var userAuth = await _SupMan.GetAuthUserAsync(authHeader);
+            if (userAuth == null) return Unauthorized();
 
             try
             {
-                var userAuth = await _client.Auth.GetUser(token);
-                if (userAuth == null) return Unauthorized();
-
                 var response = await _client
                     .From<User>()
                     .Where(x => x.UserId == userAuth.Id)
@@ -63,10 +59,9 @@ namespace api.Controllers
         public async Task<IActionResult> UpdateProfile([FromBody] Dictionary<string, JsonElement> data)
         {
             var authHeader = Request.Headers.Authorization.ToString();
-            if (string.IsNullOrWhiteSpace(authHeader) || !authHeader.StartsWith("Bearer "))
+            var userAuth = await _SupMan.GetAuthUserAsync(authHeader);
+            if (userAuth == null)
                 return Unauthorized();
-
-            var token = authHeader["Bearer ".Length..];
 
             var jsonString = JsonSerializer.Serialize(data);
             var userObject = JsonSerializer.Deserialize<User>(jsonString);
@@ -77,9 +72,6 @@ namespace api.Controllers
 
             try
             {
-                var userAuth = await _client.Auth.GetUser(token);
-                if (userAuth == null) return Unauthorized();
-
                 var query = _client.From<User>().Where(x => x.UserId == userAuth.Id);
                 var fieldsToUpdate = new List<string>();
 
@@ -155,7 +147,8 @@ namespace api.Controllers
         public async Task<IActionResult> UploadAvatar(IFormFile file)
         {
             var authHeader = Request.Headers.Authorization.ToString();
-            if (string.IsNullOrWhiteSpace(authHeader) || !authHeader.StartsWith("Bearer "))
+            var userAuth = await _SupMan.GetAuthUserAsync(authHeader);
+            if (userAuth == null)
                 return Unauthorized();
 
             var token = authHeader["Bearer ".Length..];
@@ -166,11 +159,8 @@ namespace api.Controllers
 
             try
             {
-                var userAuth = await _client.Auth.GetUser(token);
-                if (userAuth == null) return Unauthorized();
-
                 using var input = file.OpenReadStream();
-                if (!ImageOptimizer.TryOptimize(input, ImageKind.Avatar, null, out var optimized, out var optError))
+                if (!ImageOptimizer.TryOptimize(input, ImageKind.Avatar, out var optimized, out var optError))
                     return BadRequest(new { message = optError });
 
                 var fileName = $"{userAuth.Id}/avatar.webp";

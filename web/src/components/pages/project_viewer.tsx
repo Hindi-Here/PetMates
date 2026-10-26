@@ -77,7 +77,7 @@ export default function ProjectViewer() {
       })
     },
     enabled: !!projectId,
-    staleTime: STALE.medium,
+    staleTime: STALE.short,
   })
 
   const { data: vacancies = [] } = useQuery({

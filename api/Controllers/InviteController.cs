@@ -86,10 +86,9 @@ namespace api.Controllers
                 if (projectIds.Count == 0)
                     return Ok(new List<object>());
 
-                var allInvites = await _client.From<Invite>().Get();
-                var invites = allInvites.Models
-                    .Where(i => projectIds.Contains(i.ProjectId))
-                    .ToList();
+                var invites = (await _client.From<Invite>()
+                    .Filter("project_id", Supabase.Postgrest.Constants.Operator.In, projectIds)
+                    .Get()).Models;
 
                 var result = new List<object>();
 
@@ -130,18 +129,26 @@ namespace api.Controllers
             try
             {
                 var authHeader = Request.Headers.Authorization.ToString();
-                var userId = await _SupMan.GetUserIdAsync(authHeader);
-                if (string.IsNullOrEmpty(userId))
+                var actor = await _SupMan.GetActorAsync(authHeader);
+                if (actor == null)
                     return Unauthorized();
 
-                await _SupMan.UpdateLastOnlineAsync(userId);
+                var project = (await _client.From<Project>().Where(p => p.ProjectId == dto.ProjectId && p.OwnerId == actor.UserId).Get()).Models.FirstOrDefault();
+                if (project == null)
+                    return Forbid();
 
-                var project = await _client.From<Project>()
-                    .Where(p => p.ProjectId == dto.ProjectId && p.OwnerId == userId)
-                    .Get();
+                if (dto.UserId == actor.UserId)
+                    return BadRequest(new { message = "Нельзя пригласить самого себя" });
 
-                if (project.Models.Count == 0)
-                    return Unauthorized("Вы не владелец этого проекта");
+                var target = await _SupMan.GetUserCachedAsync(dto.UserId);
+                if (target == null)
+                    return NotFound(new { message = "Пользователь не найден" });
+                if (target.IsBanned)
+                    return BadRequest(new { message = "Нельзя пригласить заблокированного пользователя" });
+
+                var isMember = await _client.From<ProjectMember>().Where(pm => pm.ProjectId == dto.ProjectId && pm.UserId == dto.UserId).Get();
+                if (isMember.Models.Count > 0)
+                    return BadRequest(new { message = "Пользователь уже в команде" });
 
                 var existingInvite = await _client.From<Invite>()
                     .Where(i => i.ProjectId == dto.ProjectId)
@@ -158,29 +165,20 @@ namespace api.Controllers
                     UserId = dto.UserId,
                     ProjectId = dto.ProjectId,
                     Role = dto.Role,
-                    Status = dto.Status,
+                    Status = "pending",
                     CreatedAt = DateTime.UtcNow
                 };
 
                 var response = await _client.From<Invite>().Insert(newInvite);
                 var created = response.Models.FirstOrDefault();
-
                 if (created == null)
-                    return BadRequest("Не удалось создать приглашение");
+                    return BadRequest(new { message = "Не удалось создать приглашение" });
 
-                return Ok(new
-                {
-                    created.InviteId,
-                    created.UserId,
-                    created.ProjectId,
-                    created.Role,
-                    created.Status,
-                    CreatedAt = created.CreatedAt.ToString("o")
-                });
+                return Ok(new { created.InviteId, created.UserId, created.ProjectId, created.Role, created.Status, CreatedAt = created.CreatedAt.ToString("o") });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                return StatusCode(500, ex.Message);
+                return StatusCode(500, new { error = "Не удалось создать приглашение" });
             }
         }
 

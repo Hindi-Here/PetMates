@@ -66,6 +66,7 @@ const EventPageInner = () => {
     queryFn: () => eventApi.getEvent(eventId!),
     enabled: !!eventId,
     staleTime: STALE.none,
+    refetchOnWindowFocus: false,
   })
 
   const isOwnerView = !!event && event.ownerId === userId

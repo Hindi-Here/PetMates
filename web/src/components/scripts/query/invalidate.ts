@@ -14,3 +14,7 @@ export const invalidateRelations = (qc: QueryClient) =>
 export const invalidateModeration = (qc: QueryClient) =>
   inv(qc, queryKeys.users.all, queryKeys.projects.all, queryKeys.vacancies.all,
       queryKeys.events.all, queryKeys.notifications.all)
+
+      export const invalidateProfile = (qc: QueryClient) =>
+  inv(qc, queryKeys.profile.all, queryKeys.users.all, queryKeys.projects.all,
+      queryKeys.comments.all, queryKeys.conversations.all, queryKeys.events.all)

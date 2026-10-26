@@ -2,6 +2,9 @@
 using api.Support;
 using Microsoft.AspNetCore.Mvc;
 using Supabase;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace api.Controllers
 {
@@ -18,31 +21,30 @@ namespace api.Controllers
         {
             try
             {
-                var currentUserId = await _SupMan.GetUserIdAsync(Request.Headers.Authorization.ToString());
-                if (string.IsNullOrEmpty(currentUserId))
-                    return Unauthorized();
+                var actor = await _SupMan.GetActorAsync(Request.Headers.Authorization.ToString());
+                if (actor == null) return Unauthorized();
+                if (!actor.IsStaff) return Forbid();
+                if (targetUserId == actor.UserId)
+                    return BadRequest(new { message = "Нельзя заблокировать самого себя" });
 
-                var currentRole = await _SupMan.GetRoleAsync(currentUserId);
-                if (currentRole != Roles.Moderator && currentRole != Roles.Admin)
-                    return Forbid();
+                var targetUser = (await _SupMan.System.From<User>().Where(u => u.UserId == targetUserId).Get())
+                    .Models.FirstOrDefault();
+                if (targetUser == null) return NotFound();
+                if (targetUser.IsBanned) return BadRequest(new { message = "Пользователь уже заблокирован" });
+                if (!RoleRules.CanModerate(actor.Role, targetUser.SystemRole)) return Forbid();
 
-                var targetRole = await _SupMan.GetRoleAsync(targetUserId);
-                if (currentRole == Roles.Moderator && targetRole != Roles.User)
-                    return Forbid();
+                if (RoleRules.Normalize(targetUser.SystemRole) == Roles.Admin && await _SupMan.CountActiveAdminsAsync() <= 1)
+                    return BadRequest(new { message = "Нельзя заблокировать последнего администратора" });
 
                 var error = Validator.ValidateRequiredText(dto.Reason, Limits.Moderation.ReasonMax, "Причина");
-                if (error != null)
-                    return BadRequest(new { message = error });
+                if (error != null) return BadRequest(new { message = error });
 
-                var targetUserResponse = await _client.From<User>().Where(u => u.UserId == targetUserId).Get();
-                var targetUser = targetUserResponse.Models.FirstOrDefault();
-
-                await _client.From<User>()
+                await _SupMan.System.From<User>()
                     .Where(u => u.UserId == targetUserId)
                     .Set(u => u.IsBanned, true)
                     .Set(u => u.BannedAt!, DateTime.UtcNow)
                     .Set(u => u.BannedReason!, dto.Reason)
-                    .Set(u => u.BannedBy!, currentUserId)
+                    .Set(u => u.BannedBy!, actor.UserId)
                     .Update();
 
                 await _SupMan.Cache.UserChangedAsync(targetUserId);
@@ -67,7 +69,7 @@ namespace api.Controllers
                     });
                 }
 
-                await _SupMan.SendNotificationAsync(currentUserId, "system", targetUserId, "moderator_banned_user", new Dictionary<string, object>
+                await _SupMan.SendNotificationAsync(actor.UserId, "system", targetUserId, "moderator_banned_user", new Dictionary<string, object>
                 {
                     { "nickname", targetUser?.Nickname ?? "Пользователь" }
                 });
@@ -86,18 +88,17 @@ namespace api.Controllers
         {
             try
             {
-                var currentUserId = await _SupMan.GetUserIdAsync(Request.Headers.Authorization.ToString());
-                if (string.IsNullOrEmpty(currentUserId))
-                    return Unauthorized();
+                var actor = await _SupMan.GetActorAsync(Request.Headers.Authorization.ToString());
+                if (actor == null) return Unauthorized();
+                if (!actor.IsStaff) return Forbid();
 
-                var currentRole = await _SupMan.GetRoleAsync(currentUserId);
-                if (currentRole != Roles.Moderator && currentRole != Roles.Admin)
-                    return Forbid();
+                var targetUser = (await _SupMan.System.From<User>().Where(u => u.UserId == targetUserId).Get())
+                    .Models.FirstOrDefault();
+                if (targetUser == null) return NotFound();
+                if (!targetUser.IsBanned) return BadRequest(new { message = "Пользователь не заблокирован" });
+                if (!RoleRules.CanModerate(actor.Role, targetUser.SystemRole)) return Forbid();
 
-                var targetUserResponse = await _client.From<User>().Where(u => u.UserId == targetUserId).Get();
-                var targetUser = targetUserResponse.Models.FirstOrDefault();
-
-                await _client.From<User>()
+                await _SupMan.System.From<User>()
                     .Where(u => u.UserId == targetUserId)
                     .Set(u => u.IsBanned, false)
                     .Set(u => u.BannedAt!, null)
@@ -129,7 +130,7 @@ namespace api.Controllers
 
                 await _SupMan.SendNotificationAsync(targetUserId, "system", targetUserId, "unbanned", []);
 
-                await _SupMan.SendNotificationAsync(currentUserId, "system", targetUserId, "moderator_unbanned_user", new Dictionary<string, object>
+                await _SupMan.SendNotificationAsync(actor.UserId, "system", targetUserId, "moderator_unbanned_user", new Dictionary<string, object>
                 {
                     { "nickname", targetUser?.Nickname ?? "Пользователь" }
                 });
@@ -148,23 +149,25 @@ namespace api.Controllers
         {
             try
             {
-                var currentUserId = await _SupMan.GetUserIdAsync(Request.Headers.Authorization.ToString());
-                if (string.IsNullOrEmpty(currentUserId))
-                    return Unauthorized();
-
-                var currentRole = await _SupMan.GetRoleAsync(currentUserId);
-                if (currentRole != Roles.Admin)
-                    return Forbid();
+                var actor = await _SupMan.GetActorAsync(Request.Headers.Authorization.ToString());
+                if (actor == null) return Unauthorized();
+                if (!actor.IsAdmin) return Forbid();
+                if (targetUserId == actor.UserId)
+                    return BadRequest(new { message = "Нельзя изменить собственную роль" });
 
                 if (dto.Role != Roles.User && dto.Role != Roles.Moderator && dto.Role != Roles.Admin)
                     return BadRequest(new { message = "Недопустимая роль" });
 
-                var previousRole = await _SupMan.GetRoleAsync(targetUserId);
+                var targetUser = (await _SupMan.System.From<User>().Where(u => u.UserId == targetUserId).Get())
+                    .Models.FirstOrDefault();
+                if (targetUser == null) return NotFound();
 
-                var targetUserResponse = await _client.From<User>().Where(u => u.UserId == targetUserId).Get();
-                var targetUser = targetUserResponse.Models.FirstOrDefault();
+                var previousRole = RoleRules.Normalize(targetUser.SystemRole);
+                if (previousRole == dto.Role) return BadRequest(new { message = "Эта роль уже назначена" });
+                if (previousRole == Roles.Admin && await _SupMan.CountActiveAdminsAsync() <= 1)
+                    return BadRequest(new { message = "Нельзя снять последнего администратора" });
 
-                await _client.From<User>()
+                await _SupMan.System.From<User>()
                     .Where(u => u.UserId == targetUserId)
                     .Set(u => u.SystemRole!, dto.Role)
                     .Update();
@@ -182,7 +185,7 @@ namespace api.Controllers
                 await _SupMan.SendNotificationAsync(targetUserId, "system", targetUserId, targetEventType, new Dictionary<string, object> { { "role", dto.Role } });
 
                 string moderatorEventType = (dto.Role == Roles.Admin || dto.Role == Roles.Moderator) ? "moderator_promoted_user" : "moderator_demoted_user";
-                await _SupMan.SendNotificationAsync(currentUserId, "system", targetUserId, moderatorEventType, new Dictionary<string, object>
+                await _SupMan.SendNotificationAsync(actor.UserId, "system", targetUserId, moderatorEventType, new Dictionary<string, object>
                 {
                     { "role", dto.Role },
                     { "nickname", targetUser?.Nickname ?? "Пользователь" }

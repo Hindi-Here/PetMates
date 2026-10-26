@@ -13,6 +13,13 @@ namespace api.Controllers
         private readonly Supabase.Client _client = client;
         private readonly SupportManager _SupMan = SupMan;
 
+        private async Task<Conversation?> GetMyConversation(string conversationId, string userId)
+        {
+            var c = (await _client.From<Conversation>().Where(x => x.ConversationId == conversationId).Get())
+                .Models.FirstOrDefault();
+            return c != null && (c.UserOneId == userId || c.UserTwoId == userId) ? c : null;
+        }
+
         // Получить список переписок пользователя
         [HttpGet]
         public async Task<IActionResult> GetConversations()
@@ -28,33 +35,34 @@ namespace api.Controllers
                     .Where(p => p.UserId == userId)
                     .Get();
 
-                var result = new List<object>();
+                var convIds = participations.Models.Select(p => p.ConversationId).ToList();
+                if (convIds.Count == 0) return Ok(new List<object>());
 
-                var hiddenForUser = await _client.From<MessageHiddenForUser>()
-                    .Where(h => h.UserId == userId)
-                    .Get();
+                var convs = (await _client.From<Conversation>()
+                    .Filter("conversation_id", Constants.Operator.In, convIds).Get())
+                    .Models.ToDictionary(c => c.ConversationId);
+
+                var users = (await _SupMan.GetAllUsersAsync())
+                    .Where(u => u.UserId != null).ToDictionary(u => u.UserId!);
+
+                var hiddenForUser = await _client.From<MessageHiddenForUser>().Where(h => h.UserId == userId).Get();
                 var hiddenIds = hiddenForUser.Models.Select(h => h.MessageId).ToHashSet();
 
+                var result = new List<object>();
                 foreach (var participation in participations.Models)
                 {
-                    var convResponse = await _client.From<Conversation>()
-                        .Where(c => c.ConversationId == participation.ConversationId)
-                        .Get();
-                    var conv = convResponse.Models.FirstOrDefault();
-                    if (conv == null) continue;
+                    if (!convs.TryGetValue(participation.ConversationId, out var conv)) continue;
 
-                    var allMessages = await _client.From<Message>()
+                    var recent = await _client.From<Message>()
                         .Where(m => m.ConversationId == conv.ConversationId)
                         .Order(m => m.CreatedAt!, Ordering.Descending)
+                        .Limit(30)
                         .Get();
-
-                    var last = allMessages.Models.FirstOrDefault(m => !hiddenIds.Contains(m.MessageId));
-
+                    var last = recent.Models.FirstOrDefault(m => !hiddenIds.Contains(m.MessageId));
                     if (last == null) continue;
 
                     var otherUserId = conv.UserOneId == userId ? conv.UserTwoId : conv.UserOneId;
-                    var otherUser = await _client.From<User>().Where(u => u.UserId == otherUserId).Get();
-                    var otherUserData = otherUser.Models.FirstOrDefault();
+                    users.TryGetValue(otherUserId, out var otherUserData);
 
                     result.Add(new
                     {
@@ -92,6 +100,10 @@ namespace api.Controllers
 
                 if (dto.TargetUserId == userId)
                     return BadRequest(new { message = "Нельзя начать переписку с самим собой" });
+
+                var target = await _SupMan.GetAccessAsync(dto.TargetUserId);
+                if (!target.Exists || (target.IsBanned && !await _SupMan.IsStaffAsync(userId)))
+                    return NotFound();
 
                 var (userOneId, userTwoId) = string.CompareOrdinal(userId, dto.TargetUserId) < 0
                     ? (userId, dto.TargetUserId)
@@ -147,7 +159,11 @@ namespace api.Controllers
                     .Where(c => c.ConversationId == conversationId)
                     .Get();
                 var conversation = conv.Models.FirstOrDefault();
-                if (conversation == null) return NotFound();
+                if (conversation == null)
+                    return NotFound();
+
+                if (conversation.UserOneId != userId && conversation.UserTwoId != userId)
+                    return Forbid();
 
                 var otherUserId = conversation.UserOneId == userId ? conversation.UserTwoId : conversation.UserOneId;
 
@@ -171,39 +187,43 @@ namespace api.Controllers
                     .Order(m => m.CreatedAt!, Ordering.Ascending)
                     .Get();
 
+                if (conversation.UserOneId != userId && conversation.UserTwoId != userId)
+                    return Forbid();
+
+                var users = (await _SupMan.GetAllUsersAsync())
+                    .Where(u => u.UserId != null).ToDictionary(u => u.UserId!);
+
+                var byId = messages.Models.ToDictionary(m => m.MessageId);
+                var missingParents = messages.Models
+                    .Where(m => m.ParentMessageId != null && !byId.ContainsKey(m.ParentMessageId))
+                    .Select(m => m.ParentMessageId!).Distinct().ToList();
+                if (missingParents.Count > 0)
+                {
+                    var extra = await _client.From<Message>()
+                        .Filter("message_id", Constants.Operator.In, missingParents).Get();
+                    foreach (var p in extra.Models) byId[p.MessageId] = p;
+                }
+
                 var result = new List<object>();
                 foreach (var m in messages.Models)
                 {
                     if (hiddenIds.Contains(m.MessageId)) continue;
 
-                    string? nickname = null, avatarUrl = null;
-                    if (!string.IsNullOrEmpty(m.SenderId))
-                    {
-                        var sender = await _client.From<User>().Where(u => u.UserId == m.SenderId).Get();
-                        var senderData = sender.Models.FirstOrDefault();
-                        nickname = senderData?.Nickname;
-                        avatarUrl = senderData?.AvatarUrl;
-                    }
+                    users.TryGetValue(m.SenderId ?? "", out var senderData);
 
                     string? parentContent = null, parentNickname = null;
-                    if (!string.IsNullOrEmpty(m.ParentMessageId))
+                    if (!string.IsNullOrEmpty(m.ParentMessageId) && byId.TryGetValue(m.ParentMessageId, out var parentMsg) && !parentMsg.IsDeleted)
                     {
-                        var parent = await _client.From<Message>().Where(p => p.MessageId == m.ParentMessageId).Get();
-                        var parentMsg = parent.Models.FirstOrDefault();
-                        if (parentMsg != null && !parentMsg.IsDeleted)
-                        {
-                            parentContent = parentMsg.Content;
-                            var parentSender = await _client.From<User>().Where(u => u.UserId == parentMsg.SenderId).Get();
-                            parentNickname = parentSender.Models.FirstOrDefault()?.Nickname;
-                        }
+                        parentContent = parentMsg.Content;
+                        parentNickname = users.GetValueOrDefault(parentMsg.SenderId ?? "")?.Nickname;
                     }
 
                     result.Add(new
                     {
                         m.MessageId,
                         m.SenderId,
-                        Nickname = nickname,
-                        AvatarUrl = avatarUrl,
+                        senderData?.Nickname,
+                        senderData?.AvatarUrl,
                         Content = m.IsDeleted ? null : m.Content,
                         m.IsEdited,
                         m.IsDeleted,
@@ -216,11 +236,6 @@ namespace api.Controllers
                         UpdatedAt = m.UpdatedAt?.ToString("o")
                     });
                 }
-
-                await _client.From<ConversationParticipant>()
-                    .Where(p => p.ConversationId == conversationId && p.UserId == userId)
-                    .Set(p => p.LastReadAt!, DateTime.UtcNow)
-                    .Update();
 
                 return Ok(new
                 {
@@ -246,12 +261,28 @@ namespace api.Controllers
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 
+                var conv = await GetMyConversation(dto.ConversationId, userId);
+                if (conv == null)
+                    return NotFound(new { message = "Переписка не найдена" });
+
+                var otherId = conv.UserOneId == userId ? conv.UserTwoId : conv.UserOneId;
+                var other = await _SupMan.GetAccessAsync(otherId);
+                if (!other.Exists || (other.IsBanned && !await _SupMan.IsStaffAsync(userId)))
+                    return BadRequest(new { message = "Пользователь недоступен" });
+
+                if (!string.IsNullOrEmpty(dto.ParentMessageId))
+                {
+                    var parent = await _client.From<Message>()
+                        .Where(m => m.MessageId == dto.ParentMessageId && m.ConversationId == dto.ConversationId)
+                        .Get();
+
+                    if (parent.Models.Count == 0)
+                        return BadRequest(new { message = "Исходное сообщение не найдено в этой переписке" });
+                }
+
                 var error = Validator.ValidateChatMessage(dto.Content);
                 if (error != null)
                     return BadRequest(new { message = error });
-
-                if (string.IsNullOrWhiteSpace(dto.Content))
-                    return BadRequest(new { message = "Сообщение не может быть пустым" });
 
                 var newMessage = new Message
                 {
@@ -283,12 +314,13 @@ namespace api.Controllers
                     newMessage.MessageId,
                     newMessage.SenderId,
                     newMessage.Content,
+                    newMessage.ParentMessageId,
                     CreatedAt = newMessage.CreatedAt?.ToString("o")
                 });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                return StatusCode(500, ex.Message);
+                return StatusCode(500, new { error = "Не удалось отправить сообщение" });
             }
         }
 
@@ -447,21 +479,33 @@ namespace api.Controllers
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 
-                await _client.From<MessageHiddenForUser>().Insert(
+                var msgResponse = await _client.From<Message>()
+                    .Where(m => m.MessageId == messageId)
+                    .Get();
+
+                var message = msgResponse.Models.FirstOrDefault();
+                if (message == null)
+                    return NotFound(new { message = "Сообщение не найдено" });
+
+                var conv = await GetMyConversation(message.ConversationId, userId);
+                if (conv == null)
+                    return Forbid();
+
+                await _client.From<MessageHiddenForUser>().Upsert(
                     new MessageHiddenForUser { MessageId = messageId, UserId = userId },
                     new QueryOptions { Returning = QueryOptions.ReturnType.Minimal });
 
                 return Ok(new { message = "Сообщение скрыто" });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                return StatusCode(500, ex.Message);
+                return StatusCode(500, new { error = "Не удалось скрыть сообщение" });
             }
         }
 
         // Переслать сообщение
-        [HttpPost("message/forward")]
-        public async Task<IActionResult> ForwardMessage([FromBody] ForwardMessageDto dto)
+        [HttpPost("message/{messageId}/forward")]
+        public async Task<IActionResult> ForwardMessage(string messageId, [FromBody] ForwardMessageDto dto)
         {
             try
             {
@@ -470,17 +514,23 @@ namespace api.Controllers
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 
-                var source = await _client.From<Message>().Where(m => m.MessageId == dto.SourceMessageId).Get();
-                var sourceMsg = source.Models.FirstOrDefault();
-                if (sourceMsg == null || sourceMsg.IsDeleted)
-                    return NotFound();
+                var sourceMsgResponse = await _client.From<Message>()
+                    .Where(m => m.MessageId == messageId)
+                    .Get();
 
-                var originalNickname = sourceMsg.ForwardedFromNickname;
-                if (string.IsNullOrEmpty(originalNickname) && !string.IsNullOrEmpty(sourceMsg.SenderId))
-                {
-                    var sender = await _client.From<User>().Where(u => u.UserId == sourceMsg.SenderId).Get();
-                    originalNickname = sender.Models.FirstOrDefault()?.Nickname;
-                }
+                var sourceMsg = sourceMsgResponse.Models.FirstOrDefault();
+                if (sourceMsg == null || sourceMsg.IsDeleted)
+                    return NotFound(new { message = "Сообщение не найдено или удалено" });
+
+                if (await GetMyConversation(sourceMsg.ConversationId, userId) == null)
+                    return Forbid();
+
+                if (await GetMyConversation(dto.TargetConversationId, userId) == null)
+                    return Forbid();
+
+                var error = Validator.ValidateChatMessage(sourceMsg.Content);
+                if (error != null)
+                    return BadRequest(new { message = error });
 
                 var newMessage = new Message
                 {
@@ -488,23 +538,36 @@ namespace api.Controllers
                     ConversationId = dto.TargetConversationId,
                     SenderId = userId,
                     Content = sourceMsg.Content,
-                    IsForwarded = true,
-                    ForwardedFromNickname = originalNickname,
                     CreatedAt = DateTime.UtcNow
                 };
 
-                await _client.From<Message>().Insert(newMessage, new QueryOptions { Returning = QueryOptions.ReturnType.Minimal });
+                await _client.From<Message>().Insert(newMessage);
+
+                var now = DateTime.UtcNow;
 
                 await _client.From<Conversation>()
                     .Where(c => c.ConversationId == dto.TargetConversationId)
-                    .Set(c => c.LastMessageAt!, DateTime.UtcNow)
+                    .Set(c => c.LastMessageAt!, now)
                     .Update();
 
-                return Ok(new { message = "Сообщение переслано" });
+                await _client.From<ConversationParticipant>()
+                    .Where(p => p.ConversationId == dto.TargetConversationId && p.UserId == userId)
+                    .Set(p => p.LastReadAt!, now)
+                    .Set(p => p.HiddenAt!, null)
+                    .Update();
+
+                return Ok(new
+                {
+                    newMessage.MessageId,
+                    newMessage.ConversationId,
+                    newMessage.SenderId,
+                    newMessage.Content,
+                    CreatedAt = newMessage.CreatedAt?.ToString("o")
+                });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                return StatusCode(500, ex.Message);
+                return StatusCode(500, new { error = "Не удалось переслать сообщение" });
             }
         }
     }

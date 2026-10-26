@@ -62,7 +62,7 @@ namespace api.Models
         public object? SoftSkills { get; set; }
 
         [JsonPropertyName("last_online_at")]
-        public DateTime? LastOnlineAt { get; set; }
+        public DateTimeOffset? LastOnlineAt { get; set; }
     }
 
     public class UpdateRoleDto

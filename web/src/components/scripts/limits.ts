@@ -28,7 +28,7 @@ export const LIMITS = {
   comment: { maxLength: 2000 },
   chat: { messageMax: 2000 },
   moderation: { reasonMax: 1024 },
-  report: { messageMax: 1024, attachmentsMaxBytes: 50 * MB },
+  report: { messageMax: 1024, attachmentsMaxBytes: 50 * MB, photoMaxBytes: 10 * MB, maxFiles: 10 },
 } as const
 
 export const TIMING = {

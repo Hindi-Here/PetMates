@@ -79,6 +79,15 @@
             public const long AttachmentsMaxBytes = 50 * MB;
             public const long RequestBytes = AttachmentsMaxBytes + 5 * MB;
             public const int NicknameMax = 50;
+
+            // tg API limit
+            public const long PhotoMaxBytes = 10 * MB;
+            public const long VideoMaxBytes = 50 * MB;
+            public const int PhotoMaxSidesSum = 10_000;
+            public const int PhotoMaxAspectRatio = 20;
+            public const int AlbumMaxItems = 10;
+            public const int CaptionMax = 1024;
+            public const int TextMax = 4096;
         }
 
         public static class Search

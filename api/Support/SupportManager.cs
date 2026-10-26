@@ -1,8 +1,10 @@
 ﻿using api.Models;
 using Microsoft.Extensions.Caching.Hybrid;
 using Supabase.Postgrest;
+using Supabase.Postgrest.Interfaces;
 using System.ComponentModel;
 using System.Globalization;
+using System.Linq.Expressions;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -15,6 +17,28 @@ namespace api.Support
         public const string Admin = "admin";
 
         public static bool IsStaff(string? role) => role is Moderator or Admin;
+    }
+
+    public record Actor(string UserId, string Role)
+    {
+        public bool IsStaff => Roles.IsStaff(Role);
+        public bool IsAdmin => Role == Roles.Admin;
+    }
+
+    public static class RoleRules
+    {
+        public static string Normalize(string? role) =>
+            role is Roles.Admin or Roles.Moderator ? role : Roles.User;
+
+        public static int Rank(string? role) => Normalize(role) switch
+        {
+            Roles.Admin => 2,
+            Roles.Moderator => 1,
+            _ => 0
+        };
+        public static bool CanModerate(string? actorRole, string? targetRole) =>
+            Normalize(actorRole) == Roles.Admin ||
+            (Normalize(actorRole) == Roles.Moderator && Rank(targetRole) == 0);
     }
 
     public record Viewer(string? UserId, string? Role)
@@ -123,37 +147,33 @@ namespace api.Support
 
 
 
-    public partial class SupportManager(Supabase.Client client, AppCache cache)
+    public partial class SupportManager(Supabase.Client client, AppCache cache, [FromKeyedServices("system")] Supabase.Client system, SupabaseJwt jwt)
     {
         private readonly Supabase.Client _client = client;
+        private readonly Supabase.Client _system = system;
+        private readonly SupabaseJwt _jwt = jwt;
         private static readonly Regex MentionRegex = MyRegex();
 
         private readonly AppCache _cache = cache;
-
         public AppCache Cache => _cache;
+        public Supabase.Client System => _system;
 
-        // Получение токена пользователя
-        public async Task<string?> GetUserIdAsync(string? authHeader)
+        // Пользователь из токена: проверка подписи локально, без обращения к Supabase
+        public async Task<AuthUser?> GetAuthUserAsync(string? authHeader)
         {
             if (string.IsNullOrWhiteSpace(authHeader) || !authHeader.StartsWith("Bearer "))
                 return null;
 
             var token = authHeader["Bearer ".Length..].Trim();
-            if (string.IsNullOrEmpty(token) || token == "undefined" || token == "null")
+            if (token.Count(c => c == '.') != 2) 
                 return null;
 
-            var key = CacheKeys.Token(ComputeTokenHash(token));
-            var id = await _cache.GetOrCreateAsync<string?>(key, async ct =>
-            {
-                try { return (await _client.Auth.GetUser(token))?.Id; }
-                catch { return null; }
-            }, CacheStale.Short);
-
-            if (id is null)
-                await _cache.RemoveAsync(key);
-
-            return id;
+            return await _jwt.ValidateAsync(token);
         }
+
+        // Получение токена пользователя
+        public async Task<string?> GetUserIdAsync(string? authHeader) =>
+            (await GetAuthUserAsync(authHeader))?.Id;
 
         // Роль и бан из кэша
         public async Task<UserAccess> GetAccessAsync(string userId)
@@ -172,22 +192,39 @@ namespace api.Support
             return access;
         }
 
-
-        // Вычисление хэша токена для ключа кэша
-        private static string ComputeTokenHash(string token)
-        {
-            var bytes = System.Security.Cryptography.SHA256.HashData(
-                System.Text.Encoding.UTF8.GetBytes(token));
-            return Convert.ToBase64String(bytes);
-        }
-
         // Получить роль
         public async Task<string?> GetRoleAsync(string? userId) =>
             string.IsNullOrEmpty(userId) ? null : (await GetAccessAsync(userId)).Role;
 
-        // Является ли роль стафф?
-        public async Task<bool> IsStaffAsync(string? userId) =>
-            Roles.IsStaff(await GetRoleAsync(userId));
+        // Авторизованный, существующий и не заблокированный пользователь
+        public async Task<Actor?> GetActorAsync(string? authHeader)
+        {
+            var userId = await GetUserIdAsync(authHeader);
+            if (string.IsNullOrEmpty(userId)) return null;
+
+            var access = await GetAccessAsync(userId);
+            if (!access.Exists || access.IsBanned) return null;
+
+            await UpdateLastOnlineAsync(userId);
+            return new Actor(userId, RoleRules.Normalize(access.Role));
+        }
+
+        // Заблокированный staff — не staff
+        public async Task<bool> IsStaffAsync(string? userId)
+        {
+            if (string.IsNullOrEmpty(userId)) return false;
+            var a = await GetAccessAsync(userId);
+            return a.Exists && !a.IsBanned && Roles.IsStaff(a.Role);
+        }
+
+        // Владелец проекта: строгое совпадение projectId и OwnerId
+        public async Task<bool> IsProjectOwnerAsync(string projectId, string userId) =>
+            (await _client.From<Project>().Where(p => p.ProjectId == projectId && p.OwnerId == userId).Get())
+                .Models.Count > 0;
+
+        // Активные админы: роль Admin и не заблокирован
+        public async Task<int> CountActiveAdminsAsync() =>
+            (await GetAllUsersAsync()).Count(u => u.SystemRole == Roles.Admin && !u.IsBanned);
 
         // Определение зрителя
         public async Task<Viewer> GetViewerAsync(string? authHeader)
@@ -450,26 +487,21 @@ namespace api.Support
         public static string GetReportTypeLabel(string? type) =>
             ReportTypeLabels.TryGetValue(type ?? "", out var label) ? label : "МНЕНИЕ";
 
-        // Проверка прав на просмотр проекта (используем GetAccessAsync)
+        // Проверка прав на просмотр проекта
         public async Task<bool> CanViewProject(Project project, string? currentUserId, bool isStaff)
         {
             var owner = await GetAccessAsync(project.OwnerId);
-            if (owner.IsBanned && !isStaff)
-                return false;
+            if (owner.IsBanned && !isStaff) return false;
 
-            if (!project.IsPrivate)
+            if (isStaff)
                 return true;
 
-            if (string.IsNullOrEmpty(currentUserId))
-                return false;
-
-            if (project.OwnerId == currentUserId)
-                return true;
+            if (!project.IsPrivate) return true;
+            if (string.IsNullOrEmpty(currentUserId)) return false;
+            if (project.OwnerId == currentUserId) return true;
 
             var membership = await _client.From<ProjectMember>()
-                .Where(pm => pm.ProjectId == project.ProjectId && pm.UserId == currentUserId)
-                .Get();
-
+                .Where(pm => pm.ProjectId == project.ProjectId && pm.UserId == currentUserId).Get();
             return membership.Models.Count > 0;
         }
 
@@ -482,7 +514,7 @@ namespace api.Support
             var draft = draftResponse.Models.FirstOrDefault();
             var deletedFileNames = ParseDeletedMediaFiles(draft?.DeletedMediaFiles);
 
-            var cleanFiles = await _client.Storage.From("ProjectMedia").List(projectId);
+            var cleanFiles = await ListAllAsync("ProjectMedia", projectId);
             if (cleanFiles != null)
             {
                 foreach (var f in cleanFiles)
@@ -492,7 +524,7 @@ namespace api.Support
                 }
             }
 
-            var draftFiles = await _client.Storage.From("ProjectMediaDraft").List(projectId);
+            var draftFiles = await ListAllAsync("ProjectMediaDraft", projectId);
             if (draftFiles != null)
             {
                 foreach (var f in draftFiles)
@@ -716,6 +748,95 @@ namespace api.Support
             }
         }
 
+        // Единый метод удаления проекта (вызывается и владельцем, и модератором)
+        public async Task DeleteProjectCoreAsync(string projectId, string? reason, bool isModeration)
+        {
+            var project = (await _client.From<Project>().Where(p => p.ProjectId == projectId).Get()).Models.FirstOrDefault();
+            if (project == null) return;
+
+            var vacancies = await _client.From<Vacancy>().Where(v => v.ProjectId == projectId).Get();
+            var vacancyIds = vacancies.Models.Select(v => v.VacancyId).ToList();
+
+            var responders = new HashSet<string>();
+            foreach (var vId in vacancyIds)
+            {
+                var res = await _client.From<Response>().Where(r => r.VacancyId == vId).Get();
+                foreach (var r in res.Models) responders.Add(r.UserId);
+            }
+
+            var invites = await _client.From<Invite>().Where(i => i.ProjectId == projectId).Get();
+            var invitees = invites.Models.Select(i => i.UserId).Distinct().ToList();
+
+            await _client.From<Project>().Where(p => p.ProjectId == projectId).Delete();
+
+            await DeleteFolderAsync("ProjectMedia", projectId);
+            await DeleteFolderAsync("ProjectMediaDraft", projectId);
+
+            await Cache.ProjectChangedAsync(projectId);
+            await Cache.VacanciesChangedAsync();
+
+            var deleteEventType = isModeration ? "project_deleted_by_moderator" : "project_deleted_by_owner";
+            var ownerNotifyData = new Dictionary<string, object> { { "projectName", project.Title } };
+            if (!string.IsNullOrEmpty(reason)) ownerNotifyData["reason"] = reason;
+
+            await SendNotificationAsync(project.OwnerId, "project", projectId, deleteEventType, ownerNotifyData);
+
+            foreach (var responderId in responders)
+            {
+                await SendNotificationAsync(responderId, "response", projectId, "responses_revoked_project_deleted",
+                    new Dictionary<string, object> { { "projectName", project.Title } });
+            }
+
+            foreach (var inviteeId in invitees)
+            {
+                await SendNotificationAsync(inviteeId, "invite", projectId, "invites_revoked_project_deleted",
+                    new Dictionary<string, object> { { "projectName", project.Title } });
+            }
+        }
+
+        // Единый метод удаления мероприятия (вызывается и владельцем, и модератором)
+        public async Task DeleteEventCoreAsync(string eventId, string? reason, bool isModeration)
+        {
+            var ev = (await _client.From<Event>().Where(e => e.EventId == eventId).Get()).Models.FirstOrDefault();
+            if (ev == null) return;
+
+            var members = await _client.From<EventMember>().Where(m => m.EventId == eventId).Get();
+            var affectedMembers = members.Models.Select(m => m.UserId).Distinct().ToList();
+
+            var applications = await _client.From<EventApplication>()
+                .Where(a => a.EventId == eventId && (a.Status == "pending" || a.Status == "revision"))
+                .Get();
+            var affectedApplicants = applications.Models.Select(a => a.UserId).Distinct().ToList();
+
+            await _client.From<Event>().Where(e => e.EventId == eventId).Delete();
+
+            await DeleteEventMedia(eventId);
+
+            await Cache.EventsChangedAsync();
+
+            var deleteEventType = isModeration ? "event_deleted_by_moderator" : "event_deleted_by_owner";
+            var ownerNotifyData = new Dictionary<string, object> { { "eventName", ev.Title } };
+            if (!string.IsNullOrEmpty(reason)) ownerNotifyData["reason"] = reason;
+
+            await SendNotificationAsync(ev.OwnerId, "system", eventId, deleteEventType, ownerNotifyData);
+
+            foreach (var memberId in affectedMembers)
+            {
+                await SendNotificationAsync(memberId, "event", eventId, "event_deleted_members_notified", new Dictionary<string, object>
+                {
+                    { "eventName", ev.Title }
+                });
+             }
+
+            foreach (var applicantId in affectedApplicants)
+            {
+                await SendNotificationAsync(applicantId, "application", eventId, "application_revoked_event_deleted", new Dictionary<string, object>
+                {
+                    { "eventName", ev.Title }
+                });
+            }
+        }
+
         // Достигнут ли лимит участников
         public async Task<bool> IsLimitReached(Event ev)
         {
@@ -837,39 +958,24 @@ namespace api.Support
         }
 
         // Может ли пользователь комментировать объект
-        public async Task<bool> CanAccessReference(string referenceType, string referenceId, string userId)
+        public async Task<bool> CanAccessReference(string referenceType, string referenceId, string? userId)
         {
-            if (referenceType == "project")
+            var isStaff = await IsStaffAsync(userId);
+            switch (referenceType)
             {
-                var project = await _client.From<Project>()
-                    .Where(p => p.ProjectId == referenceId)
-                    .Get();
-                var p = project.Models.FirstOrDefault();
-                if (p == null) return false;
-
-                if (!p.IsPrivate) return true;
-                if (p.OwnerId == userId) return true;
-
-                var membership = await _client.From<ProjectMember>()
-                    .Where(pm => pm.ProjectId == referenceId && pm.UserId == userId)
-                    .Get();
-                return membership.Models.Count > 0;
+                case "project":
+                    {
+                        var p = (await _client.From<Project>().Where(x => x.ProjectId == referenceId).Get()).Models.FirstOrDefault();
+                        return p != null && await CanViewProject(p, userId, isStaff);
+                    }
+                case "event":
+                    {
+                        var ev = (await _client.From<Event>().Where(e => e.EventId == referenceId).Get()).Models.FirstOrDefault();
+                        return ev != null && await CanView(ev, userId, isStaff);
+                    }
+                default:
+                    return false;
             }
-
-            if (referenceType == "event")
-            {
-                var evResponse = await _client.From<Event>().Where(e => e.EventId == referenceId).Get();
-                var ev = evResponse.Models.FirstOrDefault();
-                if (ev == null) return false;
-                if (!ev.IsPrivate || ev.OwnerId == userId) return true;
-
-                var membership = await _client.From<EventMember>()
-                    .Where(m => m.EventId == referenceId && m.UserId == userId)
-                    .Get();
-                return membership.Models.Count > 0;
-            }
-
-            return true;
         }
 
         // Является ли пользователь владельцем объекта (проекта или мероприятия)
@@ -988,20 +1094,57 @@ namespace api.Support
 
         // КЕШ
 
+        // Разбиение запроса на чанки (до 1000 строк в запрос)
+        private static async Task<List<T>> FetchAllAsync<T>(Supabase.Client db, Expression<Func<T, object>> orderBy, Func<IPostgrestTable<T>, IPostgrestTable<T>>? filter = null)  where T : Supabase.Postgrest.Models.BaseModel, new()
+        {
+            const int page = 1000;
+            var all = new List<T>();
+
+            for (var from = 0; ; from += page)
+            {
+                var q = db.From<T>(); 
+
+                if (filter != null)
+                {
+                    q = (Supabase.Interfaces.ISupabaseTable<T, Supabase.Realtime.RealtimeChannel>)filter(q);
+                }
+
+                var batch = (await q.Order(orderBy, Supabase.Postgrest.Constants.Ordering.Ascending)
+                                    .Range(from, from + page - 1)
+                                    .Get()).Models;
+
+                all.AddRange(batch);
+
+                if (batch.Count < page) break;
+            }
+
+            return all;
+        }
+
+        // Словарь для мгновенного поиска пользователя по ID
+        private async Task<Dictionary<string, User>> GetUsersMapAsync() =>
+            (await _cache.SnapshotAsync(CacheKeys.UsersAll + ":map",
+                async () => (await GetAllUsersAsync()).Where(u => u.UserId != null).ToDictionary(u => u.UserId!),
+                CacheStale.Short, CacheKeys.Tags.Users)).Value;
+
         // Все пользователи: основа для списков, комментариев, профилей
         public async Task<List<User>> GetAllUsersAsync() =>
             (await _cache.SnapshotAsync(CacheKeys.UsersAll,
-                async () => (await _client.From<User>().Get()).Models,
+                async () => await FetchAllAsync<User>(_system, u => u.UserId!),
                 CacheStale.Short, CacheKeys.Tags.Users)).Value;
 
         // Профиль по id
-        public async Task<Models.User?> GetUserCachedAsync(string userId)
+        public async Task<User?> GetUserCachedAsync(string userId)
         {
-            var u = (await GetAllUsersAsync()).FirstOrDefault(x => x.UserId == userId);
-            if (u != null) return u;
+            var usersMap = await GetUsersMapAsync();
+            if (usersMap.TryGetValue(userId, out var cachedUser))
+            {
+                return cachedUser;
+            }
 
             var r = await _client.From<User>().Where(x => x.UserId == userId).Get();
-            u = r.Models.FirstOrDefault();
+            var u = r.Models.FirstOrDefault();
+
             if (u != null)
             {
                 await _cache.InvalidateAsync(CacheKeys.Tags.Users);
@@ -1011,66 +1154,68 @@ namespace api.Support
 
         // Счётчики для сортировки пользователей
         public async Task<UserCounts> GetUserCountsAsync() =>
-            (await _cache.SnapshotAsync(CacheKeys.UserCounts, async () =>
-            {
-                var projects = (await _client.From<Project>().Get()).Models
-                    .GroupBy(p => p.OwnerId).ToDictionary(g => g.Key, g => g.Count());
-                var ratings = (await _client.From<ProjectRating>().Get()).Models
-                    .GroupBy(r => r.UserId).ToDictionary(g => g.Key, g => g.Count());
-                return new UserCounts(projects, ratings);
-            }, CacheStale.Medium, CacheKeys.Tags.Projects)).Value;
+        (await _cache.SnapshotAsync(CacheKeys.UserCounts, async () =>
+        {
+            var projects = (await FetchAllAsync<Project>(_system, p => p.ProjectId))
+                .Where(p => p.OwnerId != null).GroupBy(p => p.OwnerId).ToDictionary(g => g.Key, g => g.Count());
+
+            var ratings = (await FetchAllAsync<ProjectRating>(_system, r => r.RatingId)) 
+                .Where(r => r.UserId != null).GroupBy(r => r.UserId).ToDictionary(g => g.Key, g => g.Count());
+
+            var members = (await FetchAllAsync<ProjectMember>(_system, m => m.MemberId))
+                .Where(m => m.UserId != null).GroupBy(m => m.UserId).ToDictionary(g => g.Key, g => g.Select(x => x.ProjectId).Distinct().Count());
+
+            return new UserCounts(projects, ratings, members);
+        }, CacheStale.Medium, CacheKeys.Tags.Projects, CacheKeys.Tags.Users)).Value;
 
         // Все открытые заявки публичных проектов
         public async Task<List<VacancyListItem>> GetVacancyListAsync() =>
-            (await _cache.SnapshotAsync(CacheKeys.VacanciesAll, async () =>
-            {
-                var vacancies = (await _client.From<Vacancy>().Where(v => v.IsOpen == true).Get()).Models;
-                var projects = (await _client.From<Project>().Get()).Models
-                    .Where(p => !p.IsPrivate).ToDictionary(p => p.ProjectId);
-                var owners = (await GetAllUsersAsync())
-                    .Where(u => u.UserId != null).ToDictionary(u => u.UserId!);
-                var members = (await _client.From<ProjectMember>().Get()).Models 
-                    .GroupBy(m => m.ProjectId).ToDictionary(g => g.Key, g => g.Count());
+        (await _cache.SnapshotAsync(CacheKeys.VacanciesAll, async () =>
+        {
+            var vacancies = await FetchAllAsync<Vacancy>(_system, v => v.VacancyId, q => q.Where(v => v.IsOpen == true)); 
+            var projects = (await FetchAllAsync<Project>(_system, p => p.ProjectId)) 
+                .Where(p => !p.IsPrivate).ToDictionary(p => p.ProjectId);
+            var owners = (await GetAllUsersAsync()).Where(u => u.UserId != null).ToDictionary(u => u.UserId!);
+            var members = (await FetchAllAsync<ProjectMember>(_system, m => m.MemberId)) 
+                .GroupBy(m => m.ProjectId).ToDictionary(g => g.Key, g => g.Count());
 
-                var list = new List<VacancyListItem>();
-                foreach (var v in vacancies)
-                {
-                    if (!projects.TryGetValue(v.ProjectId, out var p)) continue;
-                    owners.TryGetValue(p.OwnerId, out var owner);
-                    list.Add(new VacancyListItem(v, p, members.GetValueOrDefault(p.ProjectId),
-                                 owner?.Nickname, owner?.IsBanned == true));
-                }
-                return list;
-            }, CacheStale.Medium, CacheKeys.Tags.Vacancies, CacheKeys.Tags.Projects, CacheKeys.Tags.Users)).Value;
+            var list = new List<VacancyListItem>();
+            foreach (var v in vacancies)
+            {
+                if (!projects.TryGetValue(v.ProjectId, out var p)) continue;
+                owners.TryGetValue(p.OwnerId, out var owner);
+                list.Add(new VacancyListItem(v, p, members.GetValueOrDefault(p.ProjectId),
+                    owner?.Nickname, owner?.IsBanned == true, owner?.SystemRole));
+            }
+            return list;
+        }, CacheStale.Medium, CacheKeys.Tags.Vacancies, CacheKeys.Tags.Projects, CacheKeys.Tags.Users)).Value;
 
         // Все публичные мероприятия
         public async Task<List<EventListItem>> GetPublicEventsAsync() =>
-            (await _cache.SnapshotAsync(CacheKeys.EventsAll, async () =>
-            {
-                var events = (await _client.From<Event>().Where(e => e.IsPrivate == false).Get()).Models;
-                var owners = (await GetAllUsersAsync())
-                    .Where(u => u.UserId != null).ToDictionary(u => u.UserId!);
-                var members = (await _client.From<EventMember>().Get()).Models
-                    .GroupBy(m => m.EventId).ToDictionary(g => g.Key, g => g.Count());
+        (await _cache.SnapshotAsync(CacheKeys.EventsAll, async () =>
+        {
+            var events = await FetchAllAsync<Event>(_system, e => e.EventId, q => q.Where(e => e.IsPrivate == false));
+            var owners = (await GetAllUsersAsync()).Where(u => u.UserId != null).ToDictionary(u => u.UserId!);
+            var members = (await FetchAllAsync<EventMember>(_system, m => m.MemberId)) 
+                .GroupBy(m => m.EventId).ToDictionary(g => g.Key, g => g.Count());
 
-                var list = new List<EventListItem>();
-                foreach (var ev in events)
-                    if (owners.TryGetValue(ev.OwnerId, out var o))
-                        list.Add(new EventListItem(ev, o, members.GetValueOrDefault(ev.EventId)));
-                return list;
-            }, CacheStale.Medium, CacheKeys.Tags.Events, CacheKeys.Tags.Users)).Value;
+            var list = new List<EventListItem>();
+            foreach (var ev in events)
+                if (owners.TryGetValue(ev.OwnerId, out var o))
+                    list.Add(new EventListItem(ev, o, members.GetValueOrDefault(ev.EventId)));
+            return list;
+        }, CacheStale.Medium, CacheKeys.Tags.Events, CacheKeys.Tags.Users)).Value;
 
         // Команда проекта
         public async Task<List<object>> GetProjectMemberCardsAsync(string projectId) =>
             (await _cache.SnapshotAsync(CacheKeys.ProjectMembers(projectId), async () =>
             {
-                var response = await _client.From<ProjectMember>()
-                    .Where(pm => pm.ProjectId == projectId).Get();
-
+                var response = await _system.From<ProjectMember>().Where(pm => pm.ProjectId == projectId).Get();
                 var result = new List<object>();
+
                 foreach (var m in response.Models)
                 {
-                    var rpcResult = await _client.Rpc("get_team_member_card",
+                    var rpcResult = await _system.Rpc("get_team_member_card", 
                         new Dictionary<string, object> { { "p_user_id", m.UserId } });
 
                     var rows = JsonSerializer.Deserialize<List<TeamMemberCardRow>>(rpcResult.Content ?? "[]");
@@ -1104,39 +1249,73 @@ namespace api.Support
             }, CacheStale.Short, CacheKeys.Tags.Project(projectId), CacheKeys.Tags.Users)).Value;
 
         // Комментарии
-        public async Task<List<object>> GetCommentsAsync(string type, string id) =>
+        public async Task<List<CommentDto>> GetCommentsAsync(string type, string id) =>
             (await _cache.SnapshotAsync(CacheKeys.Comments(type, id), async () =>
             {
-                var comments = await _client.From<Comment>() 
+                var comments = await _system.From<Comment>()
                     .Where(c => c.ReferenceType == type && c.ReferenceId == id)
                     .Order(c => c.CreatedAt!, Supabase.Postgrest.Constants.Ordering.Ascending).Get();
 
-                var users = (await GetAllUsersAsync())
-                    .Where(u => u.UserId != null).ToDictionary(u => u.UserId!);
+                var users = (await GetAllUsersAsync()).Where(u => u.UserId != null).ToDictionary(u => u.UserId!);
 
-                var result = new List<object>();
+                var result = new List<CommentDto>();
+
                 foreach (var c in comments.Models)
                 {
                     User? u = null;
                     if (!string.IsNullOrEmpty(c.UserId)) users.TryGetValue(c.UserId, out u);
-                    result.Add(new
+
+                    result.Add(new CommentDto
                     {
-                        c.CommentId,
-                        c.UserId,
-                        u?.Nickname,
-                        u?.AvatarUrl,
-                        c.ParentCommentId,
+                        CommentId = c.CommentId,
+                        UserId = c.UserId,
+                        Nickname = u?.Nickname,
+                        AvatarUrl = u?.AvatarUrl,
+                        ParentCommentId = c.ParentCommentId,
                         Content = c.IsDeleted ? null : c.Content,
                         AuthorSystemRole = u?.SystemRole,
-                        c.IsEdited,
-                        c.IsDeleted,
-                        c.DeletedByModerator,
+                        AuthorIsBanned = u?.IsBanned ?? false,
+                        IsEdited = c.IsEdited,
+                        IsDeleted = c.IsDeleted,
+                        DeletedByModerator = c.DeletedByModerator,
                         CreatedAt = c.CreatedAt?.ToString("o"),
                         UpdatedAt = c.UpdatedAt?.ToString("o")
                     });
                 }
                 return result;
             }, CacheStale.Medium, CacheKeys.Tags.Comments(type, id), CacheKeys.Tags.Users)).Value;
+
+        // Все файлы папки (List отдаёт по 100)
+        public async Task<List<Supabase.Storage.FileObject>> ListAllAsync(string bucket, string folder)
+        {
+            var all = new List<Supabase.Storage.FileObject>();
+            for (var offset = 0; ; offset += 100)
+            {
+                var page = await _client.Storage.From(bucket)
+                    .List(folder, new Supabase.Storage.SearchOptions { Limit = 100, Offset = offset }) ?? [];
+                all.AddRange(page);
+                if (page.Count < 100) break;
+            }
+            return all;
+        }
+
+        // Удалить все файлы папки
+        public async Task DeleteFolderAsync(string bucket, string folder)
+        {
+            try
+            {
+                var storage = _client.Storage.From(bucket);
+                for (var i = 0; i < 200; i++)
+                {
+                    var files = await storage.List(folder, new Supabase.Storage.SearchOptions { Limit = 100 }) ?? [];
+                    var paths = files.Where(f => !string.IsNullOrEmpty(f.Name)).Select(f => $"{folder}/{f.Name}").ToList();
+                    if (paths.Count == 0) break;
+                    await storage.Remove(paths);
+                    if (paths.Count < 100) break;
+                }
+            }
+            catch { }
+        }
 
 
         [GeneratedRegex(@"@([a-zA-Z0-9_]+)", RegexOptions.Compiled)]

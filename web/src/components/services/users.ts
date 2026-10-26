@@ -18,6 +18,7 @@ export interface UserData {
   isOnline: boolean;
   lastSeen: string;
   createdAt?: string;
+  activityCount?: number
 }
 
 export interface UserSearchResult {

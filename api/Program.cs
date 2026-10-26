@@ -1,5 +1,6 @@
 using api.Support;
 using DotNetEnv;
+using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.Caching.Hybrid;
 using Supabase;
 using Telegram.Bot;
@@ -45,6 +46,7 @@ builder.Services.AddScoped<Supabase.Client>(sp =>
 builder.Services.AddSingleton<ITelegramBotClient>(new TelegramBotClient(botToken));
 
 builder.Services.AddControllers();
+builder.Services.AddControllers(o => o.Filters.Add<BanGateFilter>());
 
 builder.Services.AddKeyedSingleton<Supabase.Client>("system", (_, _) =>
     new Client(url!, key, new SupabaseOptions
@@ -60,10 +62,19 @@ builder.Services.AddHybridCache(o =>
     o.DefaultEntryOptions = new HybridCacheEntryOptions
     {
         Expiration = CacheStale.Short,
-        LocalCacheExpiration = CacheStale.Short
+        LocalCacheExpiration = CacheStale.Short,
+        Flags = HybridCacheEntryFlags.DisableDistributedCache
     };
 });
+builder.Services.AddResponseCompression(o =>
+{
+    o.EnableForHttps = true;
+    o.Providers.Add<BrotliCompressionProvider>();
+    o.Providers.Add<GzipCompressionProvider>();
+});
+
 builder.Services.AddSingleton<AppCache>();
+builder.Services.AddSingleton<SupabaseJwt>();
 builder.Services.AddScoped<SupportManager>();
 
 builder.Services.AddEndpointsApiExplorer();
@@ -84,6 +95,8 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+app.UseResponseCompression();
 
 if (app.Environment.IsDevelopment())
 {
