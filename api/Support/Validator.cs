@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
@@ -12,7 +13,7 @@ namespace api.Support
         private static partial Regex NameLocationRegex();
         [GeneratedRegex(@"^[a-zA-Zа-яА-Я0-9ёЁ\/\[\]\-\s]+$")]
         private static partial Regex RoleRegex();
-        [GeneratedRegex(@"^#[a-zA-Zа-яА-Я0-9_\/]+$")]
+        [GeneratedRegex(@"^#[a-zA-Zа-яА-ЯёЁ0-9_\/]+$")]
         private static partial Regex TagRegex();
         [GeneratedRegex(@"^[^\s@]+@([^\s@.,]+\.)+[^\s@.,]{2,}$")]
         private static partial Regex EmailRegex();
@@ -38,6 +39,8 @@ namespace api.Support
                     errors.Add($"[Никнейм] максимум {Limits.Auth.NicknameMax} символов");
                 else if (!NicknameRegex().IsMatch(data.Nickname))
                     errors.Add("[Никнейм] недопустимые символы");
+                else if (ReservedNicknames.Contains(data.Nickname))
+                    errors.Add("[Никнейм] этот никнейм зарезервирован");
             }
 
             if (data.RealName != null)
@@ -101,7 +104,54 @@ namespace api.Support
                     errors.Add("[Soft skills] теги должны начинаться с # и содержать только буквы, цифры и _");
             }
 
+            if (data.Age is < Limits.Profile.AgeMin or > Limits.Profile.AgeMax)
+                errors.Add($"[Возраст] допустимо от {Limits.Profile.AgeMin} до {Limits.Profile.AgeMax}");
+
+            if (data.Gender != null && data.Gender is not ("male" or "female" or "unspecified"))
+                errors.Add("[Пол] недопустимое значение");
+
+            if (!string.IsNullOrEmpty(data.Contacts))
+            {
+                var contactsError = ValidateContacts(data.Contacts);
+                if (contactsError != null) errors.Add(contactsError);
+            }
+
             return errors.Count > 0 ? errors[0] : null;
+        }
+
+        // Валидация контактов
+        private sealed record ContactItem(string? Name, string? Link);
+
+        private static string? ValidateContacts(string json)
+        {
+            List<ContactItem>? list;
+            try
+            {
+                list = JsonSerializer.Deserialize<List<ContactItem>>(json, JsonOptions.CaseInsensitive);
+            }
+            catch (JsonException)
+            {
+                return "[Контакты] некорректный формат";
+            }
+
+            list ??= [];
+
+            if (list.Count > Limits.Profile.ContactsMax)
+                return $"[Контакты] максимум {Limits.Profile.ContactsMax}";
+
+            foreach (var c in list)
+            {
+                var name = c.Name?.Trim() ?? "";
+                var link = c.Link?.Trim() ?? "";
+                if (name.Length == 0 || link.Length == 0)
+                    return "[Контакты] заполните название и ссылку";
+                if (name.Length > Limits.Profile.ContactNameMax)
+                    return $"[Контакты] название: максимум {Limits.Profile.ContactNameMax} символов";
+                if (link.Length > Limits.Profile.ContactUrlMax)
+                    return $"[Контакты] ссылка: максимум {Limits.Profile.ContactUrlMax} символов";
+            }
+
+            return null;
         }
 
         // Валидация автара
@@ -134,9 +184,16 @@ namespace api.Support
         // Валидация тегов
         private static bool ValidateTags(string value)
         {
-            var tags = value.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var tags = value.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
             return tags.All(tag => TagRegex().IsMatch(tag));
         }
+
+        // Зарезервированные никнеймы
+        private static readonly HashSet<string> ReservedNicknames = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "admin", "administrator", "moderator", "support", "petmates", "system",
+            "root", "null", "undefined", "deleted_user", "anonymous"
+        };
 
         // Валидация окна регистрации/входа
         public static string? ValidateRegister(string nickname, string email, string password, string confirmPassword)
@@ -151,6 +208,8 @@ namespace api.Support
                 errors.Add($"[Никнейм] максимум {Limits.Auth.NicknameMax} символов");
             else if (!NicknameRegex().IsMatch(nickname))
                 errors.Add("[Никнейм] недопустимые символы");
+            else if (ReservedNicknames.Contains(nickname))
+                errors.Add("[Никнейм] этот никнейм зарезервирован");
 
             if (string.IsNullOrWhiteSpace(email))
                 errors.Add("[Email] введите email");
@@ -267,6 +326,8 @@ namespace api.Support
 
             if (string.IsNullOrWhiteSpace(title))
                 errors.Add("[Название роли] введите название роли");
+            else if (title.Trim().Length < Limits.Member.RoleMin)
+                errors.Add($"[Название роли] минимум {Limits.Member.RoleMin} символа");
             else if (title.Length > Limits.Vacancy.TitleMax)
                 errors.Add($"[Название роли] максимум {Limits.Vacancy.TitleMax} символов");
 
@@ -281,6 +342,49 @@ namespace api.Support
                 errors.Add("[Теги] теги должны начинаться с # и содержать только буквы, цифры и _");
 
             return errors.Count > 0 ? errors[0] : null;
+        }
+
+        // Название медиа файлов
+        public static string? ValidateMediaFileName(string? fileName) =>
+            fileName != null && EventMediaFileNameRegex().IsMatch(fileName) ? null : "[Медиа] недопустимое имя файла";
+
+        // Черновик проекта
+        public static string? ValidateProjectDraft(Models.SaveDraftDto dto)
+        {
+            if (dto.DeletedMediaFiles != null)
+            {
+                if (dto.DeletedMediaFiles.Count > 500) return "[Черновик] слишком много файлов";
+                if (dto.DeletedMediaFiles.Any(f => ValidateMediaFileName(f) != null)) return "[Медиа] недопустимое имя файла";
+            }
+
+            if (dto.Vacancies != null)
+            {
+                if (dto.Vacancies.Count > 100) return "[Черновик] слишком много заявок";
+                foreach (var v in dto.Vacancies)
+                {
+                    if ((v.VacancyId?.Length ?? 0) > 64) return "[Черновик] некорректный идентификатор заявки";
+                    if ((v.Title?.Length ?? 0) > Limits.Vacancy.TitleMax) return $"[Название роли] максимум {Limits.Vacancy.TitleMax} символов";
+                    if ((v.Description?.Length ?? 0) > Limits.Vacancy.DescriptionMax) return $"[Описание] максимум {Limits.Vacancy.DescriptionMax} символов";
+                    if (v.RequiredTags.Count > 30 || v.RequiredTags.Any(t => t.Length > 50)) return "[Теги] слишком много или слишком длинные";
+                }
+            }
+
+            if (dto.DeletedVacancyIds?.Count > 200 || dto.DeletedMemberIds?.Count > 200)
+                return "[Черновик] слишком много элементов";
+            if (dto.DeletedVacancyIds?.Any(i => i.Length > 64) == true || dto.DeletedMemberIds?.Any(i => i.Length > 64) == true)
+                return "[Черновик] некорректный идентификатор";
+
+            if (dto.EditedRoles != null)
+            {
+                if (dto.EditedRoles.Count > 200) return "[Черновик] слишком много ролей";
+                foreach (var (id, role) in dto.EditedRoles)
+                {
+                    if (id.Length > 64) return "[Черновик] некорректный идентификатор";
+                    var roleError = ValidateRole(role);
+                    if (roleError != null) return roleError;
+                }
+            }
+            return null;
         }
 
         public static readonly string[] EventMediaSections = ["description", "results"];

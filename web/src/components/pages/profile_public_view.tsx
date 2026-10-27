@@ -4,8 +4,6 @@ import ChatIcon from '@icons/chat.svg?react'
 import MoreIcon from '@icons/more.svg?react'
 
 import { useState, useMemo, useRef, useEffect } from 'react'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
 import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../hooks/useAuth'
@@ -16,6 +14,8 @@ import type { ThirdProfileData } from '../services/profile'
 
 import InviteForm from '../forms/invite_user'
 import BanUserForm from '../forms/ban_user'
+import { Markdown } from '../common/markdown'
+import { blocksApi } from '../services/blocks'
 
 export type ProfilePublicData = ThirdProfileData & {
   systemRole?: string
@@ -55,11 +55,7 @@ export const ProfilePublicView = ({ user, isPreview = false }: ProfilePublicView
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
-  const targetSystemRole = user.systemRole
-  const isModerationTarget = currentSystemRole === 'admin' ||
-    (currentSystemRole === 'moderator' && targetSystemRole !== 'admin' && targetSystemRole !== 'moderator')
-  const canModerate = !isPreview && isAuthenticated && userId !== user.userId && isModerationTarget
-  const showActions = isPreview || (isAuthenticated && userId !== user.userId)
+  const [busy, setBusy] = useState(false)
 
   useEffect(() => {
     if (!isMenuOpen) return
@@ -75,23 +71,37 @@ export const ProfilePublicView = ({ user, isPreview = false }: ProfilePublicView
   }
 
   const handleUnban = async () => {
+    if (busy) return
+    setBusy(true)
     try {
       await moderationApi.unbanUser(user.userId)
       await refreshUser()
     } catch (error) {
-      console.error('Ошибка разблокировки:', error)
+      console.error(error instanceof Error ? error.message : 'Не удалось разблокировать пользователя')
+    } finally {
+      setBusy(false)
+      setIsMenuOpen(false)
     }
-    setIsMenuOpen(false)
   }
 
-  const handleSetRole = async (role: 'user' | 'moderator' | 'admin') => {
+  const targetSystemRole = user.systemRole
+  const isModerationTarget = currentSystemRole === 'admin' ||
+    (currentSystemRole === 'moderator' && targetSystemRole !== 'admin' && targetSystemRole !== 'moderator')
+  const canModerate = !isPreview && isAuthenticated && userId !== user.userId && isModerationTarget
+  const showActions = isPreview || (isAuthenticated && userId !== user.userId)
+
+   const handleSetRole = async (role: 'user' | 'moderator' | 'admin') => {
+    if (busy) return
+    setBusy(true)
     try {
       await moderationApi.setRole(user.userId, role)
       await refreshUser()
     } catch (error) {
-      console.error('Ошибка изменения роли:', error)
+      console.error(error instanceof Error ? error.message : 'Не удалось изменить роль')
+    } finally {
+      setBusy(false)
+      setIsMenuOpen(false)
     }
-    setIsMenuOpen(false)
   }
 
   const contactsList = useMemo(() => {
@@ -133,6 +143,22 @@ export const ProfilePublicView = ({ user, isPreview = false }: ProfilePublicView
     </div>
   )
 
+  const [blockedByMe, setBlockedByMe] = useState(false)
+  useEffect(() => {
+    if (isPreview || !isAuthenticated || userId === user.userId) return
+    blocksApi.isBlocked(user.userId).then(setBlockedByMe).catch(() => {})
+  }, [user.userId, userId, isAuthenticated, isPreview])
+
+  const toggleBlock = async () => {
+    try {
+      if (blockedByMe) await blocksApi.unblock(user.userId)
+      else await blocksApi.block(user.userId)
+      setBlockedByMe(!blockedByMe)
+    } catch (e) {
+      console.error(e instanceof Error ? e.message : 'Не удалось выполнить действие')
+    }
+  }
+
   return (
     <div className='profile-public-content'>
       <div className='profile-header-container'>
@@ -159,6 +185,12 @@ export const ProfilePublicView = ({ user, isPreview = false }: ProfilePublicView
               <InviteIcon className='action-ico' />
             </button>
 
+            {!isPreview && (
+              <button className='profile-block-btn' onClick={toggleBlock}>
+                {blockedByMe ? 'Разблокировать' : 'Заблокировать'}
+              </button>
+            )}
+
             {canModerate && (
               <div className='profile-moderation-menu-wrapper' ref={menuRef}>
                 <button
@@ -171,10 +203,13 @@ export const ProfilePublicView = ({ user, isPreview = false }: ProfilePublicView
                 {isMenuOpen && (
                   <div className='profile-moderation-menu'>
                     {user.isBanned ? (
-                      <button onClick={e => { e.stopPropagation(); handleUnban() }}>Разблокировать</button>
+                      <button disabled={busy} onClick={e => { e.stopPropagation(); handleUnban() }}>
+                        Разблокировать
+                      </button>
                     ) : (
                       <button
                         className='danger'
+                        disabled={busy}
                         onClick={e => { e.stopPropagation(); setIsMenuOpen(false); setShowBanForm(true) }}
                       >
                         Заблокировать
@@ -184,21 +219,21 @@ export const ProfilePublicView = ({ user, isPreview = false }: ProfilePublicView
                     {currentSystemRole === 'admin' && (
                       <>
                         {targetSystemRole === 'admin' ? (
-                          <button className='danger' onClick={e => { e.stopPropagation(); handleSetRole('user') }}>
-                            Снять администратора
+                          <button className='danger' disabled={busy} onClick={e => { e.stopPropagation(); handleSetRole('user') }}>
+                            Снять модератора
                           </button>
                         ) : targetSystemRole === 'user' ? (
-                          <button onClick={e => { e.stopPropagation(); handleSetRole('admin') }}>
+                          <button disabled={busy} onClick={e => { e.stopPropagation(); handleSetRole('admin') }}>
                             Назначить администратором
                           </button>
                         ) : null}
 
                         {targetSystemRole === 'moderator' ? (
-                          <button onClick={e => { e.stopPropagation(); handleSetRole('user') }}>
+                          <button disabled={busy} onClick={e => { e.stopPropagation(); handleSetRole('user') }}>
                             Снять модератора
                           </button>
                         ) : targetSystemRole === 'user' ? (
-                          <button onClick={e => { e.stopPropagation(); handleSetRole('moderator') }}>
+                          <button disabled={busy} onClick={e => { e.stopPropagation(); handleSetRole('moderator') }}>
                             Назначить модератором
                           </button>
                         ) : null}
@@ -235,7 +270,7 @@ export const ProfilePublicView = ({ user, isPreview = false }: ProfilePublicView
             <p className='profile-area-text'>Описание:</p>
           </div>
           <div className='description-text markdown-content'>
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{user.description}</ReactMarkdown>
+            <Markdown>{user.description}</Markdown>
           </div>
         </div>
       )}

@@ -1,5 +1,4 @@
-import { API_BASE } from './cfg';
-import { supabase } from './cfg';
+import { authFetch, readError } from './http'
 
 export interface CommentData {
   commentId: string;
@@ -19,78 +18,27 @@ export interface CommentData {
 export const commentApi = {
   // Получить комментарии к указанному объекту
   getComments: async (referenceType: string, referenceId: string): Promise<CommentData[]> => {
-    const { data: { session } } = await supabase.auth.getSession();
-
-    const response = await fetch(`${API_BASE}/api/comment/${referenceType}/${referenceId}`, {
-      headers: {
-        'Authorization': `Bearer ${session?.access_token}`,
-        'Content-Type': 'application/json'
-      },
-    });
-
-    if (!response.ok) throw new Error('Ошибка загрузки комментариев');
-    return await response.json();
+    const r = await authFetch(`/api/comment/${referenceType}/${referenceId}`);
+    if (!r.ok) throw new Error(await readError(r, 'Ошибка загрузки комментариев'));
+    return await r.json();
   },
 
   // Создать новый комментарий (или ответ на комментарий)
-  create: async (dto: {
-    referenceType: string;
-    referenceId: string;
-    content: string;
-    parentCommentId?: string;
-  }): Promise<CommentData> => {
-    const { data: { session } } = await supabase.auth.getSession();
-
-    const response = await fetch(`${API_BASE}/api/comment`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${session?.access_token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(dto),
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.message || 'Ошибка создания комментария');
-    }
-    return await response.json();
+  create: async (dto: { referenceType: string; referenceId: string; content: string; parentCommentId?: string }): Promise<CommentData> => {
+    const r = await authFetch('/api/comment', { method: 'POST', body: JSON.stringify(dto) });
+    if (!r.ok) throw new Error(await readError(r, 'Ошибка создания комментария'));
+    return await r.json();
   },
 
   // Обновить (отредактировать) комментарий
   update: async (commentId: string, content: string): Promise<void> => {
-    const { data: { session } } = await supabase.auth.getSession();
-
-    const response = await fetch(`${API_BASE}/api/comment/${commentId}`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${session?.access_token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ content }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.message || 'Ошибка редактирования комментария');
-    }
+    const r = await authFetch(`/api/comment/${commentId}`, { method: 'PUT', body: JSON.stringify({ content }) });
+    if (!r.ok) throw new Error(await readError(r, 'Ошибка редактирования комментария'));
   },
 
   // Удалить комментарий
   delete: async (commentId: string): Promise<void> => {
-    const { data: { session } } = await supabase.auth.getSession();
-
-    const response = await fetch(`${API_BASE}/api/comment/${commentId}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${session?.access_token}`,
-        'Content-Type': 'application/json'
-      },
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.message || 'Ошибка удаления комментария');
-    }
+    const r = await authFetch(`/api/comment/${commentId}`, { method: 'DELETE' });
+    if (!r.ok) throw new Error(await readError(r, 'Ошибка удаления комментария'));
   },
 };

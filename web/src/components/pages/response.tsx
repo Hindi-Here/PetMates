@@ -2,38 +2,18 @@ import './response.scss'
 
 import InfoIcon from '@icons/info.svg?react'
 import UsersIcon from '@icons/users.svg?react'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '../scripts/query/queryKeys'
 import { responseApi, type ResponseData } from '../services/response'
 import { inviteApi, type InviteData } from '../services/invite'
 import { projectsApi } from '../services/project'
-import { notificationApi } from '../services/notification'
 import { STALE } from '../scripts/query/queryClient'
 import { invalidateRelations } from '../scripts/query/invalidate'
-import { useUser } from '../hooks/useUser'
-
-// Отправка уведомления пользователю
-const sendNotification = (
-  userId: string,
-  referenceType: string,
-  referenceId: string,
-  eventType: string,
-  contextData: Record<string, any>
-) => {
-  notificationApi.create({
-    userId,
-    referenceType,
-    referenceId,
-    contextData: {
-      ...contextData,
-      eventType,
-    }
-  }).catch(err => console.error('Ошибка создания уведомления:', err))
-}
+import { useOnce } from '../hooks/useOnce'
 
 // Рендер карточки входящего отклика
 const renderIncomingResponseCard = (
@@ -186,8 +166,13 @@ export const Responses = () => {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  const { data: me } = useUser(userId) 
-  const currentUserNickname = me?.nickname ?? null
+  const once = useOnce()
+  const [actionError, setActionError] = useState<string | null>(null)
+
+  const showError = (e: unknown) => {
+    setActionError(e instanceof Error ? e.message : 'Не удалось выполнить действие')
+    setTimeout(() => setActionError(null), 3000)
+  }
 
   const { data: allInvites = [] } = useQuery({
     queryKey: queryKeys.invites.all,
@@ -235,97 +220,51 @@ export const Responses = () => {
     [allInvites, userId]
   )
 
-  const deleteResponseMutation = useMutation({
-    mutationFn: (responseId: string) => responseApi.delete(responseId),
-    onSuccess: async () => {
-      await invalidateRelations(queryClient)
-    },
-  })
-
-  const deleteInviteMutation = useMutation({
-    mutationFn: (inviteId: string) => inviteApi.delete(inviteId),
-    onSuccess: async () => {
-      await invalidateRelations(queryClient)
-    },
-  })
-
-  const handleResponseAction = async (responseId: string, action: 'accept' | 'decline', response: ResponseData) => {
-    try {
-      await deleteResponseMutation.mutateAsync(responseId)
-
-      const eventType = action === 'accept' ? 'response_accepted' : 'response_rejected'
-
-      sendNotification(response.userId, 'response', response.projectId, eventType, {
-        projectName: response.projectTitle || 'Проект',
-        vacancyName: response.vacancyTitle || 'Заявка',
-      })
-
-      await invalidateRelations(queryClient)
-
-    } catch (error) {
-      console.error('Ошибка обработки отклика:', error)
-      await invalidateRelations(queryClient)
-    }
-  }
-
-  const handleInviteAction = async (inviteId: string, action: 'accept' | 'decline', invite: InviteData) => {
-    try {
-      await deleteInviteMutation.mutateAsync(inviteId)
-
-      const eventType = action === 'accept' ? 'invite_accepted' : 'invite_rejected'
-
+  const handleResponseAction = (responseId: string, action: 'accept' | 'decline', _response: ResponseData) =>
+    once(`response_${responseId}`, async () => {
       try {
-        const project = await projectsApi.getProject(invite.projectId)
-        sendNotification(project.ownerId, 'invite', invite.projectId, eventType, {
-          projectName: invite.projectTitle || 'Проект',
-          vacancyName: invite.role || 'Заявка',
-          nickname: currentUserNickname || 'Пользователь',
-        })
+        if (action === 'accept') await responseApi.accept(responseId)
+        else await responseApi.decline(responseId)
       } catch (error) {
-        console.error('Ошибка получения проекта для уведомления:', error)
-      }
-
-      await invalidateRelations(queryClient)
-    } catch (error) {
-      console.error('Ошибка обработки приглашения:', error)
-    }
-  }
-
-  const handleCancelResponse = async (response: ResponseData) => {
-    try {
-      await deleteResponseMutation.mutateAsync(response.responseId)
-
-      try {
-        const project = await projectsApi.getProject(response.projectId)
-        sendNotification(project.ownerId, 'response', response.projectId, 'response_cancelled', {
-          projectName: response.projectTitle || 'Проект',
-          vacancyName: response.vacancyTitle || 'Заявка',
-          nickname: currentUserNickname || 'Пользователь',
-        })
+        showError(error)
+      } finally {
         await invalidateRelations(queryClient)
-      } catch (error) {
-        console.error('Ошибка получения проекта для уведомления:', error)
       }
-    } catch (error) {
-      console.error('Ошибка отмены отклика:', error)
-    }
-  }
+    })
 
-  const handleCancelInvite = async (invite: InviteData) => {
-    try {
-      await deleteInviteMutation.mutateAsync(invite.inviteId)
+  const handleInviteAction = (inviteId: string, action: 'accept' | 'decline', _invite: InviteData) =>
+    once(`invite_${inviteId}`, async () => {
+      try {
+        if (action === 'accept') await inviteApi.accept(inviteId)
+        else await inviteApi.decline(inviteId)
+      } catch (error) {
+        showError(error)
+      } finally {
+        await invalidateRelations(queryClient)
+      }
+    })
 
-      sendNotification(invite.userId, 'invite', invite.projectId, 'invite_cancelled', {
-        projectName: invite.projectTitle || 'Проект',
-        vacancyName: invite.role || 'Заявка',
-        nickname: currentUserNickname || 'Пользователь',
-      })
+  const handleCancelResponse = (response: ResponseData) =>
+    once(`cancel_response_${response.responseId}`, async () => {
+      try {
+        await responseApi.delete(response.responseId)
+      } catch (error) {
+        showError(error)
+      } finally {
+        await invalidateRelations(queryClient)
+      }
+    })
 
-      await invalidateRelations(queryClient)
-    } catch (error) {
-      console.error('Ошибка отмены приглашения:', error)
-    }
-  }
+  const handleCancelInvite = (invite: InviteData) =>
+    once(`cancel_invite_${invite.inviteId}`, async () => {
+      try {
+        await inviteApi.delete(invite.inviteId)
+      } catch (error) {
+        showError(error)
+      } finally {
+        await invalidateRelations(queryClient)
+      }
+    })
 
   const navigateToProject = async (projectId: string) => {
     try {
@@ -340,6 +279,8 @@ export const Responses = () => {
 
   return (
     <div className='responses-page'>
+      {actionError && <p className='save-error-text'>{actionError}</p>}
+
       {incomingResponses.length > 0 && (
         <section className='response-section'>
           <h2 className='response-section-title'>

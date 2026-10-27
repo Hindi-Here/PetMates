@@ -1,8 +1,11 @@
 using api.Support;
 using DotNetEnv;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.Caching.Hybrid;
 using Supabase;
+using System.Net;
+using System.Threading.RateLimiting;
 using Telegram.Bot;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -13,47 +16,18 @@ var url = Environment.GetEnvironmentVariable("SUPABASE_URL");
 var key = Environment.GetEnvironmentVariable("SUPABASE_KEY");
 var botToken = Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN")!;
 
-var options = new SupabaseOptions
+static SupabaseOptions supabaseOptions() => new()
 {
-    AutoRefreshToken = true,
-    AutoConnectRealtime = true
+    AutoRefreshToken = false,
+    AutoConnectRealtime = false
 };
 
-builder.Services.AddHttpContextAccessor();
-
-builder.Services.AddScoped<Supabase.Client>(sp =>
-{
-    var client = new Client(url!, key, options);
-
-    var httpContextAccessor = sp.GetRequiredService<IHttpContextAccessor>();
-    var authHeader = httpContextAccessor.HttpContext?.Request.Headers.Authorization.ToString();
-
-    if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer "))
-    {
-        var token = authHeader["Bearer ".Length..].Trim();
-
-        if (!string.IsNullOrEmpty(token) &&
-            token != "undefined" && token != "null" &&
-            token.Count(c => c == '.') == 2)
-        {
-            client.Postgrest.Options.Headers["Authorization"] = $"Bearer {token}";
-        }
-    }
-
-    return client;
-});
+builder.Services.AddScoped<Supabase.Client>(_ => new Client(url!, key, supabaseOptions()));
+builder.Services.AddKeyedSingleton<Supabase.Client>("system", (_, _) => new Client(url!, key, supabaseOptions()));
 
 builder.Services.AddSingleton<ITelegramBotClient>(new TelegramBotClient(botToken));
 
-builder.Services.AddControllers();
 builder.Services.AddControllers(o => o.Filters.Add<BanGateFilter>());
-
-builder.Services.AddKeyedSingleton<Supabase.Client>("system", (_, _) =>
-    new Client(url!, key, new SupabaseOptions
-    {
-        AutoRefreshToken = false,
-        AutoConnectRealtime = false
-    }));
 
 builder.Services.AddMemoryCache();
 builder.Services.AddHybridCache(o =>
@@ -80,21 +54,46 @@ builder.Services.AddScoped<SupportManager>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.Configure<ForwardedHeadersOptions>(o =>
+{
+    o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    o.KnownProxies.Add(IPAddress.Loopback);
+    o.KnownProxies.Add(IPAddress.IPv6Loopback);
+});
+static RateLimitPartition<string> PerIp(HttpContext c, int permit, TimeSpan window) =>
+    RateLimitPartition.GetFixedWindowLimiter(
+        c.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = permit, Window = window, QueueLimit = 0 });
+
+builder.Services.AddRateLimiter(o =>
+{
+    o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    o.AddPolicy("report", c => PerIp(c, 3, TimeSpan.FromMinutes(10)));
+    o.AddPolicy("auth", c => PerIp(c, 10, TimeSpan.FromMinutes(5)));
+    o.AddPolicy("lookup", c => PerIp(c, 20, TimeSpan.FromMinutes(1)));
+    o.AddPolicy("write", c => PerIp(c, 60, TimeSpan.FromMinutes(1)));
+});
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowLocalhost", policy =>
+    options.AddPolicy("Frontend", policy =>
     {
-        var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-                             ?? [];
-
+        var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
         policy.WithOrigins(allowedOrigins)
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();
+              .WithHeaders("Authorization", "Content-Type")
+              .WithMethods("GET", "POST", "PUT", "DELETE");
     });
 });
 
 var app = builder.Build();
+
+app.UseForwardedHeaders();
+
+app.UseExceptionHandler(a => a.Run(async ctx =>
+{
+    ctx.Response.StatusCode = StatusCodes.Status500InternalServerError;
+    await ctx.Response.WriteAsJsonAsync(new { message = "Внутренняя ошибка сервера" });
+}));
 
 app.UseResponseCompression();
 
@@ -104,8 +103,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseCors("AllowLocalhost");
-app.UseHttpsRedirection();
+app.UseCors("Frontend");
+app.UseRateLimiter();
 app.UseAuthorization();
 
 app.MapControllers();

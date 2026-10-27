@@ -175,6 +175,7 @@ export const Messages = () => {
       <div className='conversation-actions' onClick={(e) => e.stopPropagation()}>
         <button
           className={`conversation-pin-btn ${conv.isPinned ? 'pinned' : ''}`}
+          disabled={togglePinMutation.isPending}
           onClick={() => togglePinMutation.mutate(conv.conversationId)}
         >
           {conv.isPinned ? <UnpinIcon className='ico' /> : <PinIcon className='ico' />}
@@ -223,7 +224,7 @@ export const Messages = () => {
 
           {isSearchingUsers ? (
             <div className='empty-activity'>
-              <p className='empty-activity-text'>Поиск...</p>
+              <p className='empty-activity-text'>Поиск</p>
             </div>
           ) : sortedFoundUsers.length > 0 ? (
             <div className='found-users-list'>

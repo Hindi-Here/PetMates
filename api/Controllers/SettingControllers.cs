@@ -1,6 +1,7 @@
-﻿using api.Support;
-using api.Models;
+﻿using api.Models;
+using api.Support;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Supabase;
 
 namespace api.Controllers
@@ -14,6 +15,7 @@ namespace api.Controllers
 
         // Обновить пароль
         [HttpPut("password")]
+        [EnableRateLimiting("auth")]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
         {
             var error = Validator.ValidateChangePassword(request.NewPassword, request.ConfirmPassword);
@@ -29,8 +31,19 @@ namespace api.Controllers
             try
             {
                 var userAuth = await _client.Auth.GetUser(token);
-                if (userAuth == null)
+                if (userAuth == null || string.IsNullOrEmpty(userAuth.Email))
                     return Unauthorized();
+
+                if (string.IsNullOrEmpty(request.OldPassword) ||
+                    !await SupportManager.VerifyPasswordAsync(userAuth.Email, request.OldPassword))
+                {
+                    return BadRequest(new { message = "[Пароль] старый пароль указан неверно" });
+                }
+
+                if (request.OldPassword == request.NewPassword)
+                {
+                    return BadRequest(new { message = "[Пароль] новый пароль совпадает со старым" });
+                }
 
                 var supabaseUrl = Environment.GetEnvironmentVariable("SUPABASE_URL");
                 var serviceKey = Environment.GetEnvironmentVariable("SUPABASE_KEY");
@@ -50,12 +63,11 @@ namespace api.Controllers
                 if (!response.IsSuccessStatusCode)
                     return StatusCode(500, new { message = "Ошибка смены пароля" });
 
+                await SupportManager.SignOutOthersAsync(token);
+
                 return Ok(new { message = "Пароль успешно изменён" });
             }
-            catch (Exception)
-            {
-                return StatusCode(500, new { message = "Ошибка смены пароля" });
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Обновить почту
@@ -96,14 +108,12 @@ namespace api.Controllers
 
                 return Ok(new { message = "Почта успешно изменена" });
             }
-            catch (Exception)
-            {
-                return StatusCode(500, new { message = "Ошибка смены почты" });
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Удалить аккаунт
         [HttpDelete("account")]
+        [EnableRateLimiting("auth")]
         public async Task<IActionResult> DeleteAccount([FromBody] DeleteAccountRequest request)
         {
             var authHeader = Request.Headers.Authorization.ToString();
@@ -115,10 +125,19 @@ namespace api.Controllers
             try
             {
                 var userAuth = await _client.Auth.GetUser(token);
-                if (userAuth == null) return Unauthorized();
+                if (userAuth == null)
+                    return Unauthorized();
 
-                if (!SupportManager.IsNicknameValid(userAuth, request.Nickname))
+                if (!await _SupMan.NicknameMatchesAsync(userAuth.Id!, request.Nickname))
                     return BadRequest(new { message = "[Никнейм] введённый никнейм не совпадает с текущим" });
+
+                var provider = userAuth.AppMetadata?.GetValueOrDefault("provider")?.ToString() ?? "email";
+                if (provider == "email" &&
+                    (string.IsNullOrEmpty(request.Password) ||
+                     !await SupportManager.VerifyPasswordAsync(userAuth.Email!, request.Password)))
+                {
+                    return BadRequest(new { message = "[Пароль] неверный пароль" });
+                }
 
                 var uid = userAuth.Id!;
 
@@ -152,10 +171,7 @@ namespace api.Controllers
 
                 return Ok(new { message = "Аккаунт успешно удалён" });
             }
-            catch (Exception)
-            {
-                return StatusCode(500, new { message = "Ошибка удаления аккаунта" });
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Верификация
@@ -171,17 +187,15 @@ namespace api.Controllers
             try
             {
                 var userAuth = await _client.Auth.GetUser(token);
-                if (userAuth == null) return Unauthorized();
+                if (userAuth == null)
+                    return Unauthorized();
 
-                if (!SupportManager.IsNicknameValid(userAuth, request.Nickname))
+                if (!await _SupMan.NicknameMatchesAsync(userAuth.Id!, request.Nickname))
                     return BadRequest(new { message = "[Никнейм] введённый никнейм не совпадает с текущим" });
 
                 return Ok(new { message = "Никнейм подтверждён" });
             }
-            catch (Exception)
-            {
-                return StatusCode(500, new { message = "Ошибка проверки никнейма" });
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
     }
 }

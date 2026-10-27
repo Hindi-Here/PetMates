@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom';
 import { ThemeProvider } from './components/common/theme'
+import { ErrorPage } from './components/common/errorPage'
 
 import { queryClient } from './components/scripts/query/queryClient'
 import { QueryClientProvider } from '@tanstack/react-query'
@@ -14,6 +15,7 @@ import BannedPage from './components/pages/ban'
 import { useBanStatus } from './components/hooks/useBanStatus'
 import { ScrollToTop } from './components/scripts/function';
 import { AuthProvider } from './components/hooks/useAuth';
+import React from 'react';
 
 // Компонент, который проверяет статус бана пользователя и отображает соответствующую страницу
 function AppGate() {
@@ -44,7 +46,9 @@ createRoot(document.getElementById('root')!).render(
         <AuthProvider>
           <ThemeProvider>
             <ScrollToTop />
-            <AppGate />
+              <ErrorPage>
+              <AppGate />
+            </ErrorPage>
           </ThemeProvider>
         </AuthProvider>
       </QueryClientProvider>

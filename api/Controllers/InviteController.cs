@@ -1,6 +1,7 @@
 ﻿using api.Models;
 using api.Support;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Supabase;
 
 namespace api.Controllers
@@ -37,12 +38,9 @@ namespace api.Controllers
                     var projectData = project.Models.FirstOrDefault();
 
                     var ownerId = projectData?.OwnerId;
-                    var owner = string.IsNullOrEmpty(ownerId)
-                        ? await _client.From<User>().Get()
-                        : await _client.From<User>()
-                            .Where(u => u.UserId == ownerId)
-                            .Get();
-                    var ownerData = owner.Models.FirstOrDefault();
+                    var ownerData = string.IsNullOrEmpty(ownerId)
+                        ? null
+                        : await _SupMan.GetUserCachedAsync(ownerId);
 
                     result.Add(new
                     {
@@ -60,10 +58,7 @@ namespace api.Controllers
 
                 return Ok(result);
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Получить исходящие приглашения
@@ -116,14 +111,12 @@ namespace api.Controllers
 
                 return Ok(result);
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Создать приглашение
         [HttpPost]
+        [EnableRateLimiting("write")]
         public async Task<IActionResult> CreateInvite([FromBody] CreateInviteDto dto)
         {
             try
@@ -136,6 +129,18 @@ namespace api.Controllers
                 var project = (await _client.From<Project>().Where(p => p.ProjectId == dto.ProjectId && p.OwnerId == actor.UserId).Get()).Models.FirstOrDefault();
                 if (project == null)
                     return Forbid();
+
+                var roleError = Validator.ValidateRole(dto.Role);
+                if (roleError != null)
+                    return BadRequest(new { message = roleError });
+
+                var vacancyExists = await _client.From<Vacancy>()
+                    .Where(v => v.ProjectId == dto.ProjectId && v.Title == dto.Role).Get();
+                if (vacancyExists.Models.Count == 0)
+                    return BadRequest(new { message = "В проекте нет заявки с такой ролью" });
+
+                if (await _SupMan.IsBlockedBetweenAsync(actor.UserId, dto.UserId))
+                    return BadRequest(new { message = "Невозможно отправить приглашение этому пользователю" });
 
                 if (dto.UserId == actor.UserId)
                     return BadRequest(new { message = "Нельзя пригласить самого себя" });
@@ -174,57 +179,55 @@ namespace api.Controllers
                 if (created == null)
                     return BadRequest(new { message = "Не удалось создать приглашение" });
 
+                var me = await _SupMan.GetUserCachedAsync(actor.UserId);
+                var ctx = new Dictionary<string, object> { ["projectName"] = project.Title, ["vacancyName"] = dto.Role };
+                await _SupMan.SendNotificationAsync(actor.UserId, "invite", project.ProjectId, "invite_sent", new(ctx));
+                await _SupMan.SendNotificationAsync(dto.UserId, "invite", project.ProjectId, "invite_received",
+                    new(ctx) { ["nickname"] = me?.Nickname ?? "Пользователь" });
+
                 return Ok(new { created.InviteId, created.UserId, created.ProjectId, created.Role, created.Status, CreatedAt = created.CreatedAt.ToString("o") });
             }
-            catch (Exception)
-            {
-                return StatusCode(500, new { error = "Не удалось создать приглашение" });
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
-        // Обновить статус приглашения (принять/отклонить)
-        [HttpPut("{inviteId}/status")]
-        public async Task<IActionResult> UpdateInviteStatus(string inviteId, [FromBody] object data)
+        // Принять
+        [HttpPost("{inviteId}/accept")]
+        [EnableRateLimiting("write")]
+        public Task<IActionResult> Accept(string inviteId) => Decide(inviteId, true);
+
+        // Отклонить
+        [HttpPost("{inviteId}/decline")]
+        [EnableRateLimiting("write")]
+        public Task<IActionResult> Decline(string inviteId) => Decide(inviteId, false);
+
+        private async Task<IActionResult> Decide(string inviteId, bool accept)
         {
             try
             {
-                var authHeader = Request.Headers.Authorization.ToString();
-                var userId = await _SupMan.GetUserIdAsync(authHeader);
-                if (string.IsNullOrEmpty(userId))
+                var actor = await _SupMan.GetActorAsync(Request.Headers.Authorization.ToString());
+                if (actor == null)
                     return Unauthorized();
 
-                await _SupMan.UpdateLastOnlineAsync(userId);
+                var invite = (await _client.From<Invite>().Where(i => i.InviteId == inviteId).Get()).Models.FirstOrDefault();
+                if (invite == null)
+                    return NotFound();
+                if (invite.UserId != actor.UserId)
+                    return Forbid();
 
-                var invite = await _client.From<Invite>()
-                    .Where(i => i.InviteId == inviteId)
-                    .Get();
+                var project = (await _client.From<Project>().Where(p => p.ProjectId == invite.ProjectId).Get()).Models.FirstOrDefault();
 
-                if (invite.Models.Count == 0)
-                    return NotFound("Приглашение не найдено");
+                await _client.From<Invite>().Where(i => i.InviteId == inviteId).Delete();
 
-                var inviteData = invite.Models.First();
-
-                if (inviteData.UserId != userId)
-                    return Unauthorized("Вы не получатель этого приглашения");
-
-                var status = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(
-                    System.Text.Json.JsonSerializer.Serialize(data));
-
-                var newStatus = status?["status"] ?? "pending";
-
-                inviteData.Status = newStatus;
-
-                await _client.From<Invite>()
-                    .Where(i => i.InviteId == inviteId)
-                    .Set(i => i.Status, newStatus)
-                    .Update();
-
-                return Ok(new { message = "Статус обновлён" });
+                if (project != null)
+                {
+                    var me = await _SupMan.GetUserCachedAsync(actor.UserId);
+                    await _SupMan.SendNotificationAsync(project.OwnerId, "invite", project.ProjectId,
+                        accept ? "invite_accepted" : "invite_rejected",
+                        new() { ["projectName"] = project.Title, ["vacancyName"] = invite.Role, ["nickname"] = me?.Nickname ?? "Пользователь" });
+                }
+                return Ok(new { message = accept ? "Приглашение принято" : "Приглашение отклонено" });
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Удалить приглашение (отправитель или получатель)
@@ -253,19 +256,21 @@ namespace api.Controllers
                     .Where(p => p.ProjectId == inviteData.ProjectId)
                     .Get();
 
-                if (project.Models.FirstOrDefault()?.OwnerId != userId && inviteData.UserId != userId)
-                    return Unauthorized("Вы не можете удалить это приглашение");
+                var proj = project.Models.FirstOrDefault();
+                if (proj == null || proj.OwnerId != userId)
+                    return Forbid();
 
                 await _client.From<Invite>()
                     .Where(i => i.InviteId == inviteId)
                     .Delete();
 
+                var me = await _SupMan.GetUserCachedAsync(userId);
+                await _SupMan.SendNotificationAsync(inviteData.UserId, "invite", proj.ProjectId, "invite_cancelled",
+                    new() { ["projectName"] = proj.Title, ["vacancyName"] = inviteData.Role, ["nickname"] = me?.Nickname ?? "Пользователь" });
+
                 return Ok(new { message = "Приглашение удалено" });
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
     }
 }

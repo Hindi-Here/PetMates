@@ -11,5 +11,10 @@ namespace api.Support
             WriteIndented = false,
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
+
+        public static readonly JsonSerializerOptions CaseInsensitive = new()
+        {
+            PropertyNameCaseInsensitive = true
+        };
     }
 }

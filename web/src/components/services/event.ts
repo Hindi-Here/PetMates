@@ -1,5 +1,5 @@
-import { API_BASE } from './cfg'
-import { supabase } from './cfg'
+import { API_BASE, supabase } from './cfg'
+import { authFetch, readError } from './http'
 import type { UserData } from './users'
 
 export interface EventData {
@@ -128,234 +128,168 @@ export interface EventSearchParams {
   showBannedOnly?: boolean
 }
 
-const authHeaders = async (): Promise<Record<string, string>> => {
-  const { data: { session } } = await supabase.auth.getSession()
-  return {
-    'Content-Type': 'application/json',
-    ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
-  }
-}
-
-const authOnly = async (): Promise<Record<string, string>> => {
-  const { data: { session } } = await supabase.auth.getSession()
-  return session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}
-}
-
-const readError = async (response: Response, fallback: string) => {
-  const text = await response.text().catch(() => '')
-  try {
-    return JSON.parse(text).message || fallback
-  } catch {
-    return text || fallback
-  }
-}
-
 export const eventApi = {
   // Мероприятия пользователя (владелец)
   getByUser: async (userId: string): Promise<EventData[]> => {
-    const response = await fetch(`${API_BASE}/api/event/by-user/${userId}`, { headers: await authHeaders() })
-    if (!response.ok) throw new Error('Ошибка загрузки мероприятий пользователя')
-    return await response.json()
+    const r = await authFetch(`/api/event/by-user/${userId}`)
+    if (!r.ok) throw new Error(await readError(r, 'Ошибка загрузки мероприятий пользователя'))
+    return await r.json()
   },
 
   // Мероприятия, в которых пользователь участник
   getMemberEvents: async (userId: string): Promise<EventData[]> => {
-    const response = await fetch(`${API_BASE}/api/event/user/${userId}/member`, { headers: await authHeaders() })
-    if (!response.ok) throw new Error('Ошибка загрузки мероприятий участника')
-    return await response.json()
+    const r = await authFetch(`/api/event/user/${userId}/member`)
+    if (!r.ok) throw new Error(await readError(r, 'Ошибка загрузки мероприятий участника'))
+    return await r.json()
   },
 
   // Избранные мероприятия пользователя
   getFavorites: async (userId: string): Promise<EventData[]> => {
-    const response = await fetch(`${API_BASE}/api/event/user/${userId}/favorites`, { headers: await authHeaders() })
-    if (!response.ok) throw new Error('Ошибка загрузки избранных мероприятий')
-    return await response.json()
+    const r = await authFetch(`/api/event/user/${userId}/favorites`)
+    if (!r.ok) throw new Error(await readError(r, 'Ошибка загрузки избранных мероприятий'))
+    return await r.json()
   },
 
   // Создать мероприятие
   create: async (dto: CreateEventDto): Promise<EventData> => {
-    const response = await fetch(`${API_BASE}/api/event`, {
-      method: 'POST',
-      headers: await authHeaders(),
-      body: JSON.stringify(dto),
-    })
-    if (!response.ok) throw new Error(await readError(response, 'Ошибка создания мероприятия'))
-    return await response.json()
+    const r = await authFetch('/api/event', { method: 'POST', body: JSON.stringify(dto) })
+    if (!r.ok) throw new Error(await readError(r, 'Ошибка создания мероприятия'))
+    return await r.json()
   },
 
   // Удалить своё мероприятие
   delete: async (eventId: string): Promise<void> => {
-    const response = await fetch(`${API_BASE}/api/event/${eventId}`, {
-      method: 'DELETE',
-      headers: await authHeaders(),
-    })
-    if (!response.ok) throw new Error(await readError(response, 'Ошибка удаления мероприятия'))
+    const r = await authFetch(`/api/event/${eventId}`, { method: 'DELETE' })
+    if (!r.ok) throw new Error(await readError(r, 'Ошибка удаления мероприятия'))
   },
 
   // Удалить мероприятие (модерация)
   moderationDelete: async (eventId: string, reason: string): Promise<void> => {
-    const response = await fetch(`${API_BASE}/api/event/${eventId}/moderation`, {
-      method: 'DELETE',
-      headers: await authHeaders(),
-      body: JSON.stringify({ reason }),
-    })
-    if (!response.ok) throw new Error('Не удалось удалить мероприятие')
+    const r = await authFetch(`/api/event/${eventId}/moderation`, { method: 'DELETE', body: JSON.stringify({ reason }) })
+    if (!r.ok) throw new Error(await readError(r, 'Не удалось удалить мероприятие'))
   },
 
   // Оценки
   getUserRating: async (eventId: string): Promise<{ hasRated: boolean }> => {
-    const response = await fetch(`${API_BASE}/api/event/${eventId}/rating`, { headers: await authHeaders() })
-    if (!response.ok) throw new Error('Ошибка получения статуса оценки')
-    return await response.json()
+    const r = await authFetch(`/api/event/${eventId}/rating`)
+    if (!r.ok) throw new Error(await readError(r, 'Ошибка получения статуса оценки'))
+    return await r.json()
   },
 
-  // Поставить оценку мероприятию
   addRating: async (eventId: string): Promise<{ success: boolean; ratingCount: number }> => {
-    const response = await fetch(`${API_BASE}/api/event/${eventId}/rating`, {
-      method: 'POST',
-      headers: await authHeaders(),
-    })
-    if (!response.ok) throw new Error('Ошибка оценки мероприятия')
-    return await response.json()
+    const r = await authFetch(`/api/event/${eventId}/rating`, { method: 'POST' })
+    if (!r.ok) throw new Error(await readError(r, 'Ошибка оценки мероприятия'))
+    return await r.json()
   },
 
-  // Отменить оценку мероприятию
   removeRating: async (eventId: string): Promise<{ success: boolean; ratingCount: number }> => {
-    const response = await fetch(`${API_BASE}/api/event/${eventId}/rating`, {
-      method: 'DELETE',
-      headers: await authHeaders(),
-    })
-    if (!response.ok) throw new Error('Ошибка отмены оценки')
-    return await response.json()
+    const r = await authFetch(`/api/event/${eventId}/rating`, { method: 'DELETE' })
+    if (!r.ok) throw new Error(await readError(r, 'Ошибка отмены оценки'))
+    return await r.json()
   },
 
   // Получить детали мероприятия
   getEvent: async (eventId: string): Promise<EventDetails> => {
-    const response = await fetch(`${API_BASE}/api/event/${eventId}`, { headers: await authHeaders() })
-    if (!response.ok) throw new Error('Ошибка загрузки мероприятия')
-    return await response.json()
+    const r = await authFetch(`/api/event/${eventId}`)
+    if (!r.ok) throw new Error(await readError(r, 'Ошибка загрузки мероприятия'))
+    return await r.json()
   },
 
   // Обновить детали мероприятия
   update: async (eventId: string, dto: UpdateEventDto): Promise<EventDetails> => {
-    const response = await fetch(`${API_BASE}/api/event/${eventId}`, {
-      method: 'PUT',
-      headers: await authHeaders(),
-      body: JSON.stringify(dto),
-    })
-    if (!response.ok) throw new Error(await readError(response, 'Ошибка сохранения мероприятия'))
-    return await response.json()
+    const r = await authFetch(`/api/event/${eventId}`, { method: 'PUT', body: JSON.stringify(dto) })
+    if (!r.ok) throw new Error(await readError(r, 'Ошибка сохранения мероприятия'))
+    return await r.json()
   },
 
   // Получить медиафайлы мероприятия по секции
   getMedia: async (eventId: string, section: EventMediaSection): Promise<EventMediaItem[]> => {
-    const response = await fetch(`${API_BASE}/api/event/${eventId}/media/${section}`, { headers: await authHeaders() })
-    if (!response.ok) throw new Error('Ошибка получения списка медиа')
-    return await response.json()
+    const r = await authFetch(`/api/event/${eventId}/media/${section}`)
+    if (!r.ok) throw new Error(await readError(r, 'Ошибка получения списка медиа'))
+    return await r.json()
   },
 
   // Загрузить медиафайл для мероприятия в указанную секцию
   uploadMedia: async (eventId: string, section: EventMediaSection, file: File): Promise<{ url: string; fileName: string; size: number }> => {
+    const { data: { session } } = await supabase.auth.getSession()
     const formData = new FormData()
     formData.append('file', file)
-    const response = await fetch(`${API_BASE}/api/event/${eventId}/media/${section}`, {
+    const r = await fetch(`${API_BASE}/api/event/${eventId}/media/${section}`, {
       method: 'POST',
-      headers: await authOnly(),
+      headers: { ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}) },
       body: formData,
     })
-    if (!response.ok) throw new Error(await readError(response, 'Ошибка загрузки изображения'))
-    return await response.json()
+    if (!r.ok) throw new Error(await readError(r, 'Ошибка загрузки изображения'))
+    return await r.json()
   },
 
   // Удалить медиафайл мероприятия из указанной секции
   deleteMedia: async (eventId: string, section: EventMediaSection, fileName: string): Promise<void> => {
-    const response = await fetch(`${API_BASE}/api/event/${eventId}/media/${section}/${encodeURIComponent(fileName)}`, {
-      method: 'DELETE',
-      headers: await authOnly(),
-    })
-    if (!response.ok) throw new Error(await readError(response, 'Ошибка удаления файла'))
+    const r = await authFetch(`/api/event/${eventId}/media/${section}/${encodeURIComponent(fileName)}`, { method: 'DELETE' })
+    if (!r.ok) throw new Error(await readError(r, 'Ошибка удаления файла'))
   },
 
   // Обновить форму мероприятия
   updateForm: async (eventId: string, fields: EventFormField[]): Promise<EventDetails> => {
-    const response = await fetch(`${API_BASE}/api/event/${eventId}/form`, {
-      method: 'PUT',
-      headers: await authHeaders(),
-      body: JSON.stringify({ fields }),
-    })
-    if (!response.ok) throw new Error(await readError(response, 'Ошибка сохранения формы'))
-    return await response.json()
+    const r = await authFetch(`/api/event/${eventId}/form`, { method: 'PUT', body: JSON.stringify({ fields }) })
+    if (!r.ok) throw new Error(await readError(r, 'Ошибка сохранения формы'))
+    return await r.json()
   },
 
   // Получить участников мероприятия (организатор + участники)
   getMembers: async (eventId: string): Promise<{ organizer: UserData; members: UserData[] }> => {
-    const response = await fetch(`${API_BASE}/api/event/${eventId}/members`, { headers: await authHeaders() })
-    if (!response.ok) throw new Error('Ошибка загрузки участников')
-    return await response.json()
+    const r = await authFetch(`/api/event/${eventId}/members`)
+    if (!r.ok) throw new Error(await readError(r, 'Ошибка загрузки участников'))
+    return await r.json()
   },
 
   // Обновить результаты мероприятия
   updateResults: async (eventId: string, results: string): Promise<EventDetails> => {
-    const response = await fetch(`${API_BASE}/api/event/${eventId}/results`, {
-      method: 'PUT',
-      headers: await authHeaders(),
-      body: JSON.stringify({ results }),
-    })
-    if (!response.ok) throw new Error(await readError(response, 'Ошибка сохранения результатов'))
-    return await response.json()
+    const r = await authFetch(`/api/event/${eventId}/results`, { method: 'PUT', body: JSON.stringify({ results }) })
+    if (!r.ok) throw new Error(await readError(r, 'Ошибка сохранения результатов'))
+    return await r.json()
   },
 
   // Получить заявку текущего пользователя на мероприятие
   getMyApplication: async (eventId: string): Promise<MyApplication | null> => {
-    const response = await fetch(`${API_BASE}/api/event/${eventId}/applications/me`, { headers: await authHeaders() })
-    if (response.status === 204) return null
-    if (!response.ok) throw new Error('Ошибка загрузки заявки')
-    return await response.json()
+    const r = await authFetch(`/api/event/${eventId}/applications/me`)
+    if (r.status === 204) return null
+    if (!r.ok) throw new Error(await readError(r, 'Ошибка загрузки заявки'))
+    return await r.json()
   },
 
   // Отправить заявку на мероприятие
   submitApplication: async (eventId: string, answers: { fieldId: string; value: string }[]): Promise<MyApplication> => {
-    const response = await fetch(`${API_BASE}/api/event/${eventId}/applications`, {
-      method: 'POST',
-      headers: await authHeaders(),
-      body: JSON.stringify({ answers }),
-    })
-    if (!response.ok) throw new Error(await readError(response, 'Не удалось отправить заявку'))
-    return await response.json()
+    const r = await authFetch(`/api/event/${eventId}/applications`, { method: 'POST', body: JSON.stringify({ answers }) })
+    if (!r.ok) throw new Error(await readError(r, 'Не удалось отправить заявку'))
+    return await r.json()
   },
 
   // Повторно отправить заявку на мероприятие
   resubmitApplication: async (eventId: string, answers: { fieldId: string; value: string }[]): Promise<MyApplication> => {
-    const response = await fetch(`${API_BASE}/api/event/${eventId}/applications/me`, {
-      method: 'PUT',
-      headers: await authHeaders(),
-      body: JSON.stringify({ answers }),
-    })
-    if (!response.ok) throw new Error(await readError(response, 'Не удалось отправить заявку'))
-    return await response.json()
+    const r = await authFetch(`/api/event/${eventId}/applications/me`, { method: 'PUT', body: JSON.stringify({ answers }) })
+    if (!r.ok) throw new Error(await readError(r, 'Не удалось отправить заявку'))
+    return await r.json()
   },
 
   // Отозвать заявку на мероприятие
   withdrawApplication: async (eventId: string): Promise<void> => {
-    const response = await fetch(`${API_BASE}/api/event/${eventId}/applications/me`, {
-      method: 'DELETE',
-      headers: await authHeaders(),
-    })
-    if (!response.ok) throw new Error(await readError(response, 'Не удалось отозвать заявку'))
+    const r = await authFetch(`/api/event/${eventId}/applications/me`, { method: 'DELETE' })
+    if (!r.ok) throw new Error(await readError(r, 'Не удалось отозвать заявку'))
   },
 
   // Получить список заявок на мероприятие (для организатора)
   getApplications: async (eventId: string): Promise<ApplicationListItem[]> => {
-    const response = await fetch(`${API_BASE}/api/event/${eventId}/applications`, { headers: await authHeaders() })
-    if (!response.ok) throw new Error('Ошибка загрузки заявок')
-    return await response.json()
+    const r = await authFetch(`/api/event/${eventId}/applications`)
+    if (!r.ok) throw new Error(await readError(r, 'Ошибка загрузки заявок'))
+    return await r.json()
   },
 
   // Получить детали конкретной заявки на мероприятие (для организатора)
   getApplication: async (eventId: string, applicationId: string): Promise<ApplicationDetail> => {
-    const response = await fetch(`${API_BASE}/api/event/${eventId}/applications/${applicationId}`, { headers: await authHeaders() })
-    if (!response.ok) throw new Error('Заявка не найдена')
-    return await response.json()
+    const r = await authFetch(`/api/event/${eventId}/applications/${applicationId}`)
+    if (!r.ok) throw new Error(await readError(r, 'Заявка не найдена'))
+    return await r.json()
   },
 
   // Принять/отклонить заявку на мероприятие (для организатора)
@@ -365,39 +299,31 @@ export const eventApi = {
     decision: ApplicationDecision,
     comment?: string
   ): Promise<ApplicationDetail> => {
-    const response = await fetch(`${API_BASE}/api/event/${eventId}/applications/${applicationId}/decision`, {
+    const r = await authFetch(`/api/event/${eventId}/applications/${applicationId}/decision`, {
       method: 'PUT',
-      headers: await authHeaders(),
       body: JSON.stringify({ decision, comment }),
     })
-    if (!response.ok) throw new Error(await readError(response, 'Не удалось применить решение'))
-    return await response.json()
+    if (!r.ok) throw new Error(await readError(r, 'Не удалось применить решение'))
+    return await r.json()
   },
 
   // Получить черновик мероприятия
   getDraft: async (eventId: string): Promise<EventDrafts> => {
-    const response = await fetch(`${API_BASE}/api/event/${eventId}/draft`, { headers: await authHeaders() })
-    if (!response.ok) throw new Error('Ошибка загрузки черновика')
-    return await response.json()
+    const r = await authFetch(`/api/event/${eventId}/draft`)
+    if (!r.ok) throw new Error(await readError(r, 'Ошибка загрузки черновика'))
+    return await r.json()
   },
 
   // Сохранить черновик мероприятия
   saveDraft: async (eventId: string, section: EventDraftSection, data: unknown): Promise<void> => {
-    const response = await fetch(`${API_BASE}/api/event/${eventId}/draft/${section}`, {
-      method: 'PUT',
-      headers: await authHeaders(),
-      body: JSON.stringify(data),
-    })
-    if (!response.ok) throw new Error('Ошибка сохранения черновика')
+    const r = await authFetch(`/api/event/${eventId}/draft/${section}`, { method: 'PUT', body: JSON.stringify(data) })
+    if (!r.ok) throw new Error(await readError(r, 'Ошибка сохранения черновика'))
   },
 
   // Отменить черновик мероприятия
   discardDraft: async (eventId: string, section: EventDraftSection): Promise<void> => {
-    const response = await fetch(`${API_BASE}/api/event/${eventId}/draft/${section}`, {
-      method: 'DELETE',
-      headers: await authHeaders(),
-    })
-    if (!response.ok) throw new Error('Ошибка отмены черновика')
+    const r = await authFetch(`/api/event/${eventId}/draft/${section}`, { method: 'DELETE' })
+    if (!r.ok) throw new Error(await readError(r, 'Ошибка отмены черновика'))
   },
 
   // Получить список мероприятий с возможностью поиска, фильтрации и сортировки
@@ -409,8 +335,8 @@ export const eventApi = {
     if (params?.sortAsc !== undefined) query.set('sortAsc', String(params.sortAsc))
     if (params?.showBannedOnly !== undefined) query.set('showBannedOnly', String(params.showBannedOnly))
 
-    const response = await fetch(`${API_BASE}/api/event?${query.toString()}`, { headers: await authHeaders() })
-    if (!response.ok) throw new Error('Ошибка загрузки мероприятий')
-    return await response.json()
+    const r = await authFetch(`/api/event?${query.toString()}`)
+    if (!r.ok) throw new Error(await readError(r, 'Ошибка загрузки мероприятий'))
+    return await r.json()
   },
 }

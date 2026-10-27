@@ -1,6 +1,7 @@
 ﻿using api.Models;
 using api.Support;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Supabase.Postgrest;
 using static Supabase.Postgrest.Constants;
 
@@ -81,14 +82,12 @@ namespace api.Controllers
                 return Ok(result.OrderByDescending(r => ((dynamic)r).IsPinned)
                                  .ThenByDescending(r => ((dynamic)r).LastMessageAt));
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Начать новую переписку с пользователем
         [HttpPost("start")]
+        [EnableRateLimiting("write")]
         public async Task<IActionResult> StartConversation([FromBody] StartConversationDto dto)
         {
             try
@@ -104,6 +103,8 @@ namespace api.Controllers
                 var target = await _SupMan.GetAccessAsync(dto.TargetUserId);
                 if (!target.Exists || (target.IsBanned && !await _SupMan.IsStaffAsync(userId)))
                     return NotFound();
+                if (await _SupMan.IsBlockedBetweenAsync(userId, dto.TargetUserId))
+                    return BadRequest(new { message = "Невозможно написать этому пользователю" });
 
                 var (userOneId, userTwoId) = string.CompareOrdinal(userId, dto.TargetUserId) < 0
                     ? (userId, dto.TargetUserId)
@@ -138,10 +139,7 @@ namespace api.Controllers
 
                 return Ok(new { conversationId = conv.ConversationId });
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Получить сообщения
@@ -237,6 +235,15 @@ namespace api.Controllers
                     });
                 }
 
+                var newestIncoming = messages.Models.LastOrDefault(m => m.SenderId != userId)?.CreatedAt;
+                if (newestIncoming != null && (previousLastReadAt == null || newestIncoming > previousLastReadAt))
+                {
+                    await _client.From<ConversationParticipant>()
+                        .Where(p => p.ConversationId == conversationId && p.UserId == userId)
+                        .Set(p => p.LastReadAt!, DateTime.UtcNow)
+                        .Update();
+                }
+
                 return Ok(new
                 {
                     messages = result,
@@ -244,14 +251,12 @@ namespace api.Controllers
                     otherLastReadAt = otherLastReadAt?.ToString("o")
                 });
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Отправить сообщение
         [HttpPost("message")]
+        [EnableRateLimiting("write")]
         public async Task<IActionResult> SendMessage([FromBody] SendMessageDto dto)
         {
             try
@@ -269,6 +274,8 @@ namespace api.Controllers
                 var other = await _SupMan.GetAccessAsync(otherId);
                 if (!other.Exists || (other.IsBanned && !await _SupMan.IsStaffAsync(userId)))
                     return BadRequest(new { message = "Пользователь недоступен" });
+                if (await _SupMan.IsBlockedBetweenAsync(userId, otherId))
+                    return BadRequest(new { message = "Невозможно отправить сообщение этому пользователю" });
 
                 if (!string.IsNullOrEmpty(dto.ParentMessageId))
                 {
@@ -318,10 +325,7 @@ namespace api.Controllers
                     CreatedAt = newMessage.CreatedAt?.ToString("o")
                 });
             }
-            catch (Exception)
-            {
-                return StatusCode(500, new { error = "Не удалось отправить сообщение" });
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Отредактировать сообщение
@@ -346,7 +350,10 @@ namespace api.Controllers
                     .Where(m => m.MessageId == messageId && m.SenderId == userId)
                     .Get();
 
-                if (response.Models.Count == 0)
+                var existing = response.Models.FirstOrDefault();
+                if (existing == null || existing.IsDeleted)
+                    return NotFound();
+                if (await GetMyConversation(existing.ConversationId, userId) == null)
                     return NotFound();
 
                 await _client.From<Message>()
@@ -358,10 +365,7 @@ namespace api.Controllers
 
                 return Ok(new { message = "Сообщение обновлено" });
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Закрепить/открепить переписку
@@ -389,10 +393,7 @@ namespace api.Controllers
 
                 return Ok(new { isPinned = !p.IsPinned });
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Удалить сообщение (только для отправителя)
@@ -419,13 +420,10 @@ namespace api.Controllers
 
                 return Ok(new { message = "Сообщение удалено" });
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
-        // Удалить переписку
+        // Удалить (скрыть) переписку
         [HttpDelete("{conversationId}")]
         public async Task<IActionResult> HideConversation(string conversationId)
         {
@@ -435,6 +433,9 @@ namespace api.Controllers
                 var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
+
+                if (await GetMyConversation(conversationId, userId) == null)
+                    return NotFound(new { message = "Переписка не найдена или у вас нет прав" });
 
                 var now = DateTime.UtcNow;
 
@@ -457,15 +458,13 @@ namespace api.Controllers
                     }
                     catch
                     {
+
                     }
                 }
 
-                return Ok(new { message = "Переписка удалена" });
+                return Ok(new { message = "Переписка скрыта" });
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Удалить сообщение только для себя
@@ -497,14 +496,12 @@ namespace api.Controllers
 
                 return Ok(new { message = "Сообщение скрыто" });
             }
-            catch (Exception)
-            {
-                return StatusCode(500, new { error = "Не удалось скрыть сообщение" });
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Переслать сообщение
         [HttpPost("message/{messageId}/forward")]
+        [EnableRateLimiting("write")]
         public async Task<IActionResult> ForwardMessage(string messageId, [FromBody] ForwardMessageDto dto)
         {
             try
@@ -565,10 +562,7 @@ namespace api.Controllers
                     CreatedAt = newMessage.CreatedAt?.ToString("o")
                 });
             }
-            catch (Exception)
-            {
-                return StatusCode(500, new { error = "Не удалось переслать сообщение" });
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
     }
 }

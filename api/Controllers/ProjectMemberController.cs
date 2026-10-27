@@ -30,10 +30,7 @@ namespace api.Controllers
 
                 return Ok(await _SupMan.GetProjectMemberCardsAsync(projectId));
             }
-            catch (Exception)
-            {
-                return StatusCode(500, new { error = "Не удалось загрузить участников" });
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Добавить участника в команду
@@ -49,11 +46,16 @@ namespace api.Controllers
                 if (!await _SupMan.IsProjectOwnerAsync(dto.ProjectId, actor.UserId)) return Forbid();
 
                 var error = Validator.ValidateRole(dto.Role);
-                if (error != null) return BadRequest(new { message = error });
+                if (error != null)
+                    return BadRequest(new { message = error });
 
                 var target = await _SupMan.GetUserCachedAsync(dto.UserId);
-                if (target == null) return NotFound(new { message = "Пользователь не найден" });
-                if (target.IsBanned) return BadRequest(new { message = "Нельзя добавить заблокированного пользователя" });
+                if (target == null)
+                    return NotFound(new { message = "Пользователь не найден" });
+                if (target.IsBanned)
+                    return BadRequest(new { message = "Нельзя добавить заблокированного пользователя" });
+                if (await _SupMan.IsBlockedBetweenAsync(actor.UserId, dto.UserId))
+                    return BadRequest(new { message = "Невозможно добавить этого пользователя" });
 
                 var existing = await _client.From<ProjectMember>()
                     .Where(pm => pm.ProjectId == dto.ProjectId && pm.UserId == dto.UserId).Get();
@@ -74,14 +76,18 @@ namespace api.Controllers
                 await _SupMan.Cache.ProjectChangedAsync(dto.ProjectId);
 
                 var created = response.Models.FirstOrDefault();
-                if (created == null) return BadRequest(new { message = "Не удалось добавить участника" });
+                if (created == null)
+                    return BadRequest(new { message = "Не удалось добавить участника" });
+
+                var projTitle = (await _client.From<Project>().Where(p => p.ProjectId == dto.ProjectId).Get()).Models.FirstOrDefault()?.Title ?? "Проект";
+                await _SupMan.SendNotificationAsync(actor.UserId, "project", dto.ProjectId, "added",
+                    new() { ["nickname"] = target.Nickname ?? "Пользователь", ["projectName"] = projTitle, ["role"] = dto.Role });
+                await _SupMan.SendNotificationAsync(dto.UserId, "project", dto.ProjectId, "added_self",
+                    new() { ["projectName"] = projTitle, ["role"] = dto.Role });
 
                 return Ok(new { created.MemberId, created.ProjectId, created.UserId, created.Role, JoinedAt = created.JoinedAt?.ToString("o") });
             }
-            catch (Exception)
-            {
-                return StatusCode(500, new { error = "Не удалось добавить участника" });
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Удалить участника проекта
@@ -109,62 +115,75 @@ namespace api.Controllers
                 await _client.From<ProjectMember>().Where(pm => pm.MemberId == memberId).Delete();
                 await _SupMan.Cache.ProjectChangedAsync(member.ProjectId);
 
+                var removed = await _SupMan.GetUserCachedAsync(member.UserId);
+                await _SupMan.SendNotificationAsync(proj.OwnerId, "project", proj.ProjectId, "removed",
+                    new() { ["nickname"] = removed?.Nickname ?? "Пользователь", ["projectName"] = proj.Title });
+                await _SupMan.SendNotificationAsync(member.UserId, "project", proj.ProjectId, "removed_self",
+                    new() { ["projectName"] = proj.Title });
+
                 return Ok(new { message = "Участник удалён" });
             }
-            catch (Exception)
-            {
-                return StatusCode(500, new { error = "Не удалось удалить участника" });
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
-        // Найти участника по почте
+        // Найти участника команды по его никнейму
         [EnableRateLimiting("lookup")]
-        [HttpPost("find-by-email")]
-        public async Task<IActionResult> FindUserByEmail([FromBody] FindByEmailDto dto)
+        [HttpGet("find-by-nickname")]
+        public async Task<IActionResult> FindByNickname([FromQuery] string nickname)
         {
             try
             {
                 var actor = await _SupMan.GetActorAsync(Request.Headers.Authorization.ToString());
-                if (actor == null) return Unauthorized();
+                if (actor == null)
+                    return Unauthorized();
 
-                var ownsProject = (await _client.From<Project>().Where(p => p.OwnerId == actor.UserId).Limit(1).Get()).Models.Count > 0;
-                if (!ownsProject)
-                    return Forbid();
-
-                var supabaseUrl = Environment.GetEnvironmentVariable("SUPABASE_URL");
-                var serviceKey = Environment.GetEnvironmentVariable("SUPABASE_KEY");
-
-                using var http = new HttpClient();
-                http.DefaultRequestHeaders.Add("Authorization", $"Bearer {serviceKey}");
-                http.DefaultRequestHeaders.Add("apikey", serviceKey);
-
-                var response = await http.GetAsync($"{supabaseUrl}/auth/v1/admin/users");
-                if (!response.IsSuccessStatusCode)
+                var nick = nickname?.Trim() ?? "";
+                if (nick.Length < Limits.Auth.NicknameMin || nick.Length > Limits.Auth.NicknameMax)
                     return NotFound(new { message = "Пользователь не найден" });
 
-                var result = await response.Content.ReadFromJsonAsync<AuthUsersResponse>();
-                if (result?.Users == null)
-                    return NotFound(new { message = "Пользователь не найден" });
-
-                var searchEmail = dto.Email.ToLower().Trim();
-                var authUser = result.Users.FirstOrDefault(u => u.Email?.ToLower().Trim() == searchEmail);
-                if (authUser == null)
-                    return NotFound(new { message = "Пользователь не найден" });
-
-                var userData = await _client.From<User>().Where(u => u.UserId == authUser.Id).Get();
-                if (userData.Models.Count == 0)
-                    return NotFound(new { message = "Пользователь не найден" });
-
-                var user = userData.Models.First();
-                if (user.IsBanned)
+                var user = (await _SupMan.GetAllUsersAsync()).FirstOrDefault(u =>
+                    !u.IsBanned && string.Equals(u.Nickname, nick, StringComparison.OrdinalIgnoreCase));
+                if (user == null)
                     return NotFound(new { message = "Пользователь не найден" });
 
                 return Ok(new { user.UserId, user.Nickname });
             }
-            catch (Exception)
+            catch (Exception ex) { return this.Fail(ex); }
+        }
+
+        // Выйти из проекта
+        [EnableRateLimiting("write")]
+        [HttpDelete("{memberId}/leave")]
+        public async Task<IActionResult> LeaveProject(string memberId)
+        {
+            try
             {
-                return StatusCode(500, new { error = "Ошибка поиска пользователя" });
+                var actor = await _SupMan.GetActorAsync(Request.Headers.Authorization.ToString());
+                if (actor == null)
+                    return Unauthorized();
+
+                var member = (await _client.From<ProjectMember>().Where(pm => pm.MemberId == memberId).Get()).Models.FirstOrDefault();
+                if (member == null)
+                    return NotFound();
+                if (member.UserId != actor.UserId)
+                    return Forbid();
+
+                var proj = (await _client.From<Project>().Where(p => p.ProjectId == member.ProjectId).Get()).Models.FirstOrDefault();
+                if (proj == null)
+                    return NotFound();
+                if (proj.OwnerId == actor.UserId)
+                    return BadRequest(new { message = "Владелец не может покинуть проект. Удалите проект." });
+
+                await _client.From<ProjectMember>().Where(pm => pm.MemberId == memberId).Delete();
+                await _SupMan.Cache.ProjectChangedAsync(member.ProjectId);
+
+                var me = await _SupMan.GetUserCachedAsync(actor.UserId);
+                await _SupMan.SendNotificationAsync(proj.OwnerId, "project", proj.ProjectId, "removed",
+                    new() { ["nickname"] = me?.Nickname ?? "Пользователь", ["projectName"] = proj.Title });
+
+                return Ok(new { message = "Вы покинули проект" });
             }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Обновить роль участника проекта
@@ -199,6 +218,15 @@ namespace api.Controllers
                     .Update();
 
                 await _SupMan.Cache.ProjectChangedAsync(memberData.ProjectId);
+
+                var proj = (await _client.From<Project>().Where(p => p.ProjectId == memberData.ProjectId).Get()).Models.FirstOrDefault();
+                if (proj != null)
+                {
+                    await _SupMan.SendNotificationAsync(proj.OwnerId, "project", proj.ProjectId, "role_changed",
+                        new() { ["nickname"] = memberUser?.Nickname ?? "Пользователь", ["projectName"] = proj.Title, ["role"] = dto.Role });
+                    await _SupMan.SendNotificationAsync(memberData.UserId, "project", proj.ProjectId, "role_changed_self",
+                        new() { ["projectName"] = proj.Title, ["role"] = dto.Role });
+                }
 
                 return Ok(new { memberData.MemberId, memberData.ProjectId, memberData.UserId, dto.Role, JoinedAt = memberData.JoinedAt?.ToString("o") });
             }

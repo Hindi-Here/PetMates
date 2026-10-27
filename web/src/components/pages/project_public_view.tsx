@@ -9,9 +9,6 @@ import BackIcon from '@icons/back.svg?react'
 
 import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
-import rehypeRaw from 'rehype-raw'
 
 import { useAuth } from '../hooks/useAuth'
 import { useSystemRole } from '../hooks/useSystemRole'
@@ -25,6 +22,8 @@ import { VacancyCard } from '../common/vacancyCard'
 import { UserCard } from '../common/userCard'
 import { CommentsSection } from '../common/commentsSection'
 import DeleteProjectModerationForm from '../forms/delete_project_moderation'
+import { Markdown } from '../common/markdown'
+import { projectMembersApi } from '../services/project_members'
 
 export interface TeamMemberWithUser {
   memberId: string
@@ -81,6 +80,21 @@ export const ProjectPublicView = ({ data, team, vacancies, onBack, isPreview = f
   const isOwner = !!userId && userId === data.ownerId
   const members = team.filter(m => !!m.userData)
 
+  const myMembership = team.find(m => m.userId === userId && !m.isOwner)
+  const [leaveError, setLeaveError] = useState<string | null>(null)
+
+  const handleLeave = async () => {
+    if (!myMembership || !window.confirm('Покинуть проект?')) return
+    try {
+      await projectMembersApi.leave(myMembership.memberId)
+      await invalidateModeration(queryClient)
+      onBack()
+    } catch (e) {
+      setLeaveError(e instanceof Error ? e.message : 'Не удалось покинуть проект')
+      setTimeout(() => setLeaveError(null), 3000)
+    }
+  }
+
   useEffect(() => {
     if (isPreview || !userId || isOwner) return
     projectsApi.getUserRating(data.projectId)
@@ -91,7 +105,10 @@ export const ProjectPublicView = ({ data, team, vacancies, onBack, isPreview = f
   useEffect(() => {
     if (isPreview) return
     const handleEscKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') window.history.back()
+      if (e.key !== 'Escape') return
+      if ((e.target as HTMLElement).closest('input, textarea, [contenteditable="true"]')) return
+      if (document.querySelector('.dark-area-container')) return
+      window.history.back()
     }
     window.addEventListener('keydown', handleEscKey)
     return () => window.removeEventListener('keydown', handleEscKey)
@@ -152,6 +169,9 @@ export const ProjectPublicView = ({ data, team, vacancies, onBack, isPreview = f
           <button className='back-button' onClick={onBack} disabled={isPreview}>
             <BackIcon className='ico' />
           </button>
+          {!isPreview && myMembership && (
+            <button className='rate-button' onClick={handleLeave}>Покинуть</button>
+          )}
           {canModerateDelete && (
             <button className='moderation-delete-project-btn' onClick={() => setShowDeleteForm(true)}>
               <RejectIcon className='ico' />
@@ -163,9 +183,7 @@ export const ProjectPublicView = ({ data, team, vacancies, onBack, isPreview = f
       {data.description ? (
         <section className='preview-section'>
           <div className='project-description-preview markdown-content'>
-            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
-              {data.description}
-            </ReactMarkdown>
+            <Markdown>{data.description}</Markdown>
           </div>
         </section>
       ) : (
@@ -224,6 +242,7 @@ export const ProjectPublicView = ({ data, team, vacancies, onBack, isPreview = f
           }}
         />
       )}
+      {leaveError && <p className='field-error-text'>{leaveError}</p>}
     </>
   )
 }

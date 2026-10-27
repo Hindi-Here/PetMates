@@ -289,7 +289,9 @@ const AuthorizedProfile = () => {
   const [contacts, setContacts] = useState<ContactItem[]>([])
   
   const addContact = () => {
-    setContacts(prev => [...prev, { id: Date.now(), label: '', url: '', isNew: true }])
+    setContacts(prev => prev.length >= LIMITS.profile.contactsMax
+      ? prev
+      : [...prev, { id: Date.now(), label: '', url: '', isNew: true }])
   }
   
   const removeContact = (id: number) => {
@@ -311,7 +313,14 @@ const AuthorizedProfile = () => {
     const fields = ['nickname', 'realName', 'age', 'country', 'city',
       'workplace', 'profileRole', 'description', 'hardSkills', 'softSkills']
     const fieldsValid = fields.every(field => checkFormat(field, formData[field as keyof ProfileFormData] ?? '') === null)
-    const contactsValid = contacts.every(c => !c.isNew || (c.label.trim() && c.url.trim()))
+
+    const contactsValid =
+      contacts.length <= LIMITS.profile.contactsMax &&
+      contacts.every(c =>
+        c.label.trim() && c.url.trim() &&
+        c.label.length <= LIMITS.profile.contactNameMax &&
+        c.url.length <= LIMITS.profile.contactUrlMax)
+
     return fieldsValid && contactsValid
   }, [formData, contacts])
   
@@ -418,7 +427,8 @@ const AuthorizedProfile = () => {
                 <p className='profile-field-text'> Возраст: </p>
                 <input 
                   className={`profile-field-input ${touched.age && dirty.age && checkFormat('age', data.age) ? 'input-error' : ''}`} 
-                  name="age" 
+                  name="age"
+                  maxLength={3} 
                   value={formData.age ?? ''}
                   onChange={handleChange} 
                   onBlur={handleBlur} />
@@ -541,8 +551,8 @@ const AuthorizedProfile = () => {
                 <div className='contacts-list'>
                   {contacts.map(contact => (
                     <div key={contact.id} className='contact-item'>
-                      <input className='contact-input label' placeholder='Название' value={contact.label} onChange={e => updateContact(contact.id, 'label', e.target.value)} />
-                      <input className='contact-input url' placeholder='Ссылка' value={contact.url} onChange={e => updateContact(contact.id, 'url', e.target.value)} />
+                      <input className='contact-input label' placeholder='Название' value={contact.label} onChange={e => updateContact(contact.id, 'label', e.target.value)} maxLength={LIMITS.profile.contactNameMax}/>
+                      <input className='contact-input url' placeholder='Ссылка' value={contact.url} onChange={e => updateContact(contact.id, 'url', e.target.value)} maxLength={LIMITS.profile.contactUrlMax} />
                       {contact.isNew ? (
                         <>
                           <button className='contact-action reject' onClick={() => removeContact(contact.id)}>
@@ -654,13 +664,16 @@ const checkFormat = (fieldName: string, value: string): string | null => {
   const rules: Record<string, Array<[boolean, string]>> = {
     nickname: [
       [!validatorFormat.required(value), 'Введите никнейм'],
+      [!validatorFormat.minLength(value, LIMITS.profile.nicknameMin), `Минимум ${LIMITS.profile.nicknameMin} символа`],
       [!validatorFormat.maxLength(value, LIMITS.profile.nicknameMax), `Максимум ${LIMITS.profile.nicknameMax} символов`]
     ],
     realName: [
       [!validatorFormat.maxLength(value, LIMITS.profile.realNameMax), `Максимум ${LIMITS.profile.realNameMax} символов`]
     ],
     age: [
-      [value.length > 0 && !validatorFormat.number(value), 'Возраст должен содержать только цифры']
+      [value.length > 0 && !validatorFormat.number(value), 'Возраст должен содержать только цифры'],
+      [value.length > 0 && (Number(value) < LIMITS.profile.ageMin || Number(value) > LIMITS.profile.ageMax),
+        `Допустимо от ${LIMITS.profile.ageMin} до ${LIMITS.profile.ageMax}`]
     ],
     country: [
       [!validatorFormat.maxLength(value, LIMITS.profile.countryMax), `Максимум ${LIMITS.profile.countryMax} символов`]
@@ -673,7 +686,8 @@ const checkFormat = (fieldName: string, value: string): string | null => {
     ],
     profileRole: [
       [!validatorFormat.required(value), 'Введите роль'],
-      [!validatorFormat.maxLength(value, LIMITS.profile.roleMax), `Максимум ${LIMITS.profile.roleMax} символов`]
+      [!validatorFormat.maxLength(value, LIMITS.profile.roleMax), `Максимум ${LIMITS.profile.roleMax} символов`],
+      [value.length > 0 && !validatorFormat.role(value), 'Недопустимые символы']
     ],
     description: [
       [!validatorFormat.maxLength(value, LIMITS.profile.descriptionMax), `Максимум ${LIMITS.profile.descriptionMax} символов`]

@@ -1,6 +1,7 @@
 ﻿using api.Models;
 using api.Support; 
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Supabase.Postgrest;
 
 namespace api.Controllers
@@ -64,7 +65,7 @@ namespace api.Controllers
                     _ => users
                 };
 
-                var result = sorted.Select(u => new
+                var result = sorted.Take(Limits.Search.ListMax).Select(u => new
                 {
                     userId = u.UserId,
                     nickname = u.Nickname,
@@ -85,10 +86,7 @@ namespace api.Controllers
 
                 return Ok(result);
             }
-            catch (Exception)
-            {
-                return StatusCode(500);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Получить профиль пользователя по его идентификатору
@@ -139,14 +137,12 @@ namespace api.Controllers
                     lastSeen = SupportManager.FormatLastSeen(user.LastOnlineAt)
                 });
             }
-            catch (Exception)
-            {
-                return StatusCode(500);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Поиск пользователей по никнейму
         [HttpGet("search")]
+        [EnableRateLimiting("lookup")]
         public async Task<IActionResult> SearchUsers([FromQuery] string query)
         {
             try
@@ -177,10 +173,7 @@ namespace api.Controllers
 
                 return Ok(result);
             }
-            catch (Exception)
-            {
-                return StatusCode(500, new { error = "Ошибка поиска пользователей" });
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
     }
 }

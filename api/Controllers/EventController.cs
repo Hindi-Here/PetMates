@@ -30,10 +30,7 @@ namespace api.Controllers
 
                 return Ok(await _SupMan.BuildCards(response.Models, currentUserId, isStaff));
             }
-            catch (Exception)
-            {
-                return StatusCode(500);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Мероприятия, в которых пользователь участник (кроме собственных)
@@ -50,22 +47,12 @@ namespace api.Controllers
                     .Where(m => m.UserId == userId)
                     .Get();
 
-                var events = new List<Event>();
-                foreach (var m in memberships.Models)
-                {
-                    var r = await _client.From<Event>()
-                        .Where(e => e.EventId == m.EventId && e.OwnerId != userId)
-                        .Get();
-                    var ev = r.Models.FirstOrDefault();
-                    if (ev != null) events.Add(ev);
-                }
+                var events = (await _SupMan.FetchByIdsAsync<Event>("event_id", memberships.Models.Select(m => m.EventId)))
+                    .Where(e => e.OwnerId != userId).ToList();
 
                 return Ok(await _SupMan.BuildCards(events, currentUserId, isStaff));
             }
-            catch (Exception)
-            {
-                return StatusCode(500);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Избранные (оценённые) мероприятия пользователя
@@ -82,22 +69,11 @@ namespace api.Controllers
                     .Where(r => r.UserId == userId)
                     .Get();
 
-                var events = new List<Event>();
-                foreach (var rating in ratings.Models)
-                {
-                    var r = await _client.From<Event>()
-                        .Where(e => e.EventId == rating.EventId)
-                        .Get();
-                    var ev = r.Models.FirstOrDefault();
-                    if (ev != null) events.Add(ev);
-                }
+                var events = await _SupMan.FetchByIdsAsync<Event>("event_id", ratings.Models.Select(r => r.EventId));
 
                 return Ok(await _SupMan.BuildCards(events, currentUserId, isStaff));
             }
-            catch (Exception)
-            {
-                return StatusCode(500);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Получить мероприятие по ID
@@ -113,10 +89,7 @@ namespace api.Controllers
                 var details = await _SupMan.LoadDetails(eventId, currentUserId, isStaff);
                 return details == null ? NotFound() : Ok(details);
             }
-            catch (Exception)
-            {
-                return StatusCode(500);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Список публичных мероприятий с поиском и сортировкой
@@ -152,10 +125,7 @@ namespace api.Controllers
 
                 return Ok(items.Select(i => Mappers.ToCard(i.Event, i.Owner, i.MembersCount)));
             }
-            catch (Exception)
-            {
-                return StatusCode(500);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Участники мероприятия: организатор + принятые участники
@@ -190,10 +160,7 @@ namespace api.Controllers
 
                 return Ok(new { organizer = Mappers.ToUserCard(owner), members });
             }
-            catch (Exception)
-            {
-                return StatusCode(500);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Создать мероприятие
@@ -236,10 +203,7 @@ namespace api.Controllers
                 var cards = await _SupMan.BuildCards([created], userId, false);
                 return Ok(cards.FirstOrDefault());
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = ex.Message });
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Удалить своё мероприятие
@@ -304,10 +268,7 @@ namespace api.Controllers
                 var details = await _SupMan.LoadDetails(eventId, userId, false);
                 return details == null ? NotFound() : Ok(details);
             }
-            catch (Exception)
-            {
-                return StatusCode(500);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Сохранить форму заявки (только владелец)
@@ -344,10 +305,7 @@ namespace api.Controllers
                 var details = await _SupMan.LoadDetails(eventId, userId, false);
                 return details == null ? NotFound() : Ok(details);
             }
-            catch (Exception)
-            {
-                return StatusCode(500);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Сохранить результаты (только владелец)
@@ -381,10 +339,7 @@ namespace api.Controllers
                 var details = await _SupMan.LoadDetails(eventId, userId, false);
                 return details == null ? NotFound() : Ok(details);
             }
-            catch (Exception)
-            {
-                return StatusCode(500);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Оценил ли текущий пользователь мероприятие
@@ -402,10 +357,7 @@ namespace api.Controllers
 
                 return Ok(new { hasRated = rating.Models.Count != 0 });
             }
-            catch (Exception)
-            {
-                return StatusCode(500);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Оценить
@@ -437,10 +389,7 @@ namespace api.Controllers
 
                 return Ok(new { success = true, ratingCount = await _SupMan.GetRatingCount(eventId) });
             }
-            catch (Exception)
-            {
-                return StatusCode(500);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Убрать оценку
@@ -466,10 +415,7 @@ namespace api.Controllers
 
                 return Ok(new { success = true, ratingCount = await _SupMan.GetRatingCount(eventId) });
             }
-            catch (Exception)
-            {
-                return StatusCode(500);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Моя заявка на мероприятие
@@ -484,10 +430,7 @@ namespace api.Controllers
                 var app = await _SupMan.FindMyApplication(eventId, userId);
                 return app == null ? NoContent() : Ok(Mappers.ToApplicationMine(app));
             }
-            catch (Exception)
-            {
-                return StatusCode(500);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Подать заявку
@@ -545,10 +488,7 @@ namespace api.Controllers
 
                 return Ok(Mappers.ToApplicationMine(created));
             }
-            catch (Exception)
-            {
-                return StatusCode(500);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Отправить заявку повторно после доработки
@@ -595,10 +535,7 @@ namespace api.Controllers
                 var updated = await _SupMan.FindMyApplication(eventId, userId);
                 return updated == null ? NotFound() : Ok(Mappers.ToApplicationMine(updated));
             }
-            catch (Exception)
-            {
-                return StatusCode(500);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Отозвать свою заявку
@@ -622,10 +559,7 @@ namespace api.Controllers
 
                 return Ok(new { message = "Заявка отозвана" });
             }
-            catch (Exception)
-            {
-                return StatusCode(500);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Список заявок (только автор)
@@ -659,10 +593,7 @@ namespace api.Controllers
 
                 return Ok(result);
             }
-            catch (Exception)
-            {
-                return StatusCode(500);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Полная заявка (только автор)
@@ -680,10 +611,7 @@ namespace api.Controllers
                 var detail = await _SupMan.LoadApplicationDetail(ev, applicationId);
                 return detail == null ? NotFound() : Ok(detail);
             }
-            catch (Exception)
-            {
-                return StatusCode(500);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Решение автора: принять / отклонить / вернуть на доработку
@@ -755,10 +683,7 @@ namespace api.Controllers
                 var detail = await _SupMan.LoadApplicationDetail(ev, applicationId);
                 return detail == null ? NotFound() : Ok(detail);
             }
-            catch (Exception)
-            {
-                return StatusCode(500);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // МЕДИА
@@ -791,10 +716,7 @@ namespace api.Controllers
 
                 return Ok(result);
             }
-            catch (Exception)
-            {
-                return StatusCode(500);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Загрузить изображение в подраздел (владелец)
@@ -838,10 +760,7 @@ namespace api.Controllers
                 var url = _client.Storage.From("EventMedia").GetPublicUrl(path);
                 return Ok(new { url, fileName, size = optimized.Bytes.Length });
             }
-            catch (Exception)
-            {
-                return StatusCode(500);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Удалить изображение подраздела (владелец)
@@ -860,10 +779,7 @@ namespace api.Controllers
                 await _client.Storage.From("EventMedia").Remove([$"{eventId}/{section}/{fileName}"]);
                 return Ok(new { message = "Файл удалён" });
             }
-            catch (Exception)
-            {
-                return StatusCode(500);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // МОДЕРАЦИЯ
@@ -914,10 +830,7 @@ namespace api.Controllers
                     results = SupportManager.ParseDraft(draft?.Results)
                 });
             }
-            catch (Exception)
-            {
-                return StatusCode(500);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Сохранить черновик подраздела
@@ -955,10 +868,7 @@ namespace api.Controllers
 
                 return Ok(new { message = "Черновик сохранён" });
             }
-            catch (Exception)
-            {
-                return StatusCode(500);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Отменить черновик подраздела
@@ -977,10 +887,7 @@ namespace api.Controllers
                 await _SupMan.ClearDraft(eventId, section);
                 return Ok(new { message = "Черновик отменён" });
             }
-            catch (Exception)
-            {
-                return StatusCode(500);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
     }
 }

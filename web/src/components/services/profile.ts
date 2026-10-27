@@ -1,92 +1,50 @@
-import { API_BASE } from './cfg';
-import { supabase } from './cfg';
+import { API_BASE, supabase } from './cfg'
+import { authFetch, readError } from './http'
 import type { ProfileData } from '../hooks/useProfile';
 
 export interface ThirdProfileData {
-  userId: string;
-  nickname: string;
-  avatarUrl?: string;
-  realName?: string;
-  age?: number;
-  gender?: string;
-  country?: string;
-  city?: string;
-  workplace?: string;
-  profileRole?: string;
-  description?: string;
-  hardSkills?: string[];
-  softSkills?: string[];
-  contacts?: string; 
-  lastOnlineAt?: string;
-  createdAt?: string;
-  isOnline: boolean;
-  lastSeen: string;
+  userId: string; nickname: string; avatarUrl?: string; realName?: string;
+  age?: number; gender?: string; country?: string; city?: string; workplace?: string;
+  profileRole?: string; description?: string; hardSkills?: string[]; softSkills?: string[];
+  contacts?: string; lastOnlineAt?: string; createdAt?: string; isOnline: boolean; lastSeen: string;
 }
 
 export const profileApi = {
   // Получить свой профиль
-   getMe: async (): Promise<ProfileData> => {
-    const { data: { session } } = await supabase.auth.getSession();
-    const response = await fetch(`${API_BASE}/api/profile/me`, {
-      headers: { 'Authorization': `Bearer ${session?.access_token}` },
-    });
-    if (!response.ok) throw new Error('Ошибка загрузки профиля');
-    return await response.json();
+  getMe: async (): Promise<ProfileData> => {
+    const r = await authFetch('/api/profile/me');
+    if (!r.ok) throw new Error(await readError(r, 'Ошибка загрузки профиля'));
+    return await r.json();
   },
 
   // Обновить профиль
   updateMe: async (updateData: ProfileData) => {  
-  const { data: { session } } = await supabase.auth.getSession();  
-  
-  const response = await fetch(`${API_BASE}/api/profile/me`, {
-    method: 'PUT',
-    headers: { 
-      'Authorization': `Bearer ${session?.access_token}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(updateData),
-  });
+    const r = await authFetch('/api/profile/me', { method: 'PUT', body: JSON.stringify(updateData) });
+    if (!r.ok) throw new Error(await readError(r, 'Ошибка обновления профиля'));
+    return await r.json();
+  },
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.message || 'Ошибка обновления профиля');
-  }
-  
-  return await response.json();
-},
-
-// Загрузить аватар
-uploadAvatar: async (file: File): Promise<{ avatarUrl: string }> => {
-  const { data: { session } } = await supabase.auth.getSession();
-  
-  const formData = new FormData();
-  formData.append('file', file);
-
-  const response = await fetch(`${API_BASE}/api/profile/me/avatar`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${session?.access_token}`,
-    },
-    body: formData,
-  });
-
-  if (!response.ok) throw new Error('Ошибка загрузки аватара');
-  return await response.json();
-},
-
-// Получить чужой профиль
-getUserById: async (userId: string): Promise<ThirdProfileData> => {
+  // Загрузить аватар (FormData)
+  uploadAvatar: async (file: File): Promise<{ avatarUrl: string }> => {
     const { data: { session } } = await supabase.auth.getSession();
-    const response = await fetch(`${API_BASE}/api/user/${userId}`, {
-      headers: { 
-        'Authorization': `Bearer ${session?.access_token}`,
-        'Content-Type': 'application/json'
-      },
+    const formData = new FormData();
+    formData.append('file', file);
+    const r = await fetch(`${API_BASE}/api/profile/me/avatar`, {
+      method: 'POST',
+      headers: { ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {}) },
+      body: formData,
     });
-    if (!response.ok) {
-      if (response.status === 404) throw new Error('Пользователь не найден');
-      throw new Error('Ошибка загрузки профиля');
+    if (!r.ok) throw new Error(await readError(r, 'Ошибка загрузки аватара'));
+    return await r.json();
+  },
+
+  // Получить чужой профиль
+  getUserById: async (userId: string): Promise<ThirdProfileData> => {
+    const r = await authFetch(`/api/user/${userId}`);
+    if (!r.ok) {
+      if (r.status === 404) throw new Error('Пользователь не найден');
+      throw new Error(await readError(r, 'Ошибка загрузки профиля'));
     }
-    return await response.json(); 
+    return await r.json(); 
   },
 };

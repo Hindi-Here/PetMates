@@ -20,6 +20,7 @@ const Form = ({ vacancyId, vacancyTitle, onClose, onSuccess }: DeleteVacancyMode
   const queryClient = useQueryClient()
   const [reason, setReason] = useState('')
   const [isDeleting, setIsDeleting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleDelete = async () => {
     if (!reason.trim()) return
@@ -29,8 +30,8 @@ const Form = ({ vacancyId, vacancyTitle, onClose, onSuccess }: DeleteVacancyMode
       await invalidateModeration(queryClient)
       onSuccess?.()
       onClose()
-    } catch (error) {
-      console.error('Ошибка удаления заявки:', error)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Не удалось выполнить действие')
     } finally {
       setIsDeleting(false)
     }
@@ -60,10 +61,14 @@ const Form = ({ vacancyId, vacancyTitle, onClose, onSuccess }: DeleteVacancyMode
         </div>
 
         <div className='form-field-container'>
-          <p className='form-field-text'>Причина удаления</p>
-          <p className={`char-counter ${reason.length >= LIMITS.moderation.reasonMax ? 'limit' : ''}`}>
-            {reason.length} / {LIMITS.moderation.reasonMax}
-          </p>
+          <div className='profile-area-text-container'>
+            <div className='profile-area-text-wrapper'>
+              <p className='profile-area-text'>Причина удаления<sup className='required-mark'>*</sup></p>
+              <p className={`char-counter ${reason.length >= LIMITS.moderation.reasonMax ? 'limit' : ''}`}>
+                {reason.length} / {LIMITS.moderation.reasonMax}
+              </p>
+            </div>
+          </div>
           <textarea
             className='form-field-input message red'
             value={reason}
@@ -74,6 +79,7 @@ const Form = ({ vacancyId, vacancyTitle, onClose, onSuccess }: DeleteVacancyMode
           />
         </div>
 
+        {error && <p className='invite-error-text'>{error}</p>}
         <div className='form-manage'>
           <button
             className='form-manage-button red'

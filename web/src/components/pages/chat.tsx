@@ -271,12 +271,16 @@ export const Chat = () => {
     },
   })
 
-  const handleSubmit = () => {
-    if (!newMessage.trim()) return
-    if (editingMessageId) {
-      updateMutation.mutate({ messageId: editingMessageId, content: newMessage })
-    } else {
-      sendMutation.mutate(newMessage)
+  const submittingRef = useRef(false)
+  const handleSubmit = async () => {
+    if (!newMessage.trim() || submittingRef.current) return
+    submittingRef.current = true
+    try {
+      if (editingMessageId) await updateMutation.mutateAsync({ messageId: editingMessageId, content: newMessage })
+      else await sendMutation.mutateAsync(newMessage)
+    } catch {
+    } finally {
+      submittingRef.current = false
     }
   }
 
@@ -529,7 +533,7 @@ export const Chat = () => {
                 }, 100)
               }}
             >
-              {!msg.isDeleted && !selectionMode && renderMessageActions(msg, isMine)}
+              {!msg.isDeleted && !selectionMode && !msg.messageId.startsWith('temp-') && renderMessageActions(msg, isMine)}
               {renderMessageBubble(msg, isMine, otherLastReadAt)}
             </div>
           </div>

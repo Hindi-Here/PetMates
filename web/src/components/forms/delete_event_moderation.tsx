@@ -20,6 +20,7 @@ const Form = ({ eventId, eventTitle, onClose, onSuccess }: DeleteEventModeration
   const queryClient = useQueryClient()
   const [reason, setReason] = useState('')
   const [isDeleting, setIsDeleting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleDelete = async () => {
     if (!reason.trim() || isDeleting) return
@@ -29,9 +30,9 @@ const Form = ({ eventId, eventTitle, onClose, onSuccess }: DeleteEventModeration
       await invalidateModeration(queryClient)
       onSuccess?.()
       onClose()
-    } catch (error) {
-      console.error('Ошибка удаления мероприятия:', error)
-    } finally {
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Не удалось выполнить действие')
+    }finally {
       setIsDeleting(false)
     }
   }
@@ -60,19 +61,25 @@ const Form = ({ eventId, eventTitle, onClose, onSuccess }: DeleteEventModeration
         </div>
 
         <div className='form-field-container'>
-          <p className='form-field-text'>Причина удаления</p>
-          <p className={`char-counter ${reason.length >= LIMITS.moderation.reasonMax ? 'limit' : ''}`}>
-            {reason.length} / {LIMITS.moderation.reasonMax}
-          </p>
+          <div className='profile-area-text-container'>
+            <div className='profile-area-text-wrapper'>
+              <p className='profile-area-text'>Причина удаления<sup className='required-mark'>*</sup></p>
+              <p className={`char-counter ${reason.length >= LIMITS.moderation.reasonMax ? 'limit' : ''}`}>
+                {reason.length} / {LIMITS.moderation.reasonMax}
+              </p>
+            </div>
+          </div>
           <textarea
             className='form-field-input message red'
             value={reason}
             maxLength={LIMITS.moderation.reasonMax}
             onChange={(e) => setReason(e.target.value)}
             placeholder='Опишите причину — она будет показана владельцу мероприятия'
+            rows={3}
           />
         </div>
 
+        {error && <p className='invite-error-text'>{error}</p>}
         <div className='form-manage'>
           <button
             className='form-manage-button red'

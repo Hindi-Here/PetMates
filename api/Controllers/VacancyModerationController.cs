@@ -108,10 +108,7 @@ namespace api.Controllers
 
                 return Ok(new { message = "Заявка удалена модератором" });
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
     }
 }

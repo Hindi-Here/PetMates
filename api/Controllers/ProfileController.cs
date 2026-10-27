@@ -48,10 +48,7 @@ namespace api.Controllers
 
                 return Ok(Mappers.ProfileResponse(data, userAuth.Email));
             }
-            catch (Exception)
-            {
-                return StatusCode(500);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Отредактировать профиль текущего пользователя
@@ -63,10 +60,24 @@ namespace api.Controllers
             if (userAuth == null)
                 return Unauthorized();
 
-            var jsonString = JsonSerializer.Serialize(data);
-            var userObject = JsonSerializer.Deserialize<User>(jsonString);
+            if (data.TryGetValue("nickname", out var nickEl) && nickEl.ValueKind == JsonValueKind.String &&
+                await _SupMan.IsNicknameTakenAsync(nickEl.GetString()!, userAuth.Id))
+                    return Conflict(new { message = "[Никнейм] этот никнейм уже занят" });
 
-            var validationError = Validator.ValidateProfile(userObject!);
+            User? userObject;
+            try
+            {
+                var jsonString = JsonSerializer.Serialize(data);
+                userObject = JsonSerializer.Deserialize<User>(jsonString, Support.JsonOptions.CaseInsensitive);
+            }
+            catch (JsonException)
+            {
+                return BadRequest(new { message = "[Профиль] некорректные данные" });
+            }
+            if (userObject == null)
+                return BadRequest(new { message = "[Профиль] некорректные данные" });
+
+            var validationError = Validator.ValidateProfile(userObject);
             if (validationError != null)
                 return BadRequest(new { message = validationError });
 
@@ -135,10 +146,7 @@ namespace api.Controllers
 
                 return Ok(Mappers.ProfileResponse(updated.Models.First(), userAuth.Email));
             }
-            catch (Exception)
-            {
-                return StatusCode(500);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Обновить аватар
@@ -192,10 +200,7 @@ namespace api.Controllers
                 await _SupMan.Cache.UserChangedAsync(userAuth.Id!);
                 return Ok(new { avatarUrl = urlWithCacheBuster });
             }
-            catch (Exception)
-            {
-                return StatusCode(500);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
     }
 }

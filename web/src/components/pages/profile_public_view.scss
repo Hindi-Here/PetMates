@@ -375,6 +375,17 @@
   }
 }
 
+.profile-block-btn {
+  height: rem(40);
+  padding: 0 rem(16);
+  border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 70%);
+  border-radius: var(--border-radius-base);
+  background: transparent;
+  color: var(--neutral-100);
+  font-size: rem(13);
+  white-space: nowrap;
+}
+
 @media (max-width: 600px) {
   .profile-header-container {
     height: auto;

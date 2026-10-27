@@ -1,6 +1,7 @@
 ﻿using api.Models;
 using api.Support;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Supabase.Postgrest;
 using System.Text.RegularExpressions;
 
@@ -44,14 +45,12 @@ namespace api.Controllers
 
                 return Ok(result);
             }
-            catch (Exception)
-            {
-                return StatusCode(500, new { error = "Не удалось загрузить комментарии" });
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Отправить комментарий
         [HttpPost]
+        [EnableRateLimiting("write")]
         public async Task<IActionResult> CreateComment([FromBody] CreateCommentDto dto)
         {
             try
@@ -105,10 +104,7 @@ namespace api.Controllers
                     CreatedAt = newComment.CreatedAt?.ToString("o")
                 });
             }
-            catch (Exception)
-            {
-                return StatusCode(500, new { error = "Не удалось создать комментарий" });
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Отредактировать комментарий
@@ -148,10 +144,7 @@ namespace api.Controllers
 
                 return Ok(new { message = "Комментарий обновлён" });
             }
-            catch (Exception)
-            {
-                return StatusCode(500, new { error = "Не удалось обновить комментарий" });
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Удалить комментарий
@@ -180,10 +173,7 @@ namespace api.Controllers
 
                 return Ok(new { message = "Комментарий удалён" });
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
     }
 }

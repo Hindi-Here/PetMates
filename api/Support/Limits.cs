@@ -24,7 +24,13 @@
             public const int WorkplaceMax = 100;
             public const int RoleMax = 50;
             public const int DescriptionMax = 2000;
-            public const int SkillsMax = 250; 
+            public const int SkillsMax = 250;
+
+            public const int AgeMin = 1;
+            public const int AgeMax = 120;
+            public const int ContactsMax = 10;
+            public const int ContactNameMax = 50;
+            public const int ContactUrlMax = 255;
         }
 
         public static class Member
@@ -94,6 +100,7 @@
         {
             public const int UserQueryMin = 2;
             public const int UserResultsMax = 20;
+            public const int ListMax = 500;
         }
 
         public static class Comment

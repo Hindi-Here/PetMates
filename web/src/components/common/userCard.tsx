@@ -1,8 +1,6 @@
 import './userCard.scss'
-
 import AdminProjectIcon from '@icons/admin_project.svg?react'
 import MoreIcon from '@icons/more.svg?react'
-
 import { useState, useEffect, useRef, Fragment, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
@@ -16,6 +14,7 @@ import { invalidateModeration } from '../scripts/query/invalidate'
 import { projectsApi } from '../services/project'
 import type { UserData } from '../services/users'
 import BanUserForm from '../forms/ban_user'
+import { useOnce } from '../hooks/useOnce'
 
 // Компонент карточки пользователя (информация, логика, модерация)
 export const UserCard = ({ 
@@ -48,7 +47,6 @@ export const UserCard = ({
   
   const isBanned = user.isBanned ?? false
   const targetSystemRole = user.systemRole
-  
   const canInvite = isAuthenticated && authUserId !== user.userId && !disabledInvite && !isBanned
 
   const canModerate = showModerationMenu &&
@@ -58,6 +56,10 @@ export const UserCard = ({
 
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  const [showBanForm, setShowBanForm] = useState(false)
+  const [busy, setBusy] = useState(false)
+  
+  const once = useOnce()
 
   useEffect(() => {
     if (!isMenuOpen) return
@@ -70,24 +72,36 @@ export const UserCard = ({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [isMenuOpen])
 
-  const [showBanForm, setShowBanForm] = useState(false)
-
-  const handleBan = () => {
+  const handleBan = () => once(`ban:${user.userId}`, async () => {
     setIsMenuOpen(false)
     setShowBanForm(true)
-  }
+  })
 
-  const handleUnban = async () => {
-    await moderationApi.unbanUser(user.userId)
-    await invalidateModeration(queryClient)
-    setIsMenuOpen(false)
-  }
+  const handleUnban = () => once(`unban:${user.userId}`, async () => {
+    setBusy(true)
+    try {
+      await moderationApi.unbanUser(user.userId)
+      await invalidateModeration(queryClient)
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Не удалось разблокировать пользователя')
+    } finally {
+      setBusy(false)
+      setIsMenuOpen(false)
+    }
+  })
 
-  const handleSetRole = async (newRole: 'user' | 'moderator' | 'admin') => {
-    await moderationApi.setRole(user.userId, newRole)
-    await invalidateModeration(queryClient)
-    setIsMenuOpen(false)
-  }
+  const handleSetRole = (newRole: 'user' | 'moderator' | 'admin') => once(`role:${user.userId}`, async () => {
+    setBusy(true)
+    try {
+      await moderationApi.setRole(user.userId, newRole)
+      await invalidateModeration(queryClient)
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Не удалось изменить роль')
+    } finally {
+      setBusy(false)
+      setIsMenuOpen(false)
+    }
+  })
   
   const metaInfo = [
     user.realName,
@@ -127,7 +141,6 @@ export const UserCard = ({
   useEffect(() => {
     const row = rowRef.current
     if (!row) return
-
     const calculateVisible = () => {
       requestAnimationFrame(() => {
         if (!row) return
@@ -136,14 +149,12 @@ export const UserCard = ({
         if (!nickEl) return
 
         let usedWidth = nickEl.offsetWidth + 12
-
         const badgeEl = row.querySelector('.owner-badge') as HTMLElement | null
         const actionsEl = row.querySelector('.card-actions') as HTMLElement | null
         if (badgeEl) usedWidth += badgeEl.offsetWidth + 12
         if (actionsEl) usedWidth += actionsEl.offsetWidth + 12
 
         let count = 0
-
         const items = row.querySelectorAll('.meta-item') as NodeListOf<HTMLElement>
         const separators = row.querySelectorAll('.meta-separator') as NodeListOf<HTMLElement>
 
@@ -157,15 +168,10 @@ export const UserCard = ({
         if (count === 0 && metaInfo.length > 0) setVisibleCount(1) 
       })
     }
-
     calculateVisible()
-
     const resizeObserver = new ResizeObserver(calculateVisible)
     resizeObserver.observe(row)
-
-    return () => {
-      resizeObserver.disconnect()
-    }
+    return () => { resizeObserver.disconnect() }
   }, [metaInfo])
 
   const tagRowRef = useRef<HTMLDivElement>(null)
@@ -174,14 +180,12 @@ export const UserCard = ({
   useEffect(() => {
     const row = tagRowRef.current
     if (!row) return
-
     const calculateVisibleTags = () => {
       requestAnimationFrame(() => {
         if (!row) return
         const rowWidth = row.clientWidth - 32
         let usedWidth = 0
         let count = 0
-
         const items = row.querySelectorAll('.tag-item:not(.more-tag)') as NodeListOf<HTMLElement>
 
         items.forEach((item) => {
@@ -192,7 +196,6 @@ export const UserCard = ({
         if (count < skills.length) {
           const moreTag = row.querySelector('.more-tag') as HTMLElement | null
           const moreWidth = moreTag ? moreTag.offsetWidth + 8 : 50
-
           let recalc = 0
           usedWidth = 0
           items.forEach((item) => {
@@ -201,19 +204,13 @@ export const UserCard = ({
           })
           count = recalc
         }
-
         setVisibleTagCount(Math.max(count, 0))
       })
     }
-
     calculateVisibleTags()
-
     const resizeObserver = new ResizeObserver(calculateVisibleTags)
     resizeObserver.observe(row)
-
-    return () => {
-      resizeObserver.disconnect()
-    }
+    return () => { resizeObserver.disconnect() }
   }, [skills])
 
   const { data: fetchedCount = 0, isLoading: fetching } = useQuery({
@@ -251,29 +248,33 @@ export const UserCard = ({
             {isMenuOpen && (
               <div className='moderation-menu'>
                 {isBanned ? (
-                  <button onClick={(e) => { e.stopPropagation(); handleUnban() }}>Разблокировать</button>
+                  <button disabled={busy} onClick={(e) => { e.stopPropagation(); handleUnban() }}>
+                    Разблокировать
+                  </button>
                 ) : (
-                  <button className='danger' onClick={(e) => { e.stopPropagation(); handleBan() }}>Заблокировать</button>
+                  <button className='danger' disabled={busy} onClick={(e) => { e.stopPropagation(); handleBan() }}>
+                    Заблокировать
+                  </button>
                 )}
 
                 {currentSystemRole === 'admin' && (
                   <>
                     {targetSystemRole === 'admin' ? (
-                      <button onClick={(e) => { e.stopPropagation(); handleSetRole('user') }}>
+                      <button disabled={busy} onClick={(e) => { e.stopPropagation(); handleSetRole('user') }}>
                         Снять администратора
                       </button>
                     ) : (
                       <>
                         {targetSystemRole === 'moderator' ? (
-                          <button onClick={(e) => { e.stopPropagation(); handleSetRole('user') }}>
+                          <button disabled={busy} onClick={(e) => { e.stopPropagation(); handleSetRole('user') }}>
                             Снять модератора
                           </button>
                         ) : (
-                          <button onClick={(e) => { e.stopPropagation(); handleSetRole('moderator') }}>
+                          <button disabled={busy} onClick={(e) => { e.stopPropagation(); handleSetRole('moderator') }}>
                             Назначить модератором
                           </button>
                         )}
-                        <button onClick={(e) => { e.stopPropagation(); handleSetRole('admin') }}>
+                        <button disabled={busy} onClick={(e) => { e.stopPropagation(); handleSetRole('admin') }}>
                           Назначить администратором
                         </button>
                       </>

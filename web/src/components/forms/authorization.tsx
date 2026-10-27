@@ -289,7 +289,11 @@ const checkForm = (data: FormData, isRegister: boolean): boolean => {
 const Register = async (data: FormData, onError: (msg: string | null) => void, onClose?: () => void) => {
   onError(null); 
   try {
-    await authApi.register(data.name, data.email, data.password, data.confirmPassword);
+    const res = await authApi.register(data.name, data.email, data.password, data.confirmPassword);
+    if (res?.requiresConfirmation) {
+      onError('Мы отправили письмо для подтверждения почты. Перейдите по ссылке из письма и войдите');
+      return;
+    }
     onClose?.();
   } catch (err: any) {
     const errorMessage = err.message || 'Ошибка регистрации';

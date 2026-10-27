@@ -7,8 +7,9 @@ export const LIMITS = {
   auth: { nicknameMin: 3, nicknameMax: 50, emailMax: 255, passwordMin: 8, passwordMax: 255 },
 
   profile: {
-    nicknameMax: 50, realNameMax: 100, countryMax: 50, cityMax: 50,
+    nicknameMin: 3, nicknameMax: 50, realNameMax: 100, countryMax: 50, cityMax: 50,
     workplaceMax: 100, roleMax: 50, descriptionMax: 2000, skillsMax: 250,
+    ageMin: 1, ageMax: 120, contactsMax: 10, contactNameMax: 50, contactUrlMax: 255,
   },
 
   member: { roleMin: 2, roleMax: 50 },

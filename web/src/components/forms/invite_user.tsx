@@ -12,11 +12,10 @@ import { projectMembersApi, type ProjectMemberData } from '../services/project_m
 import { useAuth } from '../hooks/useAuth'
 import { inviteApi, type InviteData } from '../services/invite'
 import { type UserData } from '../services/users'
-import { notificationApi } from '../services/notification'
 
 import { useQueryClient } from '@tanstack/react-query'
 import { invalidateRelations } from '../scripts/query/invalidate'
-import { useUser } from '../hooks/useUser'
+import { useOnce } from '../hooks/useOnce'
 
 interface ProjectWithMembers extends ProjectData {
   memberCount: number;
@@ -25,25 +24,6 @@ interface ProjectWithMembers extends ProjectData {
 interface FormProps {
   onClose: () => void;
   invitedUser: UserData;
-}
-
-// Отправка уведомления пользователю
-const sendNotification = (
-  userId: string,
-  referenceType: string,
-  referenceId: string,
-  eventType: string,
-  contextData: Record<string, string | number | boolean | null | undefined>
-) => {
-  notificationApi.create({
-    userId,
-    referenceType,
-    referenceId,
-    contextData: {
-      ...contextData,
-      eventType,
-    }
-  }).catch(err => console.error('Ошибка создания уведомления:', err))
 }
 
 // Компонент формы приглашения пользователя в проект
@@ -58,9 +38,6 @@ const Form = ({ onClose, invitedUser }: FormProps) => {
   const [existingMembers, setExistingMembers] = useState<Set<string>>(new Set())
   const [existingInvites, setExistingInvites] = useState<Set<string>>(new Set())
   const [error, setError] = useState<string>('')
-
-  const { data: me } = useUser(userId)
-  const currentUserNickname = me?.nickname ?? null
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -146,42 +123,25 @@ const Form = ({ onClose, invitedUser }: FormProps) => {
                     !existingMembers.has(invitedUser.userId) &&
                     !existingInvites.has(invitedUser.userId)
 
-  const handleInvite = async () => {
-    if (!canInvite || !invitedUser || !userId) return
-    
-    setError('')
-    
-    try {
-      const selectedVacancyData = vacancies.find(v => v.vacancyId === selectedVacancy)
-      const role = selectedVacancyData?.title ?? 'Участник проекта'
-      const selectedProjectData = projects.find(p => p.projectId === selectedProject)
-      const projectName = selectedProjectData?.title || 'Проект'
-      
-      await inviteApi.create({
-        userId: invitedUser.userId,
-        projectId: selectedProject,
-        role: role
-      })
+  const once = useOnce()
+    const [isSending, setIsSending] = useState(false)
 
-      sendNotification(userId, 'invite', selectedProject, 'invite_sent', {
-        projectName,
-        vacancyName: selectedVacancyData?.title || 'Заявка',
-      })
-      
-      sendNotification(invitedUser.userId, 'invite', selectedProject, 'invite_received', {
-        projectName,
-        vacancyName: selectedVacancyData?.title || 'Заявка',
-        nickname: currentUserNickname || 'Пользователь',
-      })
-      
-      await invalidateRelations(queryClient)
-      
-      onClose()
-    } catch (error: any) {
-      console.error('Ошибка создания приглашения:', error)
-      setError(error.message || 'Не удалось отправить приглашение')
-    }
-  }
+    const handleInvite = () => once('invite', async () => {
+      if (!canInvite || !invitedUser || !userId) return
+      setError('')
+      setIsSending(true)
+      try {
+        const selectedVacancyData = vacancies.find(v => v.vacancyId === selectedVacancy)
+        const role = selectedVacancyData?.title ?? 'Участник проекта'
+        await inviteApi.create({ userId: invitedUser.userId, projectId: selectedProject, role })
+        await invalidateRelations(queryClient)
+        onClose()
+      } catch (e: any) {
+        setError(e.message || 'Не удалось отправить приглашение')
+      } finally {
+        setIsSending(false)
+      }
+    })
 
   return (
     <div className='form-container'> 
@@ -286,7 +246,7 @@ const Form = ({ onClose, invitedUser }: FormProps) => {
         )}
 
         <div className='form-manage'>
-          <button className='form-manage-button' disabled={!canInvite} onClick={handleInvite}> 
+          <button className='form-manage-button' disabled={!canInvite || isSending} onClick={handleInvite}>
             Пригласить 
           </button>
           <button className='form-manage-button cancellation' onClick={onClose}>

@@ -1,56 +1,41 @@
-import { API_BASE } from './cfg';
-import { supabase } from './cfg';
+import { supabase } from './cfg'
+import { authFetch, readError } from './http'
 
 export const authApi = {
-
   // Регистрация аккаунта
   register: async (nickname: string, email: string, password: string, confirmPassword: string) => {
-    const response = await fetch(`${API_BASE}/api/auth/register`, {
+    const r = await authFetch('/api/auth/register', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nickname, email, password, confirmPassword }),
     });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Ошибка сети' }));
-      throw new Error(error.message || 'Не удалось зарегистрироваться');
-    }
-
-    const data = await response.json();
+    if (!r.ok) throw new Error(await readError(r, 'Не удалось зарегистрироваться'));
+    
+    const data = await r.json();
     if (data.accessToken) {
       await supabase.auth.setSession({
         access_token: data.accessToken,
         refresh_token: data.refreshToken,
       });
     }
-
-    return await data;
+    return data;
   },
 
-   // Логин аккаунт
-   login: async (email: string, password: string, rememberMe: boolean = false) => {
-    const response = await fetch(`${API_BASE}/api/auth/login`, {
+  // Логин аккаунт
+  login: async (email: string, password: string, rememberMe: boolean = false) => {
+    const r = await authFetch('/api/auth/login', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password, rememberMe }),
     });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Ошибка сети' }));
-      throw new Error(error.message || 'Не удалось войти');
-    }
-
-    const data = await response.json();
+    if (!r.ok) throw new Error(await readError(r, 'Не удалось войти'));
     
+    const data = await r.json();
     if (data.accessToken) {
       const { error } = await supabase.auth.setSession({
         access_token: data.accessToken,
         refresh_token: data.refreshToken,
       });
-      
       if (error) throw error;
     }
-    
     return data;
   },
 
@@ -58,16 +43,12 @@ export const authApi = {
   signInWithGitHub: async () => {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'github',
-      options: {
-        redirectTo: `${window.location.origin}/vacancy`,
-      }
+      options: { redirectTo: `${window.location.origin}/vacancy` }
     });
-
     if (error) {
       console.error('GitHub OAuth error:', error);
       throw error;
     }
-
     return data;
   },
 
@@ -76,10 +57,7 @@ export const authApi = {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        queryParams: {
-          access_type: 'offline',
-          prompt: 'select_account',
-        },
+        queryParams: { access_type: 'offline', prompt: 'select_account' },
         scopes: 'email profile', 
         redirectTo: `${window.location.origin}/vacancy`,
       }
@@ -94,17 +72,13 @@ export const authApi = {
       provider: 'twitch',
       options: {
         redirectTo: `${window.location.origin}/vacancy`,
-        queryParams: {
-          scope: 'user:read:email',
-        },
+        queryParams: { scope: 'user:read:email' },
       }
     });
-
     if (error) {
       console.error('Twitch OAuth error:', error);
       throw error;
     }
-
     return data;
   },
 
@@ -112,5 +86,4 @@ export const authApi = {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   },
-
 };

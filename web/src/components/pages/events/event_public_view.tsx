@@ -15,9 +15,6 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { invalidateModeration } from '../../scripts/query/invalidate'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
-import rehypeRaw from 'rehype-raw'
 
 import { useAuth } from '../../hooks/useAuth'
 import { useSystemRole } from '../../hooks/useSystemRole'
@@ -28,6 +25,7 @@ import DeleteEventModerationForm from '../../forms/delete_event_moderation'
 import { EventTabs, PUBLIC_EVENT_TABS } from './event_tabs'
 import { EventMembers } from './event_members'
 import { EventApplicationForm } from './event_application_form'
+import { Markdown } from '@/components/common/markdown'
 
 export interface EventPublicData {
   eventId: string
@@ -207,13 +205,7 @@ export const EventPublicView = ({
       {data.description ? (
         <section className='preview-section'>
           <div className='project-description-preview markdown-content'>
-            <ReactMarkdown 
-              remarkPlugins={[remarkGfm]} 
-              rehypePlugins={[rehypeRaw]} 
-              components={{ img: (props: any) => <img {...props} loading="lazy" decoding="async" /> }}
-            >
-              {data.description}
-            </ReactMarkdown>
+            <Markdown>{data.description}</Markdown>
           </div>
         </section>
       ) : (
@@ -257,9 +249,7 @@ export const EventPublicView = ({
     data.results ? (
       <section className='preview-section'>
         <div className='project-description-preview markdown-content'>
-          <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
-            {data.results}
-          </ReactMarkdown>
+          <Markdown>{data.results}</Markdown>
         </div>
       </section>
     ) : (

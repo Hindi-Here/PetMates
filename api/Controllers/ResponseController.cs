@@ -2,6 +2,7 @@
 using api.Support;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Supabase;
 
 namespace api.Controllers
@@ -56,10 +57,7 @@ namespace api.Controllers
 
                 return Ok(result);
             }
-            catch (Exception)
-            {
-                return StatusCode(500, new { error = "Не удалось загрузить отклики" });
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Получить исходящие отклики
@@ -100,10 +98,7 @@ namespace api.Controllers
                 }
                 return Ok(result);
             }
-            catch (Exception)
-            {
-                return StatusCode(500, new { error = "Не удалось загрузить исходящие отклики" });
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Проверка отклика
@@ -120,14 +115,12 @@ namespace api.Controllers
                 var existing = await _client.From<Response>().Where(r => r.VacancyId == vacancyId && r.UserId == userId).Get();
                 return Ok(new { hasResponded = existing.Models.Count != 0 });
             }
-            catch (Exception)
-            {
-                return StatusCode(500, new { error = "Ошибка проверки отклика" });
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Отправить отклик
         [HttpPost]
+        [EnableRateLimiting("write")]
         public async Task<IActionResult> CreateResponse([FromBody] CreateResponseDto dto)
         {
             try
@@ -150,6 +143,8 @@ namespace api.Controllers
                     return NotFound(new { message = "Проект недоступен" });
                 if (projectData.OwnerId == actor.UserId)
                     return BadRequest(new { message = "Нельзя откликнуться на свой проект" });
+                if (await _SupMan.IsBlockedBetweenAsync(actor.UserId, projectData.OwnerId))
+                    return BadRequest(new { message = "Невозможно откликнуться на этот проект" });
 
                 var alreadyMember = await _client.From<ProjectMember>().Where(pm => pm.ProjectId == projectData.ProjectId && pm.UserId == actor.UserId).Get();
                 if (alreadyMember.Models.Count > 0)
@@ -173,22 +168,70 @@ namespace api.Controllers
                 if (created == null)
                     return BadRequest(new { message = "Не удалось создать отклик" });
 
+                var me = await _SupMan.GetUserCachedAsync(actor.UserId);
+                var ctx = new Dictionary<string, object>
+                {
+                    ["projectName"] = projectData.Title,
+                    ["vacancyName"] = vacancy.Title,
+                };
+                await _SupMan.SendNotificationAsync(actor.UserId, "response", projectData.ProjectId, "response_sent", new(ctx));
+                await _SupMan.SendNotificationAsync(projectData.OwnerId, "response", projectData.ProjectId, "response_received",
+                    new(ctx) { ["nickname"] = me?.Nickname ?? "Пользователь" });
+
                 return Ok(new { created.ResponseId, created.UserId, created.VacancyId, created.Status, CreatedAt = created.CreatedAt.ToString("o") });
             }
-            catch (Exception)
-            {
-                return StatusCode(500, new { error = "Не удалось создать отклик" });
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Удалить отклик (отменить)
         [HttpDelete("{responseId}")]
+        [EnableRateLimiting("write")]
         public async Task<IActionResult> DeleteResponse(string responseId)
         {
             try
             {
-                var authHeader = Request.Headers.Authorization.ToString();
-                var actor = await _SupMan.GetActorAsync(authHeader);
+                var actor = await _SupMan.GetActorAsync(Request.Headers.Authorization.ToString());
+                if (actor == null)
+                    return Unauthorized();
+
+                var resp = (await _client.From<Response>().Where(r => r.ResponseId == responseId).Get()).Models.FirstOrDefault();
+                if (resp == null)
+                    return NotFound();
+                if (resp.UserId != actor.UserId)
+                    return Forbid();
+
+                var vac = (await _client.From<Vacancy>().Where(v => v.VacancyId == resp.VacancyId).Get()).Models.FirstOrDefault();
+                var project = vac == null ? null
+                    : (await _client.From<Project>().Where(p => p.ProjectId == vac.ProjectId).Get()).Models.FirstOrDefault();
+
+                await _client.From<Response>().Where(r => r.ResponseId == responseId).Delete();
+
+                if (project != null)
+                {
+                    var me = await _SupMan.GetUserCachedAsync(actor.UserId);
+                    await _SupMan.SendNotificationAsync(project.OwnerId, "response", project.ProjectId, "response_cancelled",
+                        new() { ["projectName"] = project.Title, ["vacancyName"] = vac!.Title, ["nickname"] = me?.Nickname ?? "Пользователь" });
+                }
+                return Ok(new { message = "Отклик удалён" });
+            }
+            catch (Exception ex) { return this.Fail(ex); }
+        }
+
+        // Принять
+        [HttpPost("{responseId}/accept")]
+        [EnableRateLimiting("write")]
+        public Task<IActionResult> Accept(string responseId) => Decide(responseId, true);
+
+        // Октлонить
+        [HttpPost("{responseId}/decline")]
+        [EnableRateLimiting("write")]
+        public Task<IActionResult> Decline(string responseId) => Decide(responseId, false);
+
+        private async Task<IActionResult> Decide(string responseId, bool accept)
+        {
+            try
+            {
+                var actor = await _SupMan.GetActorAsync(Request.Headers.Authorization.ToString());
                 if (actor == null)
                     return Unauthorized();
 
@@ -197,18 +240,20 @@ namespace api.Controllers
                     return NotFound();
 
                 var vac = (await _client.From<Vacancy>().Where(v => v.VacancyId == resp.VacancyId).Get()).Models.FirstOrDefault();
-                var ownerId = vac == null ? null : (await _client.From<Project>().Where(p => p.ProjectId == vac.ProjectId).Get()).Models.FirstOrDefault()?.OwnerId;
-
-                if (resp.UserId != actor.UserId && ownerId != actor.UserId)
+                var project = vac == null ? null
+                    : (await _client.From<Project>().Where(p => p.ProjectId == vac.ProjectId).Get()).Models.FirstOrDefault();
+                if (vac == null || project == null || project.OwnerId != actor.UserId)
                     return Forbid();
 
                 await _client.From<Response>().Where(r => r.ResponseId == responseId).Delete();
-                return Ok(new { message = "Отклик удален" });
+
+                await _SupMan.SendNotificationAsync(resp.UserId, "response", project.ProjectId,
+                    accept ? "response_accepted" : "response_rejected",
+                    new() { ["projectName"] = project.Title, ["vacancyName"] = vac.Title });
+
+                return Ok(new { message = accept ? "Отклик принят" : "Отклик отклонён" });
             }
-            catch (Exception)
-            {
-                return StatusCode(500, new { error = "Не удалось удалить отклик" });
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
     }
 }

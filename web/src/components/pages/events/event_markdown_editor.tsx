@@ -5,13 +5,11 @@ import RejectIcon from '@icons/reject.svg?react'
 import CopyIcon from '@icons/copy.svg?react'
 
 import { useEffect, useRef, useState } from 'react'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
-import rehypeRaw from 'rehype-raw'
 import { Toggle } from '../../common/toggle'
 import { eventApi, type EventMediaItem, type EventMediaSection } from '../../services/event'
 
 import { LIMITS, TIMING } from '../../scripts/limits'
+import { Markdown } from '@/components/common/markdown'
 
 const formatFileSize = (bytes: number): string => {
   if (bytes === 0) return '0 Б'
@@ -115,9 +113,7 @@ export const EventMarkdownEditor = ({
         <div className='description-preview-container'>
           {value ? (
             <div className='project-description-preview markdown-content'>
-              <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
-                {value}
-              </ReactMarkdown>
+              <Markdown>{value}</Markdown>
             </div>
           ) : (
             <p className='description-preview-empty'>{emptyPreviewText}</p>

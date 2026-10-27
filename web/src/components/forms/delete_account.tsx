@@ -30,8 +30,14 @@ const Form = ({ onClose }: FormProps) => {
 
   const { data, handleChange } = useChangeInput({
     name: '',
-    confirmCode: ''
+    password: ''
   }, {});
+
+  const [needsPassword, setNeedsPassword] = useState(true);
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) =>
+      setNeedsPassword((user?.app_metadata?.provider ?? 'email') === 'email'));
+  }, []);
 
   useEffect(() => {
     const fetchUserNickname = async () => {
@@ -51,10 +57,10 @@ const Form = ({ onClose }: FormProps) => {
       return !validatorFormat.required(data.name);
     }
     if (step === 2) {
-      return !validatorFormat.required(data.confirmCode);
+      return needsPassword && !validatorFormat.required(data.password);
     }
     return false;
-  }, [step, data.name, data.confirmCode]);
+  }, [step, data.name, data.password, needsPassword]);
 
   const next = async () => { 
     if (step === 1) {
@@ -71,7 +77,7 @@ const Form = ({ onClose }: FormProps) => {
       setIsLoading(true);
       setErrorMessage(null);
       try {
-        await settingApi.deleteAccount(data.name);
+        await settingApi.deleteAccount(data.name, data.password);
         await supabase.auth.signOut();
         
         localStorage.clear(); 
@@ -136,20 +142,27 @@ const Form = ({ onClose }: FormProps) => {
         )}
 
         {step === 2 && (
-          <div className='form-field-container'>
-            <p className='form-field-text'> Введите код подтверждения </p>
-            <input 
-              className='form-field-input red' 
-              name='confirmCode' 
-              value={data.confirmCode} 
-              onChange={handleChange}
-            />
-            <div className="form-field-helper-container">
-              <InfoIcon className='form-field-helper-ico'/>
-              <p className="form-field-helper-text"> Это подтвердит подлинность владения аккаунтом </p>
-            </div>
-          </div>
-        )}
+        <div className='form-field-container'>
+          {needsPassword ? (
+            <>
+              <p className='form-field-text'> Введите пароль от аккаунта </p>
+              <input 
+                className='form-field-input red' 
+                type='password'
+                name='password' 
+                value={data.password} 
+                onChange={handleChange}
+              />
+              <div className="form-field-helper-container">
+                <InfoIcon className='form-field-helper-ico'/>
+                <p className="form-field-helper-text"> Это подтвердит, что аккаунт удаляете именно вы </p>
+              </div>
+            </>
+          ) : (
+            <p className='form-info-text'> Аккаунт создан через внешний сервис, пароль не требуется. </p>
+          )}
+        </div>
+      )}
 
         {step === 3 && (
           <div className='form-info-container'>

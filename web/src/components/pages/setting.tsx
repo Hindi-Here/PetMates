@@ -15,6 +15,7 @@ import { useTheme } from '../common/theme'
 
 import { useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '../scripts/query/queryKeys'
+import { useOnce } from '../hooks/useOnce'
 
 // Валидация поля пароля и возврат сообщения об ошибке
 const checkPasswordFormat = (fieldName: string, value: string, newPassword: string): string | null => {
@@ -110,7 +111,7 @@ export const Setting = () => {
 
   const { isDarkTheme, setIsDarkTheme } = useTheme()
 
-  const { data: passData, touched: passTouched, dirty: passDirty, handleChange: handlePassChange, handleBlur: handlePassBlur } = useChangeInput(
+  const { data: passData, touched: passTouched, dirty: passDirty, handleChange: handlePassChange, handleBlur: handlePassBlur, reset: resetPass } = useChangeInput(
     { oldPassword: '', newPassword: '', confirmPassword: '' },
     {
       oldPassword: validatorRegex.password,
@@ -164,18 +165,20 @@ export const Setting = () => {
     }
   }, [emailData, queryClient])
 
-  const handleChangePassword = useCallback(async () => {
+  const once = useOnce() 
+  const handleChangePassword = useCallback(() => once('password', async () => {
     setPassError(null)
     setPassSuccess(false)
     try {
       await settingApi.changePassword(passData.oldPassword, passData.newPassword, passData.confirmPassword)
+      resetPass()
       setPassSuccess(true)
       setTimeout(() => setPassSuccess(false), TIMING.toastMs)
     } catch (err: any) {
       setPassError(err.message || 'Ошибка смены пароля')
       setTimeout(() => setPassError(null), TIMING.toastMs)
     }
-  }, [passData])
+  }), [passData, once])
 
   return (
     <>

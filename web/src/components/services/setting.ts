@@ -1,58 +1,33 @@
-import { API_BASE } from './cfg';
-import { supabase } from './cfg';
+import { authFetch, readError } from './http'
 
 export const settingApi = {
   // Сменить пароль
   changePassword: async (oldPassword: string, newPassword: string, confirmPassword: string) => {
-    const { data: { session } } = await supabase.auth.getSession();
-    const response = await fetch(`${API_BASE}/api/setting/password`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session?.access_token}`,
-      },
-      body: JSON.stringify({ oldPassword, newPassword, confirmPassword }),
+    const r = await authFetch('/api/setting/password', { 
+      method: 'PUT', 
+      body: JSON.stringify({ oldPassword, newPassword, confirmPassword }) 
     });
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.message || 'Ошибка смены пароля');
-    }
-    return response.json();
+    if (!r.ok) throw new Error(await readError(r, 'Ошибка смены пароля'));
+    return await r.json();
   },
 
   // Сменить почту
   changeEmail: async (newEmail: string, confirmCode: string) => {
-    const { data: { session } } = await supabase.auth.getSession();
-    const response = await fetch(`${API_BASE}/api/setting/email`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session?.access_token}`,
-      },
-      body: JSON.stringify({ newEmail, confirmCode }),
+    const r = await authFetch('/api/setting/email', { 
+      method: 'PUT', 
+      body: JSON.stringify({ newEmail, confirmCode }) 
     });
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.message || 'Ошибка смены почты');
-    }
-    return response.json();
+    if (!r.ok) throw new Error(await readError(r, 'Ошибка смены почты'));
+    return await r.json();
   },
 
   // Удалить аккаунт
-  deleteAccount: async (nickname: string) => {
-    const { data: { session } } = await supabase.auth.getSession();
-    const response = await fetch(`${API_BASE}/api/setting/account`, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session?.access_token}`,
-      },
-      body: JSON.stringify({ nickname }), 
+  deleteAccount: async (nickname: string, password: string) => {
+    const r = await authFetch('/api/setting/account', { 
+      method: 'DELETE', 
+      body: JSON.stringify({ nickname, password }) 
     });
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.message || 'Ошибка удаления аккаунта');
-    }
-    return response.json();
+    if (!r.ok) throw new Error(await readError(r, 'Ошибка удаления аккаунта'));
+    return await r.json();
   },
 };

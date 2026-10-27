@@ -8,35 +8,16 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useSystemRole } from '../hooks/useSystemRole'
-import { useUser } from '../hooks/useUser'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '../scripts/query/queryKeys'
 import { canModerateTarget } from '../scripts/moderation'
 import { responseApi } from '../services/response'
-import { notificationApi } from '../services/notification'
 import type { VacancyData } from '../services/vacancy'
 import DeleteVacancyModerationForm from '../forms/delete_vacancy_moderation'
 import { STALE } from '../scripts/query/queryClient'
 import { useMyProjectIds } from '../hooks/useMyProjectIds'
-
-type NotificationContextData = Record<string, string | number | boolean | null | undefined>
-
-// Функция для отправки уведомлений пользователю
-const sendNotification = (
-  userId: string,
-  referenceType: string,
-  referenceId: string,
-  eventType: string,
-  contextData: NotificationContextData
-) => {
-  notificationApi.create({
-    userId,
-    referenceType,
-    referenceId,
-    contextData: { ...contextData, eventType },
-  }).catch(err => console.error('Ошибка создания уведомления:', err))
-}
+import { TIMING } from '../scripts/limits'
 
 // Компонент карточки вакансии (информация, логика, модерация)
 export const VacancyCard = ({ 
@@ -55,7 +36,6 @@ export const VacancyCard = ({
   
   const [showDeleteForm, setShowDeleteForm] = useState(false)
 
-  const { data: me } = useUser(userId)
   const { data: myProjectIds } = useMyProjectIds(userId)
 
   const projectOwnerId = vacancy.ownerId ?? null
@@ -63,8 +43,6 @@ export const VacancyCard = ({
   const ownerIsBanned = vacancy.ownerIsBanned ?? false
   const isOwner = !!userId && projectOwnerId === userId
   const isTeamMember = !!vacancy.projectId && !!myProjectIds?.has(vacancy.projectId)
-
-  const currentUserNickname = me?.nickname ?? null
 
   const { data: outgoing = [] } = useQuery({
     queryKey: queryKeys.responses.outgoing(userId!),
@@ -84,6 +62,8 @@ export const VacancyCard = ({
     setShowDeleteForm(true) 
   }
 
+  const [applyError, setApplyError] = useState<string | null>(null)
+
   const applyMutation = useMutation({
     mutationFn: () => responseApi.create({ 
       userId: userId!, 
@@ -93,27 +73,9 @@ export const VacancyCard = ({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.responses.outgoing(userId!) })
       queryClient.invalidateQueries({ queryKey: queryKeys.responses.all })
-      
-      if (userId) {
-        sendNotification(userId, 'response', vacancy.projectId!, 'response_sent', {
-          projectName: vacancy.projectTitle || 'Проект',
-          vacancyName: vacancy.title || 'Заявка',
-        })
-      }
-      
-      if (projectOwnerId && userId) {
-        sendNotification(projectOwnerId, 'response', vacancy.projectId!, 'response_received', {
-          projectName: vacancy.projectTitle || 'Проект',
-          vacancyName: vacancy.title || 'Заявка',
-          nickname: currentUserNickname || 'Пользователь',
-        })
-      }
-      
-      queryClient.invalidateQueries({ 
-        queryKey: queryKeys.notifications.all,
-        refetchType: 'active'
-      })
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all, refetchType: 'active' })
     },
+    onError: (e: Error) => { setApplyError(e.message); setTimeout(() => setApplyError(null), TIMING.toastMs) },
   })
 
   const handleApply = async (e: React.MouseEvent) => {
@@ -178,6 +140,7 @@ export const VacancyCard = ({
             </span>
           )}
         </div>
+        {applyError && <p className='field-error-text' style={{ padding: '0 1rem 1rem' }}>{applyError}</p>}
       </div>
 
       {showDeleteForm && (

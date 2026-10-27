@@ -86,7 +86,7 @@ export const EventResults = ({ event, profileId, draft, onDraftChange }: EventRe
           onChange={setValue}
           hasError={tooLong}
           emptyPreviewText='Результаты пока не заполнены'
-          placeholder={'### Итоги мероприятия\n\nУкажите финалистов, поздравления и награды.\n\n- 1 место: Участник ...\n- 2 место: Участник ...'}
+          placeholder={'### Итоги мероприятия\n\nУкажите финалистов, поздравления и награды.\n\n- 1 место: Участник\n- 2 место: Участник'}
         />
         {tooLong && <p className='event-field-error'>Максимум {LIMITS.longTextMax} символов</p>}
       </section>

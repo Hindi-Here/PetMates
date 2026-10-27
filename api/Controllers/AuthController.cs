@@ -1,6 +1,7 @@
-﻿using api.Support;
-using api.Models;
+﻿using api.Models;
+using api.Support;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Supabase.Gotrue;
 using System.Text.Json;
 
@@ -15,11 +16,15 @@ namespace api.Controllers
 
         // Зарегистрироваться
         [HttpPost("register")]
+        [EnableRateLimiting("auth")]
         public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
             var error = Validator.ValidateRegister(request.Nickname, request.Email, request.Password, request.ConfirmPassword);
             if (error != null)
                 return BadRequest(new { message = error });
+
+            if (await _SupMan.IsNicknameTakenAsync(request.Nickname))
+                return Conflict(new { message = "Этот никнейм уже занят" });
 
             try
             {
@@ -35,9 +40,14 @@ namespace api.Controllers
                 var session = await _client.Auth.SignUp(request.Email, request.Password, options);
                 await _SupMan.Cache.InvalidateAsync(CacheKeys.Tags.Users);
 
+                if (session?.AccessToken == null)
+                {
+                    return Ok(new { requiresConfirmation = true });
+                }
+
                 return Ok(new
                 {
-                    userId = session!.User?.Id,
+                    userId = session.User?.Id,
                     accessToken = session.AccessToken,
                     refreshToken = session.RefreshToken
                 });
@@ -63,6 +73,7 @@ namespace api.Controllers
 
         // Войти
         [HttpPost("login")]
+        [EnableRateLimiting("auth")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
             try

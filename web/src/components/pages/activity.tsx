@@ -243,8 +243,8 @@ export const Activity = () => {
     },
   })
 
-  const handleCreateProject = async () => {
-    if (!authUserId) return
+  const handleCreateProject = () => {
+    if (!authUserId || createProjectMutation.isPending) return
     createProjectMutation.mutate({
       title: 'Unnamed',
       shortDescription: '',
@@ -339,7 +339,7 @@ export const Activity = () => {
                     <Add className="add-icon" />
                   </div>
                   <span className="add-project-text">
-                    {createProjectMutation.isPending ? 'Создание...' : 'Создать новый проект'}
+                    Создать новый проект
                   </span>
                 </button>
               )}
@@ -420,7 +420,7 @@ export const Activity = () => {
                     <Add className="add-icon" />
                   </div>
                   <span className="add-project-text">
-                    {createEventMutation.isPending ? 'Создание...' : 'Создать новое мероприятие'}
+                    Создать новое мероприятие
                   </span>
                 </button>
               )}

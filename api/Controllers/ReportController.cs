@@ -115,10 +115,7 @@ namespace api.Controllers
 
                 return Ok(new { success = true });
             }
-            catch (Exception)
-            {
-                return StatusCode(500, new { error = "Не удалось отправить сообщение" });
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
     }
 

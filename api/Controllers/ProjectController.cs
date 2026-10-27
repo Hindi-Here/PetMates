@@ -55,10 +55,7 @@ namespace api.Controllers
 
                 return Ok(projects);
             }
-            catch (Exception)
-            {
-                return StatusCode(500);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Получить проект по ID
@@ -100,10 +97,7 @@ namespace api.Controllers
                     project.OwnerId
                 });
             }
-            catch (Exception)
-            {
-                return StatusCode(500);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Получить список проектов пользователя по его ID
@@ -124,15 +118,14 @@ namespace api.Controllers
                     .Where(p => p.OwnerId == userId)
                     .Get();
 
+                var projectIds = projectsResponse.Models.Select(p => p.ProjectId);
+                var counts = await _SupMan.GetProjectMemberCountsAsync(projectIds);
+
                 var projects = new List<object>();
                 foreach (var p in projectsResponse.Models)
                 {
                     if (!await _SupMan.CanViewProject(p, currentUserId, isStaff))
                         continue;
-
-                    var membersResponse = await _client.From<ProjectMember>()
-                        .Where(pm => pm.ProjectId == p.ProjectId)
-                        .Get();
 
                     projects.Add(new
                     {
@@ -146,15 +139,15 @@ namespace api.Controllers
                         p.IsPrivate,
                         CreatedAt = p.CreatedAt?.ToString("o"),
                         p.OwnerId,
-                        MembersCount = membersResponse.Models.Count
+                        MembersCount = counts.GetValueOrDefault(p.ProjectId, 0)
                     });
                 }
 
                 return Ok(projects);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return StatusCode(500);
+                return this.Fail(ex);
             }
         }
 
@@ -169,7 +162,8 @@ namespace api.Controllers
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 
-                var error = Validator.ValidateProject(dto.Title, dto.ShortDescription);
+                var error = Validator.ValidateProject(dto.Title, dto.ShortDescription)
+                            ?? Validator.ValidateProjectDescription(dto.FullDescription);
                 if (error != null)
                     return BadRequest(new { message = error });
 
@@ -220,10 +214,7 @@ namespace api.Controllers
                     MembersCount = 1
                 });
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Удалить проект
@@ -257,10 +248,7 @@ namespace api.Controllers
 
                 return Ok(new { hasRated = rating.Models.Count != 0 });
             }
-            catch (Exception)
-            {
-                return StatusCode(500);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Оценить
@@ -301,10 +289,7 @@ namespace api.Controllers
 
                 return Ok(new { success = true, ratingCount = updatedProject?.RatingCount ?? 0 });
             }
-            catch (Exception)
-            {
-                return StatusCode(500, new { error = "Не удалось оценить проект" });
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Убрать оценку
@@ -325,27 +310,13 @@ namespace api.Controllers
                     return NotFound(new { message = "Оценка не найдена" });
 
                 await _client.From<ProjectRating>().Delete(rating.Models.First());
+                await _SupMan.Cache.ProjectChangedAsync(projectId);
 
-                var project = await _client.From<Project>().Where(p => p.ProjectId == projectId).Get();
-                if (project.Models.Count != 0)
-                {
-                    var updatedRatingCount = Math.Max(0, project.Models.First().RatingCount - 1);
-                    await _client.From<Project>()
-                        .Where(p => p.ProjectId == projectId)
-                        .Set(p => p.RatingCount, updatedRatingCount)
-                        .Update();
+                var project = (await _client.From<Project>().Where(p => p.ProjectId == projectId).Get()).Models.FirstOrDefault();
 
-                    await _SupMan.Cache.ProjectChangedAsync(projectId);
-
-                    return Ok(new { success = true, ratingCount = updatedRatingCount });
-                }
-
-                return Ok(new { success = true, ratingCount = 0 });
+                return Ok(new { success = true, ratingCount = project?.RatingCount ?? 0 });
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Получить избранные
@@ -360,25 +331,17 @@ namespace api.Controllers
                     await _SupMan.UpdateLastOnlineAsync(currentUserId);
 
                 var ratings = await _client.From<ProjectRating>().Where(r => r.UserId == userId).Get();
+                bool isStaff = await _SupMan.IsStaffAsync(currentUserId);
+                var ratedAt = ratings.Models.GroupBy(r => r.ProjectId).ToDictionary(g => g.Key, g => g.First().CreatedAt);
+                var found = await _SupMan.FetchByIdsAsync<Project>("project_id", ratedAt.Keys);
+                var counts = await _SupMan.GetProjectMemberCountsAsync(found.Select(p => p.ProjectId));
+
                 var favoriteProjects = new List<object>();
-                bool isStaff = await _SupMan.IsStaffAsync(currentUserId!);
-
-                foreach (var rating in ratings.Models)
+                foreach (var p in found)
                 {
-                    var project = await _client.From<Project>().Where(p => p.ProjectId == rating.ProjectId).Get();
-                    if (project.Models.Count == 0) continue;
-
-                    var p = project.Models.First();
-                    var ownerResponse = await _client.From<User>().Where(u => u.UserId == p.OwnerId).Get();
-                    var owner = ownerResponse.Models.FirstOrDefault();
-
-                    if (owner == null || (owner.IsBanned == true && !isStaff))
-                        continue;
-
-                    if (!await _SupMan.CanViewProject(p, currentUserId, isStaff))
-                        continue;
-
-                    var membersResponse = await _client.From<ProjectMember>().Where(pm => pm.ProjectId == p.ProjectId).Get();
+                    var owner = await _SupMan.GetUserCachedAsync(p.OwnerId);
+                    if (owner == null || (owner.IsBanned && !isStaff)) continue;
+                    if (!await _SupMan.CanViewProject(p, currentUserId, isStaff)) continue;
 
                     favoriteProjects.Add(new
                     {
@@ -392,17 +355,14 @@ namespace api.Controllers
                         CreatedAt = p.CreatedAt?.ToString("o"),
                         p.OwnerId,
                         p.IsPrivate,
-                        MembersCount = membersResponse.Models.Count,
-                        RatedAt = rating.CreatedAt?.ToString("o")
+                        MembersCount = counts.GetValueOrDefault(p.ProjectId),
+                        RatedAt = ratedAt[p.ProjectId]?.ToString("o")
                     });
                 }
 
                 return Ok(favoriteProjects);
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Получить проекты, где пользователь участник
@@ -416,22 +376,18 @@ namespace api.Controllers
                 if (!string.IsNullOrEmpty(currentUserId))
                     await _SupMan.UpdateLastOnlineAsync(currentUserId);
 
-                var memberProjects = await _client.From<ProjectMember>().Where(pm => pm.UserId == userId).Get();
+                var memberships = (await _client.From<ProjectMember>().Where(pm => pm.UserId == userId).Get()).Models;
+                var roleByProject = memberships.GroupBy(m => m.ProjectId).ToDictionary(g => g.Key, g => g.First().Role);
+                bool isStaff = await _SupMan.IsStaffAsync(currentUserId);
+
+                var found = (await _SupMan.FetchByIdsAsync<Project>("project_id", roleByProject.Keys))
+                    .Where(p => p.OwnerId != userId).ToList();
+                var counts = await _SupMan.GetProjectMemberCountsAsync(found.Select(p => p.ProjectId));
+
                 var projects = new List<object>();
-                bool isStaff = await _SupMan.IsStaffAsync(currentUserId!);
-
-                foreach (var member in memberProjects.Models)
+                foreach (var p in found)
                 {
-                    var projectResponse = await _client.From<Project>()
-                        .Where(p => p.ProjectId == member.ProjectId && p.OwnerId != userId)
-                        .Get();
-
-                    if (projectResponse.Models.Count == 0) continue;
-
-                    var p = projectResponse.Models.First();
                     if (!await _SupMan.CanViewProject(p, currentUserId, isStaff)) continue;
-
-                    var membersResponse = await _client.From<ProjectMember>().Where(pm => pm.ProjectId == p.ProjectId).Get();
 
                     projects.Add(new
                     {
@@ -445,17 +401,14 @@ namespace api.Controllers
                         CreatedAt = p.CreatedAt?.ToString("o"),
                         p.OwnerId,
                         p.IsPrivate,
-                        MembersCount = membersResponse.Models.Count,
-                        MemberRole = member.Role
+                        MembersCount = counts.GetValueOrDefault(p.ProjectId),
+                        MemberRole = roleByProject[p.ProjectId]
                     });
                 }
 
                 return Ok(projects);
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // ЧЕРНОВИКИ
@@ -502,10 +455,7 @@ namespace api.Controllers
                     DeletedMediaFiles = SupportManager.ParseDeletedMediaFiles(draft.DeletedMediaFiles)
                 });
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Редактировать черновик
@@ -519,7 +469,8 @@ namespace api.Controllers
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 
-                var projectError = Validator.ValidateProject(dto.Title, dto.ShortDescription);
+                var projectError = Validator.ValidateProject(dto.Title, dto.ShortDescription)
+                   ?? Validator.ValidateProjectDraft(dto);
                 if (projectError != null)
                     return BadRequest(new { message = projectError });
 
@@ -551,10 +502,7 @@ namespace api.Controllers
                 await _client.From<ProjectDraft>().Upsert(draft);
                 return Ok(new { message = "Черновик сохранён" });
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Удалить черновик
@@ -588,10 +536,7 @@ namespace api.Controllers
 
                 return Ok(new { message = "Черновик отменён" });
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Сохранить черновик (удаляется)
@@ -626,7 +571,9 @@ namespace api.Controllers
 
                 var finalDescription = dto.FullDescription ?? project.FullDescription ?? "";
 
-                var deletedFileNames = SupportManager.ParseDeletedMediaFiles(draft?.DeletedMediaFiles);
+                var deletedFileNames = SupportManager.ParseDeletedMediaFiles(draft?.DeletedMediaFiles)
+                    .Where(f => Validator.ValidateMediaFileName(f) == null)
+                    .ToList();
 
                 if (deletedFileNames.Count > 0)
                 {
@@ -684,15 +631,20 @@ namespace api.Controllers
                     .Update();
 
                 await _client.From<ProjectDraft>().Where(d => d.ProjectId == projectId).Delete();
-
                 await _SupMan.Cache.ProjectChangedAsync(projectId);
+
+                if (statusChanged)
+                {
+                    var memberIds = (await _client.From<ProjectMember>().Where(pm => pm.ProjectId == projectId).Get())
+                        .Models.Select(m => m.UserId).Distinct();
+                    foreach (var uid in memberIds)
+                        await _SupMan.SendNotificationAsync(uid, "project", projectId, "status_changed",
+                            new() { ["projectName"] = newTitle, ["status"] = SupportManager.ToRuStatus(newStatus) });
+                }
 
                 return Ok(new { message = "Проект сохранён", fullDescription = finalDescription });
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // МЕДИА
@@ -761,10 +713,7 @@ namespace api.Controllers
 
                 return Ok(result);
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Загрузка медиа
@@ -808,10 +757,7 @@ namespace api.Controllers
                 var publicUrl = _client.Storage.From("ProjectMediaDraft").GetPublicUrl(path);
                 return Ok(new { url = publicUrl, fileName, size = optimized.Bytes.Length });
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Удалить медиа
@@ -824,10 +770,15 @@ namespace api.Controllers
                 var userId = await _SupMan.GetUserIdAsync(authHeader);
                 if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
+                var nameError = Validator.ValidateMediaFileName(fileName);
+                if (nameError != null)
+                    return BadRequest(new { message = nameError });
+
                 var project = await _client.From<Project>()
                     .Where(p => p.ProjectId == projectId && p.OwnerId == userId)
                     .Get();
-                if (project.Models.Count == 0) return Forbid();
+                if (project.Models.Count == 0)
+                    return Forbid();
 
                 var draftFiles = await _client.Storage.From("ProjectMediaDraft").List(projectId);
                 var isDraftFile = draftFiles?.Any(f => f.Name == fileName) == true;
@@ -868,10 +819,7 @@ namespace api.Controllers
 
                 return Ok(new { message = "Файл помечен на удаление" });
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
     }
 }

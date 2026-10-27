@@ -120,6 +120,7 @@ export const validatorFormat = {
   minLength: (value: string, min: number) => value.length >= min,
   maxLength: (value: string, max: number) => value.length <= max,
   number: (value: string) => /^[0-9]+$/.test(value),
+  role: (value: string) => /^[a-zA-Zа-яА-Я0-9ёЁ\/\[\]\-\s]+$/.test(value),
 
   // Формат валидация
   email: (value: string) => /^[^\s@]+@([^\s@.,]+\.)+[^\s@.,]{2,}$/.test(value),
@@ -136,7 +137,7 @@ export const validatorFormat = {
       return false;
 
     const tags = value.trim().split(/\s+/);
-    return tags.every(tag => /^#[a-zA-Zа-яА-Я0-9_\/]+$/.test(tag));
+    return tags.every(tag => /^#[a-zA-Zа-яА-ЯёЁ0-9_\/]+$/.test(tag));
   },
 };
 
@@ -170,7 +171,7 @@ export const validatorRegex = {
 
   role: (value: string, max: number = LIMITS.profile.roleMax) => {
     return value
-      .replace(/[^a-zA-Zа-яА-Я0-9ёЁ/[]-\s]/g, '')
+      .replace(/[^a-zA-Zа-яА-Я0-9ёЁ\/\[\]\-\s]/g, '')
       .replace(/^\s+/, '')
       .replace(/\s\s+/g, ' ')
       .slice(0, max);

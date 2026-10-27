@@ -16,9 +16,6 @@ import RejectIcon from '@icons/reject.svg?react'
 import { useEffect, useState, useRef, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Toggle } from '../common/toggle'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
-import rehypeRaw from 'rehype-raw'
 import { Dropdown } from '../common/dropdown'
 import { validatorFormat, validatorRegex, useChangeInput, useIsOpen } from '../scripts/function'
 import { useAuth } from '../hooks/useAuth'
@@ -30,7 +27,6 @@ import { usersApi, type UserData } from '../services/users'
 import { vacanciesApi, type VacancyData } from '../services/vacancy'
 import { responseApi, type ResponseData } from '../services/response'
 import { inviteApi, type InviteData } from '../services/invite'
-import { notificationApi } from '../services/notification'
 import DeleteProjectForm from '../forms/delete_project'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '../scripts/query/queryKeys'
@@ -39,7 +35,8 @@ import { LIMITS, TIMING, maxChars, minChars } from '../scripts/limits'
 import { STALE } from '../scripts/query/queryClient'
 import { invalidateProjects, invalidateRelations } from '../scripts/query/invalidate'
 import { CommentsSection } from '../common/commentsSection'
-import { useUser } from '../hooks/useUser'
+import { Markdown } from '../common/markdown'
+import { useOnce } from '../hooks/useOnce'
 
 export interface TeamMemberWithUser {
   memberId: string
@@ -239,52 +236,6 @@ const TeamMemberProjectCard = ({
   )
 }
 
-const sendNotification = (
-  userId: string,
-  referenceType: string,
-  referenceId: string,
-  eventType: string,
-  contextData: Record<string, string | number | boolean | null | undefined>,
-  projectName: string
-) => {
-  const notificationData = {
-    userId,
-    referenceType,
-    referenceId,
-    contextData: {
-      ...contextData,
-      eventType,
-      projectName,
-    }
-  }
-  notificationApi.create(notificationData)
-    .then(() => { })
-    .catch(err => {
-      console.error('Ошибка создания уведомления:', err)
-      console.error('Данные:', notificationData)
-    })
-}
-
-const notifyAllMembersExceptOwner = (
-  members: TeamMemberWithUser[],
-  ownerId: string | undefined,
-  referenceType: string,
-  referenceId: string,
-  eventType: string,
-  contextData: Record<string, string | number | boolean | null | undefined>,
-  projectName: string,
-  excludeUserIds: string[] = []
-) => {
-  const membersToNotify = members.filter(m =>
-    !m.isOwner &&
-    m.userId !== ownerId &&
-    !excludeUserIds.includes(m.userId)
-  )
-  membersToNotify.forEach(member => {
-    sendNotification(member.userId, referenceType, referenceId, eventType, contextData, projectName)
-  })
-}
-
 interface ProjectProps { onCancel?: () => void }
 
 export const Project = ({ onCancel }: ProjectProps) => {
@@ -458,18 +409,19 @@ export const Project = ({ onCancel }: ProjectProps) => {
     }
   )
 
-  const checkProjectFormat = (fieldName: string, value: string): string | null => {
+    const checkProjectFormat = (fieldName: string, value: string): string | null => {
     const rules: Record<string, Array<[boolean, string]>> = {
       name: [
         [!validatorFormat.required(value), 'Введите название проекта'],
-        [!validatorFormat.maxLength(value, LIMITS.project.titleMax), 'Максимум 50 символов']
+        [!validatorFormat.maxLength(value, LIMITS.project.titleMax), maxChars(LIMITS.project.titleMax)]
       ],
       shortDesc: [
-        [!validatorFormat.maxLength(value, LIMITS.project.shortDescriptionMax), 'Максимум 150 символов']
+        [!validatorFormat.maxLength(value, LIMITS.project.shortDescriptionMax), maxChars(LIMITS.project.shortDescriptionMax)]
       ],
     }
     const fieldRules = rules[fieldName as keyof typeof rules]
-    if (!fieldRules) return null
+    if (!fieldRules)
+      return null
     const error = fieldRules.find(([isInvalid]) => isInvalid)
     return error?.[1] ?? null
   }
@@ -477,8 +429,8 @@ export const Project = ({ onCancel }: ProjectProps) => {
   const checkRoleFormat = (value: string): string | null => {
     const rules: Array<[boolean, string]> = [
       [!validatorFormat.required(value), 'Введите роль'],
-      [!validatorFormat.maxLength(value, LIMITS.member.roleMax), 'Максимум 50 символов'],
-      [value.length > 0 && value.length < LIMITS.member.roleMin, 'Минимум 2 символа'],
+      [!validatorFormat.maxLength(value, LIMITS.member.roleMax), maxChars(LIMITS.member.roleMax)],
+      [value.length > 0 && value.length < LIMITS.member.roleMin, minChars(LIMITS.member.roleMin)],
     ]
     const error = rules.find(([isInvalid]) => isInvalid)
     return error?.[1] ?? null
@@ -488,6 +440,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
     const rules: Record<string, Array<[boolean, string]>> = {
       vacTitle: [
         [!validatorFormat.required(value), 'Введите название роли'],
+        [value.trim().length > 0 && value.trim().length < LIMITS.member.roleMin, minChars(LIMITS.member.roleMin)],
         [!validatorFormat.maxLength(value, LIMITS.vacancy.titleMax), maxChars(LIMITS.vacancy.titleMax)]
       ],
       vacDesc: [
@@ -584,10 +537,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
   const projectInvites = useMemo(() =>
     allInvites.filter(invite => invite.projectId === projectId),
     [allInvites, projectId]
-  )
-
-  const { data: me } = useUser(currentUserId)    
-  const currentUserNickname = me?.nickname ?? null
+  ) 
 
   useEffect(() => {
     setLoadedDraft(undefined)
@@ -867,32 +817,26 @@ export const Project = ({ onCancel }: ProjectProps) => {
     }
   }
 
-  const handleBack = async () => {
-    if (hasChanges && projectId) {
-      try {
-        await projectDraftApi.discardDraft(projectId)
-      } catch (error) {
-        console.error('Ошибка сброса черновика:', error)
-      }
-    }
+  const handleBack = () => {
     if (onCancel) { onCancel(); return }
     navigate(`${profilePath}/activity`, { replace: true })
   }
 
   useEffect(() => {
-    const handleEscKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        handleBack()
-      }
+    const onEsc = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if ((e.target as HTMLElement).closest('input, textarea, select, [contenteditable="true"]')) return
+      if (document.querySelector('.dark-area-container')) return
+      handleBack()
     }
-    window.addEventListener('keydown', handleEscKey)
-    return () => {
-      window.removeEventListener('keydown', handleEscKey)
-    }
-  }, [handleBack])
+    window.addEventListener('keydown', onEsc)
+    return () => window.removeEventListener('keydown', onEsc)
+  }, [profilePath, onCancel])
 
+  const savingRef = useRef(false)
   const handleSave = async () => {
-    if (!projectId || !hasChanges || !isProjectFormValid) return
+    if (savingRef.current || !projectId || !hasChanges || !isProjectFormValid) return
+    savingRef.current = true
     setIsSaving(true)
     setSaveError(null)
     try {
@@ -911,40 +855,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
       setProjectMedia(media)
 
       if (deletedVacancyIds.length > 0) {
-        deletedVacancyIds.forEach(vacancyId => {
-          if (vacancyId.startsWith('temp_')) return
-          const vacancy = localVacancies.find(v => v.vacancyId === vacancyId)
-          if (!vacancy) return
-
-          const vacancyResponses = responses.filter(r => r.vacancyId === vacancyId)
-          const uniqueRespondents = new Map<string, ResponseData>()
-          vacancyResponses.forEach(r => {
-            if (!uniqueRespondents.has(r.userId)) {
-              uniqueRespondents.set(r.userId, r)
-            }
-          })
-          uniqueRespondents.forEach((_, userId) => {
-            sendNotification(userId, 'response', projectId!, 'responses_revoked_vacancy_deleted', {
-              projectName: name || project?.title || 'Проект',
-              vacancyName: vacancy.title || 'Заявка',
-            }, name || project?.title || 'Проект')
-          })
-
-          const vacancyInvites = projectInvites.filter(i => i.role === vacancy.title && i.status === 'pending')
-          const uniqueInvitees = new Map<string, InviteData>()
-          vacancyInvites.forEach(i => {
-            if (!uniqueInvitees.has(i.userId)) {
-              uniqueInvitees.set(i.userId, i)
-            }
-          })
-          uniqueInvitees.forEach((_, userId) => {
-            sendNotification(userId, 'invite', projectId!, 'invites_revoked_vacancy_deleted', {
-              projectName: name || project?.title || 'Проект',
-              vacancyName: vacancy.title || 'Заявка',
-            }, name || project?.title || 'Проект')
-          })
-        })
-        await Promise.all(deletedVacancyIds.map(id => vacanciesApi.delete(id)))
+        await Promise.all(deletedVacancyIds.filter(id => !id.startsWith('temp_')).map(id => vacanciesApi.delete(id)))
         setDeletedVacancyIds([])
       }
 
@@ -964,23 +875,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
       }))
 
       if (deletedMemberIds.length > 0) {
-        const removedMembers = initialTeamState.filter(m => deletedMemberIds.includes(m.memberId))
-        await Promise.all(deletedMemberIds.map(memberId =>
-          projectMembersApi.removeMember(memberId)
-        ))
-        removedMembers.forEach(member => {
-          const nickname = member.userData?.nickname || 'Пользователь'
-          const projectName = name || project?.title || 'Проект'
-          if (project?.ownerId) {
-            sendNotification(project.ownerId, 'project', projectId!, 'removed', {
-              nickname,
-              projectName,
-            }, projectName)
-          }
-          sendNotification(member.userId, 'project', projectId!, 'removed_self', {
-            projectName,
-          }, projectName)
-        })
+        await Promise.all(deletedMemberIds.map(memberId => projectMembersApi.removeMember(memberId)))
         setDeletedMemberIds([])
       }
 
@@ -989,41 +884,8 @@ export const Project = ({ onCancel }: ProjectProps) => {
         newRole
       }))
       if (roleUpdates.length > 0) {
-        await Promise.all(roleUpdates.map(({ memberId, newRole }) =>
-          projectMembersApi.updateMemberRole(memberId, newRole)
-        ))
-        roleUpdates.forEach(({ memberId, newRole }) => {
-          const member = initialTeamState.find(m => m.memberId === memberId)
-          if (!member) return
-          const nickname = member.userData?.nickname || 'Пользователя'
-          const projectName = name || project?.title || 'Проект'
-          if (project?.ownerId) {
-            sendNotification(project.ownerId, 'project', projectId!, 'role_changed', {
-              nickname,
-              projectName,
-              role: newRole,
-            }, projectName)
-          }
-          sendNotification(member.userId, 'project', projectId!, 'role_changed_self', {
-            projectName,
-            role: newRole,
-          }, projectName)
-        })
+        await Promise.all(roleUpdates.map(({ memberId, newRole }) => projectMembersApi.updateMemberRole(memberId, newRole)))
         setEditedRoles({})
-      }
-
-      if (status !== initialState.status) {
-        const projectName = name || project?.title || 'Проект'
-        if (project?.ownerId) {
-          sendNotification(project.ownerId, 'project', projectId!, 'status_changed', {
-            projectName,
-            status,
-          }, projectName)
-        }
-        notifyAllMembersExceptOwner(localTeamMembers, project?.ownerId, 'project', projectId!, 'status_changed', {
-          projectName,
-          status,
-        }, projectName)
       }
 
       await invalidateProjects(queryClient)
@@ -1049,6 +911,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
       setSaveError(msg)
       setTimeout(() => setSaveError(null), TIMING.toastMs)
     } finally {
+      savingRef.current = false
       setIsSaving(false)
     }
   }
@@ -1060,16 +923,17 @@ export const Project = ({ onCancel }: ProjectProps) => {
 
   const inviteMemberMutation = useMutation({
     mutationFn: async ({ email, role }: { email: string; role: string }) => {
-      const emailValid = validatorFormat.email(email)
+      const nick = email.trim()
       const roleError = checkRoleFormat(role)
-      if (!emailValid) {
-        throw new Error('Введите корректный email')
+      if (nick.length < LIMITS.auth.nicknameMin) {
+        throw new Error(minChars(LIMITS.auth.nicknameMin))
       }
       if (roleError) {
         throw new Error(roleError)
       }
-      const targetUser = await usersApi.findByEmail(email)
-      if (!targetUser) throw new Error('Пользователя с такой почтой не существует')
+      const targetUser = await usersApi.findByNickname(nick)
+      if (!targetUser)
+        throw new Error('Пользователь с таким ником не найден')      
 
       try {
         await projectMembersApi.addMember({
@@ -1099,7 +963,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
       }
       return targetUser
     },
-    onSuccess: async (targetUser) => {
+    onSuccess: async () => {
       setInviteEmail('')
       setInviteRole('')
       setInviteRoleError(null)
@@ -1111,20 +975,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.projects.team(projectId!) })
       await queryClient.invalidateQueries({ queryKey: queryKeys.projects.members(projectId!) })
 
-      const projectName = name || project?.title || 'Проект'
-      const nickname = targetUser.nickname || 'Пользователь'
-      const role = inviteRole.trim()
-      if (project?.ownerId) {
-        sendNotification(project.ownerId, 'project', projectId!, 'added', {
-          nickname,
-          projectName,
-          role,
-        }, projectName)
-      }
-      sendNotification(targetUser.userId, 'project', projectId!, 'added_self', {
-        projectName,
-        role,
-      }, projectName)
       await invalidateRelations(queryClient)
     },
     onError: (error: any) => {
@@ -1245,88 +1095,29 @@ export const Project = ({ onCancel }: ProjectProps) => {
   const handleDeleteClick = () => { if (projectId) setShowDeleteForm(true) }
 
   const handleDeleteSuccess = () => {
-    const projectName = name || project?.title || 'Проект'
-    notifyAllMembersExceptOwner(localTeamMembers, project?.ownerId, 'project', projectId!, 'project_deleted', {
-      projectName,
-    }, projectName)
-
-    const uniqueRespondents = new Map<string, ResponseData>()
-    responses.forEach(r => {
-      if (!uniqueRespondents.has(r.userId)) {
-        uniqueRespondents.set(r.userId, r)
-      }
-    })
-    uniqueRespondents.forEach((response, userId) => {
-      sendNotification(userId, 'response', projectId!, 'responses_revoked_project_deleted', {
-        projectName,
-        nickname: response.userNickname || 'Пользователь',
-      }, projectName)
-    })
-
-    const uniqueInvitees = new Map<string, InviteData>()
-    projectInvites.forEach(i => {
-      if (!uniqueInvitees.has(i.userId)) {
-        uniqueInvitees.set(i.userId, i)
-      }
-    })
-    uniqueInvitees.forEach((invite, userId) => {
-      sendNotification(userId, 'invite', projectId!, 'invites_revoked_project_deleted', {
-        projectName,
-        nickname: invite.userName || 'Пользователь',
-      }, projectName)
-    })
-
-    queryClient.removeQueries({ queryKey: queryKeys.projects.byId(projectId!) })
+  queryClient.removeQueries({ queryKey: queryKeys.projects.byId(projectId!) })
     invalidateProjects(queryClient)
 
     navigate(`${profilePath}/activity`, { replace: true })
   }
 
-  const handleResponseAction = async (response: ResponseData, action: 'accept' | 'decline') => {
-    try {
-      await responseApi.delete(response.responseId)
-      const eventType = action === 'accept' ? 'response_accepted' : 'response_rejected'
-      sendNotification(response.userId, 'response', response.projectId, eventType, {
-        projectName: response.projectTitle || 'Проект',
-        vacancyName: response.vacancyTitle || 'Заявка',
-      }, response.projectTitle || 'Проект')
-
-      if (action === 'accept' && project?.ownerId) {
-        try {
-          await projectMembersApi.addMember({
-            projectId: projectId!,
-            userId: response.userId,
-            role: response.vacancyTitle || 'Участник'
-          })
-          await queryClient.invalidateQueries({ queryKey: queryKeys.projects.team(projectId!) })
-          await queryClient.invalidateQueries({ queryKey: queryKeys.projects.members(projectId!) })
-
-          teamInitializedRef.current = false
-        }
-        catch (addError) {
-          console.error('Ошибка добавления участника:', addError)
-        }
+  const once = useOnce() 
+  const handleResponseAction = (response: ResponseData, action: 'accept' | 'decline') =>
+    once(response.responseId, async () => {
+      try {
+        if (action === 'accept') await responseApi.accept(response.responseId)
+        else await responseApi.decline(response.responseId)
+        await invalidateRelations(queryClient)
+      } catch (error) {
+        console.error('Ошибка обработки отклика:', error)
       }
-      await invalidateRelations(queryClient)
-    }
-    catch (error) {
-      console.error('Ошибка обработки отклика:', error)
-    }
-  }
+  })
 
   const handleCancelInvite = async (invite: InviteData) => {
     try {
       await inviteApi.delete(invite.inviteId)
-      sendNotification(invite.userId, 'invite', invite.projectId, 'invite_cancelled', {
-        projectName: invite.projectTitle || 'Проект',
-        vacancyName: invite.role || 'Заявка',
-        nickname: currentUserNickname || 'Пользователь',
-      }, invite.projectTitle || 'Проект')
       queryClient.invalidateQueries({ queryKey: queryKeys.invites.outgoing(profileId || '') })
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.notifications.all,
-        refetchType: 'active'
-      })
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all, refetchType: 'active' })
     }
     catch (error) {
       console.error('Ошибка отмены приглашения:', error)
@@ -1430,9 +1221,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
               <div className='description-preview-container'>
                 {description ? (
                   <div className='project-description-preview markdown-content'>
-                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
-                      {description}
-                    </ReactMarkdown>
+                    <Markdown>{description}</Markdown>
                   </div>
                 ) : (
                   <p className='description-preview-empty'>Описание пока не заполнено</p>
@@ -1466,7 +1255,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
                   <Add className='media-upload-ico' />
                   <span>Прикрепить медиа</span>
                 </button>
-                <p className='media-upload-hint'>Общий размер медиа до {LIMITS.upload.mediaTotalMaxBytes} МБ</p>
+                <p className='media-upload-hint'>Общий размер медиа до {LIMITS.upload.mediaTotalMaxBytes / 1024 / 1024} МБ</p>
                 <div className='preview-toggle-container'>
                   <p className='preview-toggle-label'>Предпросмотр</p>
                   <Toggle checked={isPreviewDescription} onChange={setIsPreviewDescription} />
@@ -1518,7 +1307,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
             <div className='team-invite-row'>
               <input
                 className='project-field-input'
-                placeholder='Email участника'
+                placeholder='Ник участника'
                 value={inviteEmail}
                 onChange={e => setInviteEmail(e.target.value)}
               />
@@ -1534,7 +1323,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
                 className='team-invite-btn'
                 onClick={handleInvite}
                 disabled={
-                  !validatorFormat.email(inviteEmail) ||
+                  inviteEmail.trim().length < LIMITS.auth.nicknameMin ||
                   !inviteRole.trim() ||
                   !!inviteRoleError ||
                   inviteMemberMutation.isPending

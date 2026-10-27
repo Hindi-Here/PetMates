@@ -69,10 +69,7 @@ namespace api.Controllers
 
                 return Ok(vacancies);
             }
-            catch (Exception)
-            {
-                return StatusCode(500, new { error = "Не удалось загрузить заявки" });
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Получить все заявки проекта
@@ -110,10 +107,7 @@ namespace api.Controllers
 
                 return Ok(vacancies);
             }
-            catch (Exception)
-            {
-                return StatusCode(500, new { error = "Не удалось загрузить заявки проекта" });
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
 
@@ -156,10 +150,7 @@ namespace api.Controllers
 
                 return Ok(new { created.VacancyId, created.ProjectId, created.Title, created.Role, created.Description, created.RequiredTags, created.IsOpen, PublishedAt = created.PublishedAt?.ToString("o") });
             }
-            catch (Exception)
-            {
-                return StatusCode(500, new { error = "Не удалось создать заявку" });
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Редактировать заявку
@@ -201,10 +192,7 @@ namespace api.Controllers
 
                 return Ok(new { v.VacancyId, v.ProjectId, Title = titleToValidate, Role = dto.Role ?? v.Role, Description = descToValidate, RequiredTags = dto.RequiredTags ?? v.RequiredTags, IsOpen = dto.IsOpen ?? v.IsOpen, PublishedAt = v.PublishedAt?.ToString("o") });
             }
-            catch (Exception)
-            {
-                return StatusCode(500, new { error = "Не удалось обновить заявку" });
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
 
         // Удалить заявку
@@ -225,15 +213,29 @@ namespace api.Controllers
                 if (!await _SupMan.IsProjectOwnerAsync(v.ProjectId, actor.UserId))
                     return Forbid();
 
+                var projTitle = (await _client.From<Project>().Where(p => p.ProjectId == v.ProjectId).Get()).Models.FirstOrDefault()?.Title ?? "Проект";
+                var responders = (await _client.From<Response>().Where(r => r.VacancyId == vacancyId).Get())
+                    .Models.Select(r => r.UserId).Distinct().ToList();
+                var invites = (await _client.From<Invite>()
+                    .Where(i => i.ProjectId == v.ProjectId && i.Role == v.Title && i.Status == "pending").Get()).Models;
+                var inviteIds = invites.Select(i => i.InviteId).ToList();
+                var invitees = invites.Select(i => i.UserId).Distinct().ToList();
+
                 await _client.From<Vacancy>().Where(x => x.VacancyId == vacancyId).Delete();
+                if (inviteIds.Count > 0)
+                    await _client.From<Invite>().Where(i => inviteIds.Contains(i.InviteId)).Delete();
                 await _SupMan.Cache.VacanciesChangedAsync();
+
+                foreach (var uid in responders)
+                    await _SupMan.SendNotificationAsync(uid, "response", v.ProjectId, "responses_revoked_vacancy_deleted",
+                        new() { ["projectName"] = projTitle, ["vacancyName"] = v.Title });
+                foreach (var uid in invitees)
+                    await _SupMan.SendNotificationAsync(uid, "invite", v.ProjectId, "invites_revoked_vacancy_deleted",
+                        new() { ["projectName"] = projTitle, ["vacancyName"] = v.Title });
 
                 return Ok(new { message = "Заявка удалена" });
             }
-            catch (Exception)
-            {
-                return StatusCode(500, new { error = "Не удалось удалить заявку" });
-            }
+            catch (Exception ex) { return this.Fail(ex); }
         }
     }
 }

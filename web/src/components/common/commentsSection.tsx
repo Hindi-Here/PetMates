@@ -6,7 +6,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { commentApi, type CommentData } from '../services/comment'
 import { useAuth } from '../hooks/useAuth'
-import { LIMITS } from '../scripts/limits'
+import { LIMITS, TIMING } from '../scripts/limits'
 import { queryKeys } from '../scripts/query/queryKeys'
 
 interface CommentNode extends CommentData {
@@ -58,7 +58,7 @@ export const CommentsSection = ({
     enabled: !!referenceId,
   })
 
-  const [_, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const createMutation = useMutation({
     mutationFn: (dto: { content: string; parentCommentId?: string }) =>
@@ -80,6 +80,7 @@ export const CommentsSection = ({
       setEditingId(null)
       setEditContent('')
     },
+    onError: (e: Error) => { setError(e.message); setTimeout(() => setError(null), TIMING.toastMs) },
   })
 
   const deleteMutation = useMutation({
@@ -87,6 +88,7 @@ export const CommentsSection = ({
     onSuccess: async () => { 
       await queryClient.invalidateQueries({ queryKey: queryKeys.comments.byRef(referenceType, referenceId) }) 
     },
+    onError: (e: Error) => { setError(e.message); setTimeout(() => setError(null), TIMING.toastMs) },
   })
 
   const toggleReplies = (id: string) =>
@@ -182,6 +184,7 @@ export const CommentsSection = ({
               <div className='comment-reply-input'>
                 <textarea
                   className='comment-textarea small'
+                  maxLength={LIMITS.comment.maxLength}
                   placeholder={`Ответ для @${node.nickname}...`}
                   value={replyContent}
                   onChange={e => setReplyContent(e.target.value)}
@@ -205,6 +208,7 @@ export const CommentsSection = ({
               <div className='comment-edit-input'>
                 <textarea
                   className='comment-textarea small'
+                  maxLength={LIMITS.comment.maxLength}
                   value={editContent}
                   onChange={e => setEditContent(e.target.value)}
                 />
@@ -257,6 +261,7 @@ export const CommentsSection = ({
           Отправить
         </button>
       </div>
+      {error && <p className='save-error-text'>{error}</p>}
 
       <div className='comments-list'>
         {comments.length === 0 ? (

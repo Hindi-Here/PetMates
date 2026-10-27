@@ -662,17 +662,18 @@ namespace api.Support
             var allUsers = await GetAllUsersAsync();
             var usersDict = allUsers.Where(u => u.UserId != null).ToDictionary(u => u.UserId!);
 
+            var list = events.ToList();
+            var counts = await GetEventMemberCountsAsync(list.Select(e => e.EventId));
             var result = new List<object>();
 
-            foreach (var ev in events.OrderByDescending(e => e.CreatedAt))
+            foreach (var ev in list.OrderByDescending(e => e.CreatedAt))
             {
-                if (!usersDict.TryGetValue(ev.OwnerId, out var owner)) continue;
-
+                if (!usersDict.TryGetValue(ev.OwnerId, out var owner))
+                    continue;
                 if (!await CanView(ev, currentUserId, isStaff))
                     continue;
 
-                var members = await _client.From<EventMember>().Where(m => m.EventId == ev.EventId).Get();
-                result.Add(Mappers.ToCard(ev, owner, members.Models.Count));
+                result.Add(Mappers.ToCard(ev, owner, counts.GetValueOrDefault(ev.EventId)));
             }
             return result;
         }
@@ -767,6 +768,9 @@ namespace api.Support
             var invites = await _client.From<Invite>().Where(i => i.ProjectId == projectId).Get();
             var invitees = invites.Models.Select(i => i.UserId).Distinct().ToList();
 
+            var teamIds = (await _client.From<ProjectMember>().Where(m => m.ProjectId == projectId).Get())
+                .Models.Select(m => m.UserId).Where(u => u != project.OwnerId).Distinct().ToList();
+
             await _client.From<Project>().Where(p => p.ProjectId == projectId).Delete();
 
             await DeleteFolderAsync("ProjectMedia", projectId);
@@ -780,6 +784,10 @@ namespace api.Support
             if (!string.IsNullOrEmpty(reason)) ownerNotifyData["reason"] = reason;
 
             await SendNotificationAsync(project.OwnerId, "project", projectId, deleteEventType, ownerNotifyData);
+
+            foreach (var memberId in teamIds)
+                await SendNotificationAsync(memberId, "project", projectId, "project_deleted",
+                    new Dictionary<string, object> { { "projectName", project.Title } });
 
             foreach (var responderId in responders)
             {
@@ -1006,18 +1014,22 @@ namespace api.Support
             var matches = MentionRegex.Matches(comment.Content ?? "");
             if (matches.Count == 0) return;
 
-            var nicknames = matches.Select(m => m.Groups[1].Value).Distinct().ToList();
+            var nicknames = matches.Select(m => m.Groups[1].Value).Distinct().Take(5).ToList();
 
             var allUsers = await GetAllUsersAsync();
             var usersByNickname = allUsers.Where(u => !string.IsNullOrEmpty(u.Nickname))
                                           .ToDictionary(u => u.Nickname!, u => u, StringComparer.OrdinalIgnoreCase);
 
-            var authorNickname = usersByNickname.TryGetValue(authorId, out var author) ? (author.Nickname ?? "Пользователь") : "Пользователь";
+            var authorNickname = allUsers.FirstOrDefault(u => u.UserId == authorId)?.Nickname ?? "Пользователь";
 
             foreach (var nickname in nicknames)
             {
-                if (!usersByNickname.TryGetValue(nickname, out var mentionedUser)) continue;
-                if (mentionedUser.UserId == authorId) continue;
+                if (!usersByNickname.TryGetValue(nickname, out var mentionedUser))
+                    continue;
+                if (mentionedUser.UserId == authorId)
+                    continue;
+                if (await IsBlockedBetweenAsync(authorId, mentionedUser.UserId!))
+                    continue;
 
                 var mention = new CommentMention
                 {
@@ -1317,6 +1329,88 @@ namespace api.Support
             catch { }
         }
 
+        // Auth-хелперы
+        private static readonly HttpClient AuthHttp = new();
+        private static string SbUrl => Environment.GetEnvironmentVariable("SUPABASE_URL")!.TrimEnd('/');
+        private static string SbKey => Environment.GetEnvironmentVariable("SUPABASE_KEY")!;
+
+        // Проверка пароля без создания сессии в клиенте
+        public static async Task<bool> VerifyPasswordAsync(string email, string password)
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Post, $"{SbUrl}/auth/v1/token?grant_type=password")
+            { Content = JsonContent.Create(new { email, password }) };
+            req.Headers.Add("apikey", SbKey);
+            using var res = await AuthHttp.SendAsync(req);
+            return res.IsSuccessStatusCode;
+        }
+
+        // Закрыть все сессии, кроме текущей
+        public static async Task SignOutOthersAsync(string accessToken)
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Post, $"{SbUrl}/auth/v1/logout?scope=others");
+            req.Headers.Add("apikey", SbKey);
+            req.Headers.Authorization = new("Bearer", accessToken);
+            using var res = await AuthHttp.SendAsync(req);
+        }
+
+        // Забанить/разбанить в GoTrue
+        public static async Task SetAuthBanAsync(string userId, string duration)
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Put, $"{SbUrl}/auth/v1/admin/users/{userId}")
+            { Content = JsonContent.Create(new { ban_duration = duration }) };
+            req.Headers.Add("apikey", SbKey);
+            req.Headers.Authorization = new("Bearer", SbKey);
+            using var res = await AuthHttp.SendAsync(req);
+        }
+
+        // Пакетная загрузка по списку id
+        public async Task<List<T>> FetchByIdsAsync<T>(string column, IEnumerable<string> ids)
+            where T : Supabase.Postgrest.Models.BaseModel, new()
+        {
+            var all = new List<T>();
+            foreach (var chunk in ids.Distinct().Chunk(100))
+            {
+                var r = await _client.From<T>()
+                    .Filter(column, Supabase.Postgrest.Constants.Operator.In, chunk.ToList())
+                    .Get();
+                all.AddRange(r.Models);
+            }
+            return all;
+        }
+
+        public async Task<Dictionary<string, int>> GetProjectMemberCountsAsync(IEnumerable<string> projectIds) =>
+            (await FetchByIdsAsync<ProjectMember>("project_id", projectIds))
+                .GroupBy(m => m.ProjectId).ToDictionary(g => g.Key, g => g.Count());
+
+        public async Task<Dictionary<string, int>> GetEventMemberCountsAsync(IEnumerable<string> eventIds) =>
+            (await FetchByIdsAsync<EventMember>("event_id", eventIds))
+                .GroupBy(m => m.EventId).ToDictionary(g => g.Key, g => g.Count());
+
+        // Блокировки между пользователями
+        public async Task<bool> IsBlockedBetweenAsync(string a, string b)
+        {
+            var ab = await _client.From<UserBlock>().Where(x => x.BlockerId == a).Where(x => x.BlockedId == b).Get();
+            if (ab.Models.Count > 0) return true;
+            var ba = await _client.From<UserBlock>().Where(x => x.BlockerId == b).Where(x => x.BlockedId == a).Get();
+            return ba.Models.Count > 0;
+        }
+
+        public async Task<bool> IsNicknameTakenAsync(string nickname, string? exceptUserId = null)
+        {
+            var res = await _system.Rpc("nickname_taken", new Dictionary<string, object?>
+            {
+                ["p_nick"] = nickname.Trim(),
+                ["p_except"] = exceptUserId
+            });
+            return string.Equals(res.Content?.Trim(), "true", StringComparison.OrdinalIgnoreCase);
+        }
+
+        public async Task<bool> NicknameMatchesAsync(string userId, string? nickname)
+        {
+            var u = await GetUserCachedAsync(userId);
+            return u != null && !string.IsNullOrWhiteSpace(nickname) &&
+                   string.Equals(u.Nickname?.Trim(), nickname.Trim(), StringComparison.OrdinalIgnoreCase);
+        }
 
         [GeneratedRegex(@"@([a-zA-Z0-9_]+)", RegexOptions.Compiled)]
         private static partial Regex MyRegex();
