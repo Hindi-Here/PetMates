@@ -7,14 +7,14 @@
   width: 100%;
   max-width: 100%;
   overflow-x: hidden;
-  
+
   .form-field-container:first-child {
-    margin-top: rem(8); 
+    margin-top: rem(8);
   }
 }
 
 .form-field-container {
-  margin-top: rem(16); 
+  margin-top: rem(16);
   margin-bottom: rem(6);
   width: 100%;
   box-sizing: border-box;
@@ -22,12 +22,12 @@
   .form-field-label {
     padding-top: rem(6);
     padding-bottom: rem(12);
-    font-weight: normal; 
+    font-weight: normal;
     width: 100%;
     box-sizing: border-box;
-  
+
     &::after {
-      content: '*';
+      content: "*";
       color: var(--important-color);
       font-size: rem(12);
       display: inline-block;
@@ -47,20 +47,20 @@
   padding-right: rem(4);
   width: 100%;
   box-sizing: border-box;
-  
+
   &::-webkit-scrollbar {
     width: 6px;
   }
-  
+
   &::-webkit-scrollbar-track {
     background: color-mix(in srgb, var(--neutral-100), transparent 95%);
     border-radius: rem(3);
   }
-  
+
   &::-webkit-scrollbar-thumb {
     background: color-mix(in srgb, var(--neutral-100), transparent 70%);
     border-radius: rem(3);
-    
+
     &:hover {
       background: color-mix(in srgb, var(--neutral-100), transparent 60%);
     }
@@ -78,16 +78,25 @@
   transition: all 0.25s;
   width: 100%;
   box-sizing: border-box;
-  
+
   &:hover {
     border-color: color-mix(in srgb, var(--primary-accent), transparent 70%);
-    background: color-mix(in srgb, var(--card-bg-color), var(--primary-accent) 3%);
+    background: color-mix(
+      in srgb,
+      var(--card-bg-color),
+      var(--primary-accent) 3%
+    );
   }
-  
+
   &.selected {
     border-color: var(--primary-accent);
-    background: color-mix(in srgb, var(--card-bg-color), var(--primary-accent) 6%);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-accent), transparent 90%);
+    background: color-mix(
+      in srgb,
+      var(--card-bg-color),
+      var(--primary-accent) 6%
+    );
+    box-shadow: 0 0 0 2px
+      color-mix(in srgb, var(--primary-accent), transparent 90%);
   }
 }
 
@@ -108,7 +117,7 @@
 .project-info {
   flex: 1;
   min-width: 0;
-  
+
   .project-title {
     font-weight: bold;
     color: var(--neutral-100);
@@ -118,7 +127,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  
+
   .project-members {
     font-size: rem(12);
     color: var(--text-secondary-color);
@@ -136,7 +145,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  
+
   .checkmark-icon {
     width: rem(14);
     height: rem(14);
@@ -166,20 +175,20 @@
   padding-right: rem(4);
   width: 100%;
   box-sizing: border-box;
-  
+
   &::-webkit-scrollbar {
     width: 6px;
   }
-  
+
   &::-webkit-scrollbar-track {
     background: color-mix(in srgb, var(--neutral-100), transparent 95%);
     border-radius: rem(3);
   }
-  
+
   &::-webkit-scrollbar-thumb {
     background: color-mix(in srgb, var(--neutral-100), transparent 70%);
     border-radius: rem(3);
-    
+
     &:hover {
       background: color-mix(in srgb, var(--neutral-100), transparent 60%);
     }
@@ -197,18 +206,27 @@
   transition: all 0.25s;
   width: 100%;
   box-sizing: border-box;
-  
+
   &:hover:not(.disabled) {
     border-color: color-mix(in srgb, var(--primary-accent), transparent 70%);
-    background: color-mix(in srgb, var(--card-bg-color), var(--primary-accent) 3%);
+    background: color-mix(
+      in srgb,
+      var(--card-bg-color),
+      var(--primary-accent) 3%
+    );
   }
-  
+
   &.selected {
     border-color: var(--primary-accent);
-    background: color-mix(in srgb, var(--card-bg-color), var(--primary-accent) 6%);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-accent), transparent 90%);
+    background: color-mix(
+      in srgb,
+      var(--card-bg-color),
+      var(--primary-accent) 6%
+    );
+    box-shadow: 0 0 0 2px
+      color-mix(in srgb, var(--primary-accent), transparent 90%);
   }
-  
+
   &.disabled {
     opacity: 0.5;
     background: var(--unborder-content-bg-color);
@@ -232,7 +250,7 @@
 .invite-vacancy-info {
   flex: 1;
   min-width: 0;
-  
+
   .invite-vacancy-title {
     font-weight: bold;
     color: var(--neutral-100);
@@ -242,7 +260,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  
+
   .invite-vacancy-date {
     font-size: rem(12);
     color: var(--text-secondary-color);
@@ -276,36 +294,51 @@
   border-radius: var(--border-radius-base);
   width: 100%;
   box-sizing: border-box;
-  
+
   .warning-icon {
     width: rem(16);
     height: rem(16);
     fill: var(--important-color);
     flex-shrink: 0;
   }
-  
+
   p {
     margin: 0;
     font-size: rem(14);
     color: var(--important-color);
   }
-  
+
   &.error {
     background: color-mix(in srgb, var(--important-color), transparent 95%);
     border-color: color-mix(in srgb, var(--important-color), transparent 70%);
-    
+
     .warning-icon {
       fill: var(--important-color);
     }
-    
+
     p {
       color: var(--important-color);
     }
   }
 }
 
+
+
+.form-field-text.no-required::after {
+  content: none;
+}
+
+.invite-error-text {
+  font-size: rem(12);
+  color: var(--important-color);
+  text-align: center;
+  margin: rem(12) 0;
+  padding-top: rem(12);
+  border-radius: var(--border-radius-base);
+}
+
 .form-manage {
-  margin-top: rem(24); 
+  margin-top: rem(24);
   margin-bottom: rem(24);
   height: rem(40);
   width: 100%;
@@ -328,12 +361,16 @@
     border: none;
     transition: 0.25s;
     box-sizing: border-box;
-
+    
     &:disabled {
-      opacity: 0.4;
-      pointer-events: none; 
+      background-color: color-mix(in srgb, var(--primary-accent), var(--neutral-0) 30%) !important;
+      color: color-mix(in srgb, var(--button-white-text), transparent 40%) !important;
+      cursor: not-allowed;
+      pointer-events: none;
+      transform: none !important;
     }
   }
+
   .form-manage-button.cancellation {
     width: rem(125);
     background-color: var(--card-bg-color);
@@ -342,34 +379,19 @@
     border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 65%);
     transition: 0.25s;
     box-sizing: border-box;
-
-    &:not(:disabled):hover {
-      background-color: color-mix(in srgb, var(--card-bg-color), var(--neutral-100) 6%);
+    
+    &:disabled {
+      background-color: color-mix(in srgb, var(--card-bg-color), var(--neutral-100) 3%) !important;
+      color: color-mix(in srgb, var(--neutral-100), transparent 40%) !important;
+      border-color: color-mix(in srgb, var(--neutral-100), transparent 75%) !important;
     }
   }
-}
-
-.form-field-text.no-required::after {
-  content: none;
-}
-
-.invite-error-text {
-  font-size: rem(12);
-  color: var(--important-color);
-  text-align: center;
-  margin: rem(12) 0;
-  padding-top: rem(12);
-  border-radius: var(--border-radius-base);
 }
 
 @media (max-width: 480px) {
   .form-manage {
     flex-wrap: wrap;
     height: auto;
-
-    .form-manage-button {
-      width: 100%;
-    }
   }
 
   .project-item,

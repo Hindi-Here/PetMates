@@ -2,21 +2,17 @@
 using api.Support;
 using Microsoft.AspNetCore.Mvc;
 using Supabase;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class UserModerationController(Client client, SupportManager SupMan) : ControllerBase
+    public class UserModerationController(SupportManager SupMan) : ControllerBase
     {
-        private readonly Client _client = client;
         private readonly SupportManager _SupMan = SupMan;
 
         // Бан пользователя
-        [HttpPut("{targetUserId}/ban")]
+        [HttpPut("{targetUserId}/ban")] 
         public async Task<IActionResult> BanUser(string targetUserId, [FromBody] BanUserDto dto)
         {
             try
@@ -29,21 +25,17 @@ namespace api.Controllers
                 if (targetUserId == actor.UserId)
                     return BadRequest(new { message = "Нельзя заблокировать самого себя" });
 
-                var targetUser = (await _SupMan.System.From<User>().Where(u => u.UserId == targetUserId).Get())
-                    .Models.FirstOrDefault();
-                if (targetUser == null)
-                    return NotFound();
+                var targetUser = (await _SupMan.System.From<User>().Where(u => u.UserId == targetUserId).Get()).Models.FirstOrDefault();
+                if (targetUser == null) return NotFound();
                 if (targetUser.IsBanned)
                     return BadRequest(new { message = "Пользователь уже заблокирован" });
-                if (!RoleRules.CanModerate(actor.Role, targetUser.SystemRole))
-                    return Forbid();
+                if (!RoleRules.CanModerate(actor.Role, targetUser.SystemRole)) return Forbid();
 
                 if (RoleRules.Normalize(targetUser.SystemRole) == Roles.Admin && await _SupMan.CountActiveAdminsAsync() <= 1)
                     return BadRequest(new { message = "Нельзя заблокировать последнего администратора" });
 
                 var error = Validator.ValidateRequiredText(dto.Reason, Limits.Moderation.ReasonMax, "Причина");
-                if (error != null)
-                    return BadRequest(new { message = error });
+                if (error != null) return BadRequest(new { message = error });
 
                 await _SupMan.System.From<User>()
                     .Where(u => u.UserId == targetUserId)
@@ -58,18 +50,18 @@ namespace api.Controllers
 
                 var (responders, invitees) = await _SupMan.GetPendingThirdParties(targetUserId);
 
-                foreach (var (responderId, projectName, vacancyName) in responders)
+                foreach (var (responderId, projectId, projectName, vacancyName) in responders)
                 {
-                    await _SupMan.SendNotificationAsync(responderId, "response", targetUserId, "response_paused_owner_banned", new Dictionary<string, object>
+                    await _SupMan.SendNotificationAsync(responderId, "response", projectId, "response_paused_owner_banned", new Dictionary<string, object>
                     {
                         { "projectName", projectName },
                         { "vacancyName", vacancyName }
                     });
                 }
 
-                foreach (var (inviteeId, projectName, role) in invitees)
+                foreach (var (inviteeId, projectId, projectName, role) in invitees)
                 {
-                    await _SupMan.SendNotificationAsync(inviteeId, "invite", targetUserId, "invite_paused_owner_banned", new Dictionary<string, object>
+                    await _SupMan.SendNotificationAsync(inviteeId, "invite", projectId, "invite_paused_owner_banned", new Dictionary<string, object>
                     {
                         { "projectName", projectName },
                         { "role", role }
@@ -98,14 +90,11 @@ namespace api.Controllers
                 if (!actor.IsStaff)
                     return Forbid();
 
-                var targetUser = (await _SupMan.System.From<User>().Where(u => u.UserId == targetUserId).Get())
-                    .Models.FirstOrDefault();
-                if (targetUser == null)
-                    return NotFound();
+                var targetUser = (await _SupMan.System.From<User>().Where(u => u.UserId == targetUserId).Get()).Models.FirstOrDefault();
+                if (targetUser == null) return NotFound();
                 if (!targetUser.IsBanned)
                     return BadRequest(new { message = "Пользователь не заблокирован" });
-                if (!RoleRules.CanModerate(actor.Role, targetUser.SystemRole))
-                    return Forbid();
+                if (!RoleRules.CanModerate(actor.Role, targetUser.SystemRole)) return Forbid();
 
                 await _SupMan.System.From<User>()
                     .Where(u => u.UserId == targetUserId)
@@ -116,23 +105,22 @@ namespace api.Controllers
                     .Update();
 
                 await _SupMan.Cache.UserChangedAsync(targetUserId);
-
                 await SupportManager.SetAuthBanAsync(targetUserId, "none");
 
                 var (responders, invitees) = await _SupMan.GetPendingThirdParties(targetUserId);
 
-                foreach (var (responderId, projectName, vacancyName) in responders)
+                foreach (var (responderId, projectId, projectName, vacancyName) in responders)
                 {
-                    await _SupMan.SendNotificationAsync(responderId, "response", targetUserId, "response_resumed_owner_unbanned", new Dictionary<string, object>
+                    await _SupMan.SendNotificationAsync(responderId, "response", projectId, "response_resumed_owner_unbanned", new Dictionary<string, object>
                     {
                         { "projectName", projectName },
                         { "vacancyName", vacancyName }
                     });
                 }
 
-                foreach (var (inviteeId, projectName, role) in invitees)
+                foreach (var (inviteeId, projectId, projectName, role) in invitees)
                 {
-                    await _SupMan.SendNotificationAsync(inviteeId, "invite", targetUserId, "invite_resumed_owner_unbanned", new Dictionary<string, object>
+                    await _SupMan.SendNotificationAsync(inviteeId, "invite", projectId, "invite_resumed_owner_unbanned", new Dictionary<string, object>
                     {
                         { "projectName", projectName },
                         { "role", role }

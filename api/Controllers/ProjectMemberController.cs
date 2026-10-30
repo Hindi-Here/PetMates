@@ -230,9 +230,9 @@ namespace api.Controllers
 
                 return Ok(new { memberData.MemberId, memberData.ProjectId, memberData.UserId, dto.Role, JoinedAt = memberData.JoinedAt?.ToString("o") });
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return StatusCode(500, new { error = "Не удалось обновить роль" });
+                return this.Fail(ex);
             }
         }
     }

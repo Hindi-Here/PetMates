@@ -1,56 +1,70 @@
-.form-steps-container{
-    display: flex;
-    justify-content: space-between;
-    margin-top: rem(12);
-    margin-bottom: rem(24);
-    position: relative; 
+.form-manage-button.back {
+  width: rem(125) !important;
+  background-color: var(--card-bg-color) !important;
+  color: var(--neutral-100) !important;
+  font-weight: normal !important;
+  border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 65%) !important;
+  transition: 0.25s !important;
+  box-sizing: border-box !important;
+  filter: none !important;
 
-    &::before {
-        content: '';
-        position: absolute;
-        top: 50%;
-        left: 0;
-        right: 0;
-        height: 2px;
-        background-color: color-mix(in srgb, var(--neutral-100), transparent 85%);
-        transform: translateY(-50%);
-        z-index: 1;
-    }
+  &:not(:disabled):hover {
+    background-color: color-mix(in srgb, var(--card-bg-color), var(--neutral-100) 6%) !important;
+    filter: none !important;
+  }
 
-    .form-step-container {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        width: rem(20);
-        height: rem(20);
-        border-radius: 50%;
-        background-color: var(--form-step-bg-color);
-        border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 75%);
-        position: relative; 
-        z-index: 2; 
-        transition: 0.25s;
-
-        .form-step-number {
-            color: var(--text-secondary-color);
-            font-size: rem(12);
-        }
-
-        &.active {
-            background-color: var(--success-extra-ligth-color);
-            border-color: var(--success-color);
-
-            .delete-account-step-number {
-                color: var(--success-color);
-                font-weight: bold;
-            }
-        }
-    }
+  &:not(:disabled):active {
+    background-color: color-mix(in srgb, var(--card-bg-color), var(--neutral-100) 9%) !important;
+    transform: scale(0.98);
+    filter: none !important;
+  }
 }
 
-.form-manage-button.back{
-    width: rem(125);
-    background-color: var(--neutral-0);
-    color: var(--neutral-100);
-    font-weight: normal;
+.form-steps-container {
+  display: flex;
+  justify-content: space-between;
+  margin-top: rem(12);
+  margin-bottom: rem(24);
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: color-mix(in srgb, var(--neutral-100), transparent 85%);
+    transform: translateY(-50%);
+    z-index: 1;
+  }
+
+  .form-step-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: rem(20);
+    height: rem(20);
+    border-radius: 50%;
+    background-color: var(--form-step-bg-color);
     border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 75%);
+    position: relative;
+    z-index: 2;
+    transition: 0.25s;
+
+    .form-step-number {
+      color: var(--text-secondary-color);
+      font-size: rem(12);
+    }
+
+    &.active {
+      background-color: var(--success-extra-ligth-color);
+      border-color: var(--success-color);
+
+      .delete-account-step-number {
+        color: var(--success-color);
+        font-weight: bold;
+      }
+    }
+  }
 }

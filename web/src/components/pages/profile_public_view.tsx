@@ -2,6 +2,8 @@ import './profile_public_view.scss'
 import InviteIcon from '@icons/invite_in_project.svg?react'
 import ChatIcon from '@icons/chat.svg?react'
 import MoreIcon from '@icons/more.svg?react'
+import BanUserIcon from '@icons/ban-user.svg?react'
+import UnbanUserIcon from '@icons/unban-user.svg?react'
 
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -162,7 +164,7 @@ export const ProfilePublicView = ({ user, isPreview = false }: ProfilePublicView
   return (
     <div className='profile-public-content'>
       <div className='profile-header-container'>
-        <img className='profile-avatar' src={user.avatarUrl || '/default-avatar.png'} alt={user.nickname} />
+        <img className='profile-avatar' src={user.avatarUrl || '/default-avatar.png'} />
         <div className='profile-username-container'>
           <div className='username-main'>
             <h1 className='username'>{user.nickname}</h1>
@@ -186,8 +188,12 @@ export const ProfilePublicView = ({ user, isPreview = false }: ProfilePublicView
             </button>
 
             {!isPreview && (
-              <button className='profile-block-btn' onClick={toggleBlock}>
-                {blockedByMe ? 'Разблокировать' : 'Заблокировать'}
+              <button
+                className='profile-action-btn danger'
+                onClick={toggleBlock}
+                title={blockedByMe ? 'Разблокировать' : 'Заблокировать'}
+              >
+                {blockedByMe ? <UnbanUserIcon className='action-ico' /> : <BanUserIcon className='action-ico' />}
               </button>
             )}
 

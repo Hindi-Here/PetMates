@@ -158,7 +158,7 @@ const Form = ({ onClose, invitedUser }: FormProps) => {
           <p className='form-field-label'> Выберите проект </p>
           
           {isLoading ? (
-            <div className='project-loading'>Загрузка проектов...</div>
+            <div className='project-loading'>Загрузка проектов</div>
           ) : projects.length === 0 ? (
             <div className='project-empty'>
               <p>Отсутствуют проекты для выбора</p>

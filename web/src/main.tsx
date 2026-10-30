@@ -15,7 +15,6 @@ import BannedPage from './components/pages/ban'
 import { useBanStatus } from './components/hooks/useBanStatus'
 import { ScrollToTop } from './components/scripts/function';
 import { AuthProvider } from './components/hooks/useAuth';
-import React from 'react';
 
 // Компонент, который проверяет статус бана пользователя и отображает соответствующую страницу
 function AppGate() {

@@ -1,6 +1,7 @@
 ﻿using api.Models;
 using api.Support;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Supabase.Postgrest;
 using System.Globalization;
 using System.Text.Json;
@@ -15,7 +16,7 @@ namespace api.Controllers
         private readonly SupportManager _SupMan = SupMan;
 
         // Мои мероприятия / мероприятия пользователя
-        [HttpGet("by-user/{userId}")]
+        [HttpGet("by-user/{userId:guid}")]
         public async Task<IActionResult> GetUserEvents(string userId)
         {
             try
@@ -34,7 +35,7 @@ namespace api.Controllers
         }
 
         // Мероприятия, в которых пользователь участник (кроме собственных)
-        [HttpGet("user/{userId}/member")]
+        [HttpGet("user/{userId:guid}/member")]
         public async Task<IActionResult> GetUserMemberEvents(string userId)
         {
             try
@@ -56,7 +57,7 @@ namespace api.Controllers
         }
 
         // Избранные (оценённые) мероприятия пользователя
-        [HttpGet("user/{userId}/favorites")]
+        [HttpGet("user/{userId:guid}/favorites")]
         public async Task<IActionResult> GetUserFavoriteEvents(string userId)
         {
             try
@@ -77,7 +78,7 @@ namespace api.Controllers
         }
 
         // Получить мероприятие по ID
-        [HttpGet("{eventId}")]
+        [HttpGet("{eventId:guid}")]
         public async Task<IActionResult> GetEvent(string eventId)
         {
             try
@@ -129,7 +130,7 @@ namespace api.Controllers
         }
 
         // Участники мероприятия: организатор + принятые участники
-        [HttpGet("{eventId}/members")]
+        [HttpGet("{eventId:guid}/members")]
         public async Task<IActionResult> GetEventMembers(string eventId)
         {
             try
@@ -207,7 +208,7 @@ namespace api.Controllers
         }
 
         // Удалить своё мероприятие
-        [HttpDelete("{eventId}")]
+        [HttpDelete("{eventId:guid}")]
         public async Task<IActionResult> DeleteEvent(string eventId)
         {
             var userId = await _SupMan.GetUserIdAsync(Request.Headers.Authorization.ToString());
@@ -222,7 +223,7 @@ namespace api.Controllers
         }
 
         // Сохранить подраздел «Общее» (только владелец)
-        [HttpPut("{eventId}")]
+        [HttpPut("{eventId:guid}")]
         public async Task<IActionResult> UpdateEvent(string eventId, [FromBody] UpdateEventDto dto)
         {
             try
@@ -272,7 +273,7 @@ namespace api.Controllers
         }
 
         // Сохранить форму заявки (только владелец)
-        [HttpPut("{eventId}/form")]
+        [HttpPut("{eventId:guid}/form")]
         public async Task<IActionResult> UpdateEventForm(string eventId, [FromBody] UpdateEventFormDto dto)
         {
             try
@@ -309,7 +310,7 @@ namespace api.Controllers
         }
 
         // Сохранить результаты (только владелец)
-        [HttpPut("{eventId}/results")]
+        [HttpPut("{eventId:guid}/results")]
         public async Task<IActionResult> UpdateEventResults(string eventId, [FromBody] UpdateEventResultsDto dto)
         {
             try
@@ -343,7 +344,7 @@ namespace api.Controllers
         }
 
         // Оценил ли текущий пользователь мероприятие
-        [HttpGet("{eventId}/rating")]
+        [HttpGet("{eventId:guid}/rating")]
         public async Task<IActionResult> GetUserRating(string eventId)
         {
             try
@@ -361,7 +362,7 @@ namespace api.Controllers
         }
 
         // Оценить
-        [HttpPost("{eventId}/rating")]
+        [HttpPost("{eventId:guid}/rating")]
         public async Task<IActionResult> AddRating(string eventId)
         {
             try
@@ -393,7 +394,7 @@ namespace api.Controllers
         }
 
         // Убрать оценку
-        [HttpDelete("{eventId}/rating")]
+        [HttpDelete("{eventId:guid}/rating")]
         public async Task<IActionResult> RemoveRating(string eventId)
         {
             try
@@ -419,7 +420,7 @@ namespace api.Controllers
         }
 
         // Моя заявка на мероприятие
-        [HttpGet("{eventId}/applications/me")]
+        [HttpGet("{eventId:guid}/applications/me")]
         public async Task<IActionResult> GetMyEventApplication(string eventId)
         {
             try
@@ -720,7 +721,8 @@ namespace api.Controllers
         }
 
         // Загрузить изображение в подраздел (владелец)
-        [HttpPost("{eventId}/media/{section}")]
+        [HttpPost("{eventId:guid}/media/{section}")]
+        [EnableRateLimiting("upload")]
         [RequestSizeLimit(Limits.Upload.MediaRequestBytes)]
         public async Task<IActionResult> UploadMedia(string eventId, string section, [FromForm] IFormFile file)
         {

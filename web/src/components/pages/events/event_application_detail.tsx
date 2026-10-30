@@ -69,7 +69,6 @@ export const EventApplicationDetail = ({ eventId, applicationId, basePath }: Eve
 
   const handleAccept = () => {
     if (!canAccept || decideMutation.isPending) return
-    if (!window.confirm('Принять заявку? Пользователь станет участником мероприятия.')) return
     decideMutation.mutate({ decision: 'accept' })
   }
 
@@ -92,7 +91,7 @@ export const EventApplicationDetail = ({ eventId, applicationId, basePath }: Eve
         </div>
 
         <div className='event-app-applicant-card'>
-          <img src={applicant.avatarUrl || '/default-avatar.png'} alt={applicant.nickname} />
+          <img src={applicant.avatarUrl || '/default-avatar.png'} />
           <div className='event-app-applicant-card-info'>
             <p className='event-app-applicant-name'>@{applicant.nickname}</p>
             {meta.length > 0 && <p className='event-app-applicant-meta'>{meta.join(' • ')}</p>}

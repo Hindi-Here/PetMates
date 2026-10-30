@@ -72,6 +72,7 @@ builder.Services.AddRateLimiter(o =>
     o.AddPolicy("auth", c => PerIp(c, 10, TimeSpan.FromMinutes(5)));
     o.AddPolicy("lookup", c => PerIp(c, 20, TimeSpan.FromMinutes(1)));
     o.AddPolicy("write", c => PerIp(c, 60, TimeSpan.FromMinutes(1)));
+    o.AddPolicy("upload", c => PerIp(c, 20, TimeSpan.FromMinutes(1)));
 });
 
 builder.Services.AddCors(options =>

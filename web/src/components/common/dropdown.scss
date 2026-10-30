@@ -12,9 +12,7 @@
   margin-top: rem(2);
   z-index: 10;
   padding: rem(5) 0;
-
   .dropdown-item {
-    transition: 0.25s;
     margin-left: rem(2);
     margin-right: rem(2);
     margin-top: rem(3);
@@ -22,31 +20,16 @@
     padding-top: rem(8);
     padding-bottom: rem(8);
     background-color: var(--neutral-0);
-
     .dropdown-item-text {
       font-size: rem(14);
-      transition: 0.25s;
       color: var(--neutral-100);
       padding-left: rem(16);
       padding-right: rem(16);
       user-select: none;
       white-space: nowrap;
     }
-
-    &:hover {
-      background-color: color-mix(in srgb, var(--neutral-100), transparent 95%);
-      
-      .dropdown-item-text {
-        color: var(--neutral-100);
-      }
-    }
-    
-    &:active {
-      filter: brightness(0.95);
-    }
   }
 }
-
 .dropdown-nav-container {
   background-color: var(--header-bg-hover-color);
   width: rem(250);
@@ -63,10 +46,8 @@
   padding: 0;
   max-height: calc(100vh - #{rem(75)});
   overflow-y: auto;
-
   .dropdown-nav-item {
     display: block;
-    transition: 0.25s;
     margin-left: rem(2);
     margin-right: rem(2);
     margin-top: rem(3);
@@ -74,59 +55,25 @@
     padding-top: rem(8);
     padding-bottom: rem(8);
     position: relative;
-
     &:first-of-type {
       margin-top: 0;
     }
-
     .dropdown-nav-item-text {
-      transition: 0.25s;
       font-size: rem(15);
       color: var(--header-text-color);
       padding-left: rem(24);
       padding-right: rem(24);
       user-select: none;
     }
-
-    &:hover {
-      background-color: color-mix(in srgb, var(--header-text-color), transparent 88%);
-
-      .dropdown-nav-item-text {
-        color: var(--primary-accent);
-      }
-    }
-    
-    &:active {
-      .dropdown-nav-item-text {
-        filter: brightness(1.1); 
-      }
-    }
-
     &.logout {
       background-color: var(--header-bg-color);
-
       .dropdown-nav-item-text {
         color: var(--important-color);
         padding-top: rem(6);
         padding-bottom: rem(6);
       }
-
-      &:hover {
-        background-color: color-mix(in srgb, var(--header-text-color), transparent 88%);
-        
-        .dropdown-nav-item-text {
-          color: color-mix(in srgb, var(--important-color) 100%, white 10%);
-        }
-      }
-      
-      &:active {
-        .dropdown-nav-item-text {
-          filter: brightness(0.9); 
-        }
-      }
     }
   }
-
   .submenu-container {
     position: absolute;
     top: 0;
@@ -141,15 +88,17 @@
     padding: 0;
     animation: slideLeft 0.25s ease;
     z-index: 1001;
-
     .separator {
       border: none;
       height: 1px;
       margin: 0;
       width: 100%;
-      background-color: color-mix(in srgb, var(--header-text-color), transparent 85%);
+      background-color: color-mix(
+        in srgb,
+        var(--header-text-color),
+        transparent 85%
+      );
     }
-
     .submenu-item {
       display: block;
       margin-left: rem(2);
@@ -163,34 +112,32 @@
       font-size: rem(15);
       color: var(--header-text-color);
       text-decoration: none;
-      transition: 0.25s;
-
       &:first-of-type {
         margin-top: 0;
       }
-
-      &:hover {
-        background-color: color-mix(in srgb, var(--header-text-color), transparent 88%);
-        color: var(--primary-accent);
-      }
-
       &.active {
-        background-color: color-mix(in srgb, var(--primary-accent), transparent 90%);
+        background-color: color-mix(
+          in srgb,
+          var(--primary-accent),
+          transparent 90%
+        );
         color: var(--primary-accent);
         font-weight: bold;
       }
     }
   }
-
   .separator {
     border: none;
     height: 1px;
     margin: 0;
     width: 100%;
-    background-color: color-mix(in srgb, var(--header-text-color), transparent 85%);
+    background-color: color-mix(
+      in srgb,
+      var(--header-text-color),
+      transparent 85%
+    );
   }
 }
-
 @keyframes slideLeft {
   from {
     opacity: 0;
@@ -201,7 +148,6 @@
     transform: translateX(0);
   }
 }
-
 @keyframes slideDown {
   from {
     opacity: 0;
@@ -212,18 +158,15 @@
     transform: translateY(0);
   }
 }
-
 @media (max-width: 480px) {
   .dropdown-container {
     max-width: calc(100vw - #{rem(32)});
   }
-
   .dropdown-item {
     margin-top: rem(3);
     margin-bottom: rem(3);
     padding-top: rem(8);
     padding-bottom: rem(8);
-
     .dropdown-item-text {
       padding-left: rem(12);
       padding-right: rem(12);
@@ -231,10 +174,8 @@
       word-break: break-word;
     }
   }
-
   .dropdown-nav-container {
     width: min(#{rem(280)}, 100vw);
-
     .submenu-container {
       position: static;
       width: 100%;
@@ -245,7 +186,6 @@
       border-radius: var(--border-radius-base);
       border-top-left-radius: 0;
       border-top-right-radius: 0;
-
       .submenu-item {
         padding: rem(10) rem(32);
         font-size: rem(14);

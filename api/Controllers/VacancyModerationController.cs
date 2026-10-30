@@ -76,7 +76,7 @@ namespace api.Controllers
 
                 if (!string.IsNullOrEmpty(projectData.OwnerId))
                 {
-                    await _SupMan.SendNotificationAsync(projectData.OwnerId, "response", vacancyId, "vacancy_deleted_by_moderator", new Dictionary<string, object>
+                    await _SupMan.SendNotificationAsync(projectData.OwnerId, "response", vacancy.ProjectId, "vacancy_deleted_by_moderator", new Dictionary<string, object>
                     {
                         { "vacancyName", vacancyTitle },
                         { "reason", reason }
@@ -85,7 +85,7 @@ namespace api.Controllers
 
                 foreach (var responderId in affectedResponders)
                 {
-                    await _SupMan.SendNotificationAsync(responderId, "response", vacancyId, "responses_revoked_vacancy_deleted_by_moderator", new Dictionary<string, object>
+                    await _SupMan.SendNotificationAsync(responderId, "response", vacancy.ProjectId, "responses_revoked_vacancy_deleted_by_moderator", new Dictionary<string, object>
                     {
                         { "vacancyName", vacancyTitle }
                     });
@@ -93,14 +93,14 @@ namespace api.Controllers
 
                 foreach (var inviteeId in affectedInvitees)
                 {
-                    await _SupMan.SendNotificationAsync(inviteeId, "invite", vacancyId, "invites_revoked_vacancy_deleted_by_moderator", new Dictionary<string, object>
+                    await _SupMan.SendNotificationAsync(inviteeId, "invite", vacancy.ProjectId, "invites_revoked_vacancy_deleted_by_moderator", new Dictionary<string, object>
                     {
                         { "vacancyName", vacancyTitle },
                         { "nickname", ownerNickname }
                     });
                 }
 
-                await _SupMan.SendNotificationAsync(actor.UserId, "response", vacancyId, "moderator_deleted_vacancy", new Dictionary<string, object>
+                await _SupMan.SendNotificationAsync(actor.UserId, "response", vacancy.ProjectId, "moderator_deleted_vacancy", new Dictionary<string, object>
                 {
                     { "vacancyName", vacancyTitle },
                     { "reason", reason }

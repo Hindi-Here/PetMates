@@ -76,7 +76,7 @@
   border: none;
   border-radius: var(--border-radius-base);
   font-size: rem(14);
-  font-weight:bold;
+  font-weight: bold;
   transition: 0.25s;
   white-space: nowrap;
 
@@ -215,9 +215,8 @@
   color: var(--text-secondary-color);
   flex-shrink: 0;
   margin-left: auto;
-  padding-right: rem(12); 
+  padding-right: rem(12);
 }
-
 
 .conversation-nickname {
   font-size: rem(16);
@@ -243,44 +242,21 @@
 }
 
 .conversation-pin-btn {
-  width: rem(40);
-  height: rem(40);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  border-radius: var(--border-radius-base);
-  background: var(--button-neutral-bg-color);
-  color: var(--text-secondary-color);
-  transition: all 0.25s;
-  flex-shrink: 0;
-  padding: 0;
-
-  .ico { 
-    width: rem(16); 
-    height: rem(16); 
-  }
-
-  &:hover {
-    background: color-mix(in srgb, var(--button-neutral-bg-color), var(--neutral-100) 4%);
-    transform: scale(0.975);
-  }
-
-  &:active{
-    background: color-mix(in srgb, var(--button-neutral-bg-color), var(--neutral-100) 6%);
-    transform: scale(0.95);
+  .ico {
+    width: rem(16);
+    height: rem(16);
   }
 
   &.pinned {
     color: var(--primary-accent);
     background: color-mix(in srgb, var(--primary-accent), transparent 90%);
-    &:hover { 
-      background: color-mix(in srgb, var(--primary-accent), transparent 85%); 
-      transform: scale(0.975);
+
+    &:hover {
+      background: color-mix(in srgb, var(--primary-accent), transparent 85%);
     }
-    &:active{
-      background: color-mix(in srgb, var(--primary-accent), transparent 80%); 
-      transform: scale(0.95);
+
+    &:active {
+      background: color-mix(in srgb, var(--primary-accent), transparent 80%);
     }
   }
 }
@@ -298,24 +274,27 @@
   transition: all 0.25s;
   flex-shrink: 0;
   padding: 0;
-
-  &:hover {
+  filter: none !important;
+  
+  &:hover:not(:disabled) {
     background: color-mix(in srgb, var(--button-danger-bg-color), var(--important-color) 4%);
     transform: scale(0.975);
   }
-
-  &:active{
+  
+  &:active:not(:disabled) {
     background: color-mix(in srgb, var(--button-danger-bg-color), var(--important-color) 6%);
     transform: scale(0.95);
   }
-
-  &:active {
-    transform: scale(0.98);
+  
+  &:disabled {
+    opacity: 0.4;
+    pointer-events: none;
   }
-
+  
   .ico {
     width: rem(16);
     height: rem(16);
+    fill: var(--important-color);
   }
 }
 
@@ -396,7 +375,7 @@
   }
 
   .conversation-date {
-    padding-right: 0; 
+    padding-right: 0;
   }
 
   .conversation-nickname {

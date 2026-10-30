@@ -348,7 +348,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
     setIsUploadingMedia(true)
     try {
       const { url } = await projectDraftApi.uploadDraftMedia(projectId, file)
-      insertAtCursor(`\n<img src="${url}" width="400" alt="${file.name}" />\n`)
+      insertAtCursor(`\n<img src="${url}" width="400" />\n`)
       const media = await projectsApi.getMedia(projectId)
       setProjectMedia(media)
     } catch (error) {
@@ -360,8 +360,8 @@ export const Project = ({ onCancel }: ProjectProps) => {
     }
   }
 
-  const handleInsertMedia = (url: string, fileName: string) => {
-    insertAtCursor(`\n<img src="${url}" width="400" alt="${fileName}" />\n`)
+  const handleInsertMedia = (url: string) => {
+    insertAtCursor(`\n<img src="${url}" width="400" />\n`)
   }
 
   const handleDeleteMedia = async (fileName: string, fileUrl: string, isDraft: boolean) => {
@@ -724,6 +724,10 @@ export const Project = ({ onCancel }: ProjectProps) => {
       setHasBasicInfoDraft(false)
     }
   }, [name, shortDesc, status, isPrivate, initialState, hasBasicInfoDraft])
+
+  useEffect(() => {
+    if (!isBasicInfoChanged && hasBasicInfoDraft) setHasBasicInfoDraft(false)
+  }, [isBasicInfoChanged, hasBasicInfoDraft])
 
   useEffect(() => {
     if (description === initialState.description && hasDescriptionDraft) {
@@ -1276,7 +1280,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
                         <button
                           type='button'
                           className='media-action-btn copy'
-                          onClick={() => handleInsertMedia(media.url, media.name)}
+                          onClick={() => handleInsertMedia(media.url)}
                           disabled={isPreviewDescription}
                         >
                           <CopyIcon className='ico' />

@@ -109,7 +109,7 @@ export const CommentsSection = ({
       <div key={node.commentId} className={`comment-item ${depth > 0 ? 'comment-reply' : ''}`}>
         <div className='comment-wrapper'>
           <div className='comment-avatar'>
-            <img src={node.avatarUrl || '/default-avatar.png'} alt={node.nickname || 'User'} />
+            <img src={node.avatarUrl || '/default-avatar.png'}/>
           </div>
 
           <div className='comment-body'>
@@ -185,7 +185,7 @@ export const CommentsSection = ({
                 <textarea
                   className='comment-textarea small'
                   maxLength={LIMITS.comment.maxLength}
-                  placeholder={`Ответ для @${node.nickname}...`}
+                  placeholder={`Ответ для @${node.nickname}`}
                   value={replyContent}
                   onChange={e => setReplyContent(e.target.value)}
                 />
@@ -247,7 +247,7 @@ export const CommentsSection = ({
       <div className='comment-input-wrapper'>
         <textarea
           className='comment-textarea'
-          placeholder={readOnly ? 'Предпросмотр: отправка комментариев недоступна' : 'Место для твоего комментария...'}
+          placeholder={readOnly ? 'Предпросмотр: отправка комментариев недоступна' : 'Место для твоего комментария'}
           value={newComment}
           maxLength={LIMITS.comment.maxLength}
           disabled={readOnly}

@@ -22,6 +22,10 @@ namespace api.Controllers
             var project = (await _client.From<Project>().Where(p => p.ProjectId == projectId).Get()).Models.FirstOrDefault();
             if (project == null) return NotFound();
 
+            if (project.IsPrivate) return NotFound();
+            if (project.OwnerId == actor.UserId)
+                return BadRequest(new { message = "Свой проект удаляйте обычным способом" });
+
             if (!RoleRules.CanModerate(actor.Role, await _SupMan.GetRoleAsync(project.OwnerId)))
                 return Forbid();
 

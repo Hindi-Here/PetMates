@@ -68,8 +68,8 @@ export const EventMarkdownEditor = ({
     })
   }
 
-  const imgTag = (url: string, name: string) =>
-    `\n<img src="${url}" width="400" alt="${name.replace(/["<>]/g, '')}" />\n`
+  const imgTag = (url: string) =>
+    `\n<img src="${url}" width="400" />\n`
 
   const totalSize = media.reduce((acc, m) => acc + m.size, 0)
 
@@ -86,7 +86,7 @@ export const EventMarkdownEditor = ({
     setIsUploading(true)
     try {
       const { url } = await eventApi.uploadMedia(eventId, section, file)
-      insertAtCursor(imgTag(url, file.name))
+      insertAtCursor(imgTag(url))
       setMedia(await eventApi.getMedia(eventId, section))
     } catch (err) {
       showMediaError(err instanceof Error ? err.message : 'Не удалось загрузить изображение')
@@ -169,7 +169,7 @@ export const EventMarkdownEditor = ({
                   <button
                     type='button'
                     className='media-action-btn copy'
-                    onClick={() => insertAtCursor(imgTag(item.url, item.name))}
+                    onClick={() => insertAtCursor(imgTag(item.url))}
                     disabled={isPreview}
                   >
                     <CopyIcon className='ico' />

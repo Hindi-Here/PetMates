@@ -41,7 +41,7 @@ const ApplicationCard = ({ item, onOpen }: { item: ApplicationListItem; onOpen: 
       </div>
 
       <div className='event-app-applicant'>
-        <img src={item.applicant.avatarUrl || '/default-avatar.png'} alt={item.applicant.nickname} />
+        <img src={item.applicant.avatarUrl || '/default-avatar.png'} />
         <div className='event-app-applicant-info'>
           <p className='event-app-applicant-name'>@{item.applicant.nickname}</p>
           <p className='event-app-applicant-role'>{item.applicant.profileRole || 'Роль не указана'}</p>

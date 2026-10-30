@@ -301,7 +301,7 @@ const Profile = ({ user }: { user: ProfileData | null }) => {
 
       <div ref={menuRef} className={`profile-panel-container ${isOpen ? 'open' : ''}`} onClick={openMenu}>
         <div className='avatar-container'>
-          <img className='avatar-image' src={user?.avatarUrl} alt="Avatar" />
+          <img className='avatar-image' src={user?.avatarUrl} />
         </div>
         <div className='username-container'>
           <p className='username-text'>

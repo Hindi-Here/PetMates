@@ -77,9 +77,11 @@ export default function Events() {
               </p>
             </>
           ) : (
-            events.map(event => (
-              <EventCard key={event.eventId} event={event} showModerationDelete />
-            ))
+            <div className='events-list'>
+              {events.map(event => (
+                <EventCard key={event.eventId} event={event} showModerationDelete />
+              ))}
+            </div>
           )}
         </div>
       </div>

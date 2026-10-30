@@ -1,6 +1,7 @@
 ﻿using api.Models;
 using api.Support;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Supabase;
 using System.Text.Json;
 
@@ -151,6 +152,7 @@ namespace api.Controllers
 
         // Обновить аватар
         [HttpPost("me/avatar")]
+        [EnableRateLimiting("upload")]
         [RequestSizeLimit(Limits.Upload.AvatarRequestBytes)]
         public async Task<IActionResult> UploadAvatar(IFormFile file)
         {
@@ -199,6 +201,34 @@ namespace api.Controllers
 
                 await _SupMan.Cache.UserChangedAsync(userAuth.Id!);
                 return Ok(new { avatarUrl = urlWithCacheBuster });
+            }
+            catch (Exception ex) { return this.Fail(ex); }
+        }
+
+        // Удалить аватар (вернуть аватар по умолчанию)
+        [HttpDelete("me/avatar")]
+        public async Task<IActionResult> DeleteAvatar()
+        {
+            var userAuth = await _SupMan.GetAuthUserAsync(Request.Headers.Authorization.ToString());
+            if (userAuth == null)
+                return Unauthorized();
+
+            try
+            {
+                try
+                {
+                    await _client.Storage.From("Avatar").Remove(
+                        [$"{userAuth.Id}/avatar.webp", $"{userAuth.Id}/avatar.png", $"{userAuth.Id}/avatar.jpg"]);
+                }
+                catch { }
+
+                await _client.From<User>()
+                    .Where(x => x.UserId == userAuth.Id)
+                    .Set(x => x.AvatarUrl!, null)
+                    .Update();
+
+                await _SupMan.Cache.UserChangedAsync(userAuth.Id!);
+                return Ok(new { avatarUrl = (string?)null });
             }
             catch (Exception ex) { return this.Fail(ex); }
         }

@@ -1,6 +1,7 @@
 ﻿using api.Models;
 using api.Support;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Supabase;
 using Supabase.Postgrest;
 using System.Text.Json;
@@ -520,17 +521,7 @@ namespace api.Controllers
                     .Get();
                 if (ownerCheck.Models.Count == 0) return NotFound();
 
-                var draftFiles = await _client.Storage.From("ProjectMediaDraft").List(projectId);
-                if (draftFiles != null && draftFiles.Count > 0)
-                {
-                    foreach (var file in draftFiles)
-                    {
-                        if (!string.IsNullOrEmpty(file.Name))
-                        {
-                            await _client.Storage.From("ProjectMediaDraft").Remove($"{projectId}/{file.Name}");
-                        }
-                    }
-                }
+                await _SupMan.DeleteFolderAsync("ProjectMediaDraft", projectId);
 
                 await _client.From<ProjectDraft>().Where(d => d.ProjectId == projectId).Delete();
 
@@ -657,13 +648,19 @@ namespace api.Controllers
             {
                 var authHeader = Request.Headers.Authorization.ToString();
                 var userId = await _SupMan.GetUserIdAsync(authHeader);
-                if (string.IsNullOrEmpty(userId)) return Unauthorized();
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
 
                 var project = await _client.From<Project>().Where(p => p.ProjectId == projectId).Get();
-                if (project.Models.Count == 0) return NotFound();
+                if (project.Models.Count == 0)
+                    return NotFound();
+
+                if (project.Models.First().OwnerId != userId)
+                    return Forbid();
 
                 bool isStaff = await _SupMan.IsStaffAsync(userId);
-                if (!await _SupMan.CanViewProject(project.Models.First(), userId, isStaff)) return Forbid();
+                if (!await _SupMan.CanViewProject(project.Models.First(), userId, isStaff))
+                    return Forbid();
 
                 var draftResponse = await _client.From<ProjectDraft>().Where(d => d.ProjectId == projectId).Get();
                 var draft = draftResponse.Models.FirstOrDefault();
@@ -718,6 +715,7 @@ namespace api.Controllers
 
         // Загрузка медиа
         [HttpPost("{projectId}/media/draft")]
+        [EnableRateLimiting("upload")]
         [RequestSizeLimit(Limits.Upload.MediaRequestBytes)]
         public async Task<IActionResult> UploadDraftMedia(string projectId, [FromForm] IFormFile file)
         {

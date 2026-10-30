@@ -5,18 +5,9 @@
   background-color: color-mix(in srgb, var(--neutral-100), transparent 75%);
   border-radius: rem(24);
   transition: background-color 0.25s;
-
-  &:hover{
-    filter: brightness(0.975);
-  }
-  &:active{
-    filter: brightness(0.95);
-  }
-
   &.checked {
     background-color: var(--primary-accent);
   }
-
   .toggle-input {
     position: absolute;
     opacity: 0;
@@ -24,7 +15,6 @@
     height: 100%;
     z-index: 2;
   }
-
   .toggle-slider {
     position: absolute;
     top: 50%;
@@ -35,14 +25,12 @@
     background-color: var(--button-white-text);
     border-radius: 50%;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    transition: transform 0.25s cubic-bezier(0.4, 0.0, 0.2, 1);
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   }
-
   &.checked .toggle-slider {
     transform: translate(rem(24), -50%);
   }
 }
-
 .toggle-container {
   display: inline-flex;
   align-items: center;

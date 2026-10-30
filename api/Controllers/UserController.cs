@@ -48,20 +48,21 @@ namespace api.Controllers
                 {
                     users = [.. users.Where(u => searchField switch
                     {
-                        "name" => u.Nickname?.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase) == true || u.RealName?.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase) == true,
+                        "name" => u.Nickname?.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase) == true ||
+                                  u.RealName?.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase) == true,
                         "tag" => SupportManager.ParseSkills(u.HardSkills).Any(t => t.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase)),
                         "role" => u.ProfileRole?.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase) == true,
                         _ => true,
                     })];
-                        }
+                }
 
                 IEnumerable<User> sorted = sortField switch
                 {
                     "date" => sortAsc ? users.OrderBy(u => u.CreatedAt) : users.OrderByDescending(u => u.CreatedAt),
                     "alphabet" => sortAsc ? users.OrderBy(u => u.Nickname) : users.OrderByDescending(u => u.Nickname),
-                    "activity" => sortAsc ? users.OrderBy(u => u.LastOnlineAt) : users.OrderByDescending(u => u.LastOnlineAt),
-                    "project_count" => sortAsc ? users.OrderBy(u => projectCounts.GetValueOrDefault(u.UserId ?? "", 0)) : users.OrderByDescending(u => projectCounts.GetValueOrDefault(u.UserId ?? "", 0)),
-                    "_count" => sortAsc ? users.OrderBy(u => ratingCounts.GetValueOrDefault(u.UserId ?? "", 0)) : users.OrderByDescending(u => ratingCounts.GetValueOrDefault(u.UserId ?? "", 0)),
+                    "activity" => sortAsc
+                        ? users.OrderBy(u => counts.ActivityCounts.GetValueOrDefault(u.UserId ?? "", 0))
+                        : users.OrderByDescending(u => counts.ActivityCounts.GetValueOrDefault(u.UserId ?? "", 0)),
                     _ => users
                 };
 

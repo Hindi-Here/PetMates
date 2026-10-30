@@ -43,7 +43,7 @@
     ::selection {
       background-color: color-mix(in srgb, var(--important-color), transparent 75%);
     }
-    
+
     .vacancy-title {
       color: var(--important-color) !important;
     }
@@ -71,28 +71,6 @@
             color: var(--important-color) !important;
           }
         }
-      }
-    }
-
-    .vacancy-apply-button {
-      background-color: color-mix(in srgb, var(--important-color), transparent 70%) !important;
-      color: var(--important-color) !important;
-      opacity: 0.7;
-      border-color: var(--important-color) !important;
-
-      &:hover {
-        filter: none !important;
-      }
-
-      &:active {
-        transform: none !important;
-        filter: none !important;
-      }
-
-      &:disabled {
-        opacity: 0.7 !important;
-        background-color: color-mix(in srgb, var(--important-color), transparent 70%) !important;
-        color: var(--important-color) !important;
       }
     }
   }
@@ -169,7 +147,10 @@
 
       &.more-tag {
         background-color: var(--header-bg-color);
-        .tag-text { color: var(--header-text-color); }
+
+        .tag-text {
+          color: var(--header-text-color);
+        }
       }
     }
   }
@@ -187,33 +168,9 @@
       gap: rem(16);
 
       .vacancy-apply-button {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        outline: none;
         width: rem(175);
         height: rem(40);
-        background-color: color-mix(in srgb, var(--primary-accent), var(--neutral-0) 12%);
-        color: var(--button-white-text);
-        font-weight: bold;
-        border-radius: var(--border-radius-base);
-        border: none;
-        transition: 0.25s;
         font-size: rem(14);
-
-        &:hover:not(:disabled) { 
-          filter: brightness(0.975); 
-          transform: scale(0.99);
-        }
-        &:active:not(:disabled) { 
-          filter: brightness(0.95); 
-          transform: scale(0.975); 
-        }
-        &:disabled {
-          opacity: 0.5;
-          pointer-events: none;
-          background-color: color-mix(in srgb, var(--primary-accent), var(--neutral-0) 12%);
-        }
       }
 
       .vacancy-rating {
@@ -223,7 +180,10 @@
         font-size: rem(12);
         color: var(--text-secondary-color);
 
-        .star-ico { width: rem(14); height: rem(14); }
+        .star-ico {
+          width: rem(14);
+          height: rem(14);
+        }
       }
     }
 
@@ -235,7 +195,10 @@
       color: var(--text-secondary-color);
       margin-left: auto;
 
-      .calendar-ico { width: rem(14); height: rem(14); }
+      .calendar-ico {
+        width: rem(14);
+        height: rem(14);
+      }
     }
   }
 }
@@ -311,32 +274,6 @@
   top: rem(12);
   right: rem(12);
   z-index: 5;
-  width: rem(40);
-  height: rem(40);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--border-radius-base);
-  border: none;
-  background-color: var(--button-danger-bg-color);
-  color: var(--important-color);
-  transition: 0.25s;
-  flex-shrink: 0;
-  padding: 0;
-
-  &:hover:not(:disabled) {
-    background: color-mix(in srgb, var(--button-danger-bg-color), var(--important-color) 4%);
-    transform: scale(0.975);
-  }
-  &:active:not(:disabled){
-    background: color-mix(in srgb, var(--button-danger-bg-color), var(--important-color) 6%);
-    transform: scale(0.95);
-  }
-
-
-  &:disabled {
-    opacity: 0.5;
-  }
 
   .ico {
     width: rem(18);

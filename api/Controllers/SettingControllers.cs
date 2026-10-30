@@ -128,7 +128,7 @@ namespace api.Controllers
                 if (userAuth == null)
                     return Unauthorized();
 
-                if (!await _SupMan.NicknameMatchesAsync(userAuth.Id!, request.Nickname))
+                if (!SupportManager.IsNicknameValid(userAuth, request.Nickname))
                     return BadRequest(new { message = "[Никнейм] введённый никнейм не совпадает с текущим" });
 
                 var provider = userAuth.AppMetadata?.GetValueOrDefault("provider")?.ToString() ?? "email";
@@ -141,19 +141,11 @@ namespace api.Controllers
 
                 var uid = userAuth.Id!;
 
-                var ownedProjects = await _client.From<Project>().Where(p => p.OwnerId == uid).Get();
-                foreach (var p in ownedProjects.Models)
-                {
-                    await _SupMan.DeleteFolderAsync("ProjectMedia", p.ProjectId);
-                    await _SupMan.DeleteFolderAsync("ProjectMediaDraft", p.ProjectId);
-                }
+                var projectIds = (await _client.From<Project>().Where(p => p.OwnerId == uid).Get())
+                    .Models.Select(p => p.ProjectId).ToList();
 
-                var ownedEvents = await _client.From<Event>().Where(e => e.OwnerId == uid).Get();
-                foreach (var e in ownedEvents.Models)
-                {
-                    await _SupMan.DeleteEventMedia(e.EventId);
-                }
-                await _SupMan.DeleteFolderAsync("Avatar", uid);
+                var eventIds = (await _client.From<Event>().Where(e => e.OwnerId == uid).Get())
+                    .Models.Select(e => e.EventId).ToList();
 
                 var supabaseUrl = Environment.GetEnvironmentVariable("SUPABASE_URL");
                 var serviceKey = Environment.GetEnvironmentVariable("SUPABASE_KEY");
@@ -167,6 +159,18 @@ namespace api.Controllers
                 if (!response.IsSuccessStatusCode)
                     return StatusCode(500, new { message = "Ошибка удаления аккаунта в Supabase" });
 
+                foreach (var id in projectIds)
+                {
+                    await _SupMan.DeleteFolderAsync("ProjectMedia", id);
+                    await _SupMan.DeleteFolderAsync("ProjectMediaDraft", id);
+                }
+
+                foreach (var id in eventIds)
+                {
+                    await _SupMan.DeleteEventMedia(id);
+                }
+
+                await _SupMan.DeleteFolderAsync("Avatar", uid);
                 await _SupMan.Cache.EverythingChangedAsync();
 
                 return Ok(new { message = "Аккаунт успешно удалён" });

@@ -84,7 +84,8 @@ export const ProjectPublicView = ({ data, team, vacancies, onBack, isPreview = f
   const [leaveError, setLeaveError] = useState<string | null>(null)
 
   const handleLeave = async () => {
-    if (!myMembership || !window.confirm('Покинуть проект?')) return
+    if (!myMembership)
+      return
     try {
       await projectMembersApi.leave(myMembership.memberId)
       await invalidateModeration(queryClient)

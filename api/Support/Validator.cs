@@ -353,8 +353,10 @@ namespace api.Support
         {
             if (dto.DeletedMediaFiles != null)
             {
-                if (dto.DeletedMediaFiles.Count > 500) return "[Черновик] слишком много файлов";
-                if (dto.DeletedMediaFiles.Any(f => ValidateMediaFileName(f) != null)) return "[Медиа] недопустимое имя файла";
+                if (dto.DeletedMediaFiles.Count > 500)
+                    return "[Черновик] слишком много файлов";
+                if (dto.DeletedMediaFiles.Any(f => ValidateMediaFileName(f) != null))
+                    return "[Медиа] недопустимое имя файла";
             }
 
             if (dto.Vacancies != null)
@@ -362,10 +364,15 @@ namespace api.Support
                 if (dto.Vacancies.Count > 100) return "[Черновик] слишком много заявок";
                 foreach (var v in dto.Vacancies)
                 {
-                    if ((v.VacancyId?.Length ?? 0) > 64) return "[Черновик] некорректный идентификатор заявки";
-                    if ((v.Title?.Length ?? 0) > Limits.Vacancy.TitleMax) return $"[Название роли] максимум {Limits.Vacancy.TitleMax} символов";
-                    if ((v.Description?.Length ?? 0) > Limits.Vacancy.DescriptionMax) return $"[Описание] максимум {Limits.Vacancy.DescriptionMax} символов";
-                    if (v.RequiredTags.Count > 30 || v.RequiredTags.Any(t => t.Length > 50)) return "[Теги] слишком много или слишком длинные";
+                    if ((v.VacancyId?.Length ?? 0) > 64)
+                        return "[Черновик] некорректный идентификатор заявки";
+                    if ((v.Title?.Length ?? 0) > Limits.Vacancy.TitleMax)
+                        return $"[Название роли] максимум {Limits.Vacancy.TitleMax} символов";
+                    if ((v.Description?.Length ?? 0) > Limits.Vacancy.DescriptionMax)
+                        return $"[Описание] максимум {Limits.Vacancy.DescriptionMax} символов";
+                    if ((v.RequiredTags?.Count ?? 0) > 30 || (v.RequiredTags ?? []).Any(t => t.Length > 50))
+                        return "[Теги] слишком много или слишком длинные";
+
                 }
             }
 
@@ -379,9 +386,11 @@ namespace api.Support
                 if (dto.EditedRoles.Count > 200) return "[Черновик] слишком много ролей";
                 foreach (var (id, role) in dto.EditedRoles)
                 {
-                    if (id.Length > 64) return "[Черновик] некорректный идентификатор";
+                    if (id.Length > 64)
+                        return "[Черновик] некорректный идентификатор";
                     var roleError = ValidateRole(role);
-                    if (roleError != null) return roleError;
+                    if (roleError != null)
+                        return roleError;
                 }
             }
             return null;

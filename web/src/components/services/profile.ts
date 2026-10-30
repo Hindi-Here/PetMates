@@ -38,6 +38,12 @@ export const profileApi = {
     return await r.json();
   },
 
+  // Удалить аватар
+  deleteAvatar: async (): Promise<void> => {
+    const r = await authFetch('/api/profile/me/avatar', { method: 'DELETE' });
+    if (!r.ok) throw new Error(await readError(r, 'Ошибка удаления аватара'));
+  },
+
   // Получить чужой профиль
   getUserById: async (userId: string): Promise<ThirdProfileData> => {
     const r = await authFetch(`/api/user/${userId}`);

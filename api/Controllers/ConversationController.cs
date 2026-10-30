@@ -293,7 +293,6 @@ namespace api.Controllers
 
                 var newMessage = new Message
                 {
-                    MessageId = Guid.NewGuid().ToString(),
                     ConversationId = dto.ConversationId,
                     SenderId = userId,
                     Content = dto.Content,
@@ -301,7 +300,9 @@ namespace api.Controllers
                     CreatedAt = DateTime.UtcNow
                 };
 
-                await _client.From<Message>().Insert(newMessage);
+                var inserted = (await _client.From<Message>().Insert(newMessage)).Models.FirstOrDefault();
+                if (inserted == null)
+                    return BadRequest(new { message = "Не удалось отправить сообщение" });
 
                 var now = DateTime.UtcNow;
 
@@ -318,11 +319,11 @@ namespace api.Controllers
 
                 return Ok(new
                 {
-                    newMessage.MessageId,
-                    newMessage.SenderId,
-                    newMessage.Content,
-                    newMessage.ParentMessageId,
-                    CreatedAt = newMessage.CreatedAt?.ToString("o")
+                    inserted.MessageId,
+                    inserted.SenderId,
+                    inserted.Content,
+                    inserted.ParentMessageId,
+                    CreatedAt = inserted.CreatedAt?.ToString("o")
                 });
             }
             catch (Exception ex) { return this.Fail(ex); }
@@ -398,6 +399,7 @@ namespace api.Controllers
 
         // Удалить сообщение (только для отправителя)
         [HttpDelete("message/{messageId}")]
+        [EnableRateLimiting("write")]
         public async Task<IActionResult> DeleteMessage(string messageId)
         {
             try
@@ -416,7 +418,10 @@ namespace api.Controllers
 
                 await _client.From<Message>()
                     .Where(m => m.MessageId == messageId)
-                    .Delete();
+                    .Set(m => m.IsDeleted, true)
+                    .Set(m => m.Content!, "")
+                    .Set(m => m.UpdatedAt!, DateTime.UtcNow)
+                    .Update();
 
                 return Ok(new { message = "Сообщение удалено" });
             }
@@ -522,12 +527,24 @@ namespace api.Controllers
                 if (await GetMyConversation(sourceMsg.ConversationId, userId) == null)
                     return Forbid();
 
-                if (await GetMyConversation(dto.TargetConversationId, userId) == null)
+                var targetConv = await GetMyConversation(dto.TargetConversationId, userId);
+                if (targetConv == null)
                     return Forbid();
+
+                var otherId = targetConv.UserOneId == userId ? targetConv.UserTwoId : targetConv.UserOneId;
+                var other = await _SupMan.GetAccessAsync(otherId);
+
+                if (!other.Exists || (other.IsBanned && !await _SupMan.IsStaffAsync(userId)))
+                    return BadRequest(new { message = "Пользователь недоступен" });
+
+                if (await _SupMan.IsBlockedBetweenAsync(userId, otherId))
+                    return BadRequest(new { message = "Невозможно отправить сообщение этому пользователю" });
 
                 var error = Validator.ValidateChatMessage(sourceMsg.Content);
                 if (error != null)
                     return BadRequest(new { message = error });
+
+                var author = sourceMsg.SenderId == null ? null : await _SupMan.GetUserCachedAsync(sourceMsg.SenderId);
 
                 var newMessage = new Message
                 {
@@ -535,6 +552,10 @@ namespace api.Controllers
                     ConversationId = dto.TargetConversationId,
                     SenderId = userId,
                     Content = sourceMsg.Content,
+                    IsForwarded = true,
+                    ForwardedFromNickname = sourceMsg.IsForwarded
+                        ? sourceMsg.ForwardedFromNickname
+                        : author?.Nickname ?? "Пользователь",
                     CreatedAt = DateTime.UtcNow
                 };
 
@@ -559,10 +580,15 @@ namespace api.Controllers
                     newMessage.ConversationId,
                     newMessage.SenderId,
                     newMessage.Content,
+                    newMessage.IsForwarded,
+                    newMessage.ForwardedFromNickname,
                     CreatedAt = newMessage.CreatedAt?.ToString("o")
                 });
             }
-            catch (Exception ex) { return this.Fail(ex); }
+            catch (Exception ex)
+            {
+                return this.Fail(ex);
+            }
         }
     }
 }

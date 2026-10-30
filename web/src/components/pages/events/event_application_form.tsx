@@ -86,7 +86,6 @@ export const EventApplicationForm = ({ data }: { data: EventPublicData }) => {
   })
 
   const handleWithdraw = () => {
-    if (!window.confirm('Отозвать заявку?')) return
     withdrawMutation.mutate()
   }
 

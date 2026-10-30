@@ -336,7 +336,6 @@ export const Chat = () => {
   }
 
   const handleBulkDeleteForMe = async () => {
-    if (!window.confirm(`Удалить ${selectedIds.size} сообщений у себя?`)) return
     await Promise.all(Array.from(selectedIds).map(id => deleteForMeMutation.mutateAsync(id)))
     exitSelectionMode()
   }
@@ -370,7 +369,7 @@ export const Chat = () => {
         }
       }}
     >
-      <img src={c.otherUserAvatarUrl || '/default-avatar.png'} alt='' />
+      <img src={c.otherUserAvatarUrl || '/default-avatar.png'} />
       <span>{c.otherUserNickname || 'Пользователь'}</span>
     </div>
   )
@@ -560,7 +559,7 @@ export const Chat = () => {
           className='chat-header-user'
           onClick={() => currentConversation && navigate(`/profile/${currentConversation.otherUserId}/info`)}
         >
-          <img className='chat-header-avatar' src={otherUser?.avatarUrl || '/default-avatar.png'} alt={otherUser?.nickname || 'User'} />
+          <img className='chat-header-avatar' src={otherUser?.avatarUrl || '/default-avatar.png'}/>
           <div className='chat-header-info'>
             <p className='chat-header-nickname'>{otherUser?.nickname || currentConversation?.otherUserNickname || 'Пользователь'}</p>
             <p className='chat-header-status'>
@@ -643,7 +642,7 @@ export const Chat = () => {
         <textarea
           ref={textareaRef}
           className='chat-textarea'
-          placeholder='Написать сообщение...'
+          placeholder='Написать сообщение'
           value={newMessage}
           maxLength={LIMITS.chat.messageMax}
           onChange={(e) => setNewMessage(e.target.value)}

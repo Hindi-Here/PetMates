@@ -83,7 +83,7 @@ export const UserCard = ({
       await moderationApi.unbanUser(user.userId)
       await invalidateModeration(queryClient)
     } catch (e) {
-      alert(e instanceof Error ? e.message : 'Не удалось разблокировать пользователя')
+      console.error(e instanceof Error ? e.message : 'Не удалось разблокировать пользователя')
     } finally {
       setBusy(false)
       setIsMenuOpen(false)
@@ -96,7 +96,7 @@ export const UserCard = ({
       await moderationApi.setRole(user.userId, newRole)
       await invalidateModeration(queryClient)
     } catch (e) {
-      alert(e instanceof Error ? e.message : 'Не удалось изменить роль')
+      console.error(e instanceof Error ? e.message : 'Не удалось изменить роль')
     } finally {
       setBusy(false)
       setIsMenuOpen(false)
@@ -288,7 +288,7 @@ export const UserCard = ({
 
         <div className='info-place-container'>
           <div className='avatar-container'>
-            <img className='avatar-ico' src={user.avatarUrl || '/default-avatar.png'} alt={user.nickname} />
+            <img className='avatar-ico' src={user.avatarUrl || '/default-avatar.png'} />
           </div>
           <div className='info-container'>
             <div className='nickname-row' ref={rowRef}>

@@ -5,10 +5,14 @@
   padding-bottom: rem(36);
 
   .contacts-list .contact-item .contact-link,
-  .profile-area-container .description-text { overflow-wrap: anywhere; }
+  .profile-area-container .description-text {
+    overflow-wrap: anywhere;
+  }
 }
 
-.profile-field-container { grid-template-columns: rem(220) minmax(0, 1fr); }
+.profile-field-container {
+  grid-template-columns: rem(220) minmax(0, 1fr);
+}
 
 .profile-header-container {
   display: flex;
@@ -18,7 +22,9 @@
   position: relative;
 
   .contacts-list .contact-item .contact-link,
-  .profile-area-container .description-text { overflow-wrap: anywhere; }
+  .profile-area-container .description-text {
+    overflow-wrap: anywhere;
+  }
 
   .profile-avatar {
     width: rem(100);
@@ -123,6 +129,25 @@
       pointer-events: none;
     }
   }
+
+  .profile-action-btn.danger {
+    background-color: var(--button-danger-bg-color);
+
+    .action-ico {
+      fill: var(--important-color);
+      color: var(--important-color);
+    }
+
+    &:hover:not(:disabled) {
+      background: color-mix(in srgb, var(--button-danger-bg-color), var(--important-color) 4%);
+      transform: scale(0.975);
+    }
+
+    &:active:not(:disabled) {
+      background: color-mix(in srgb, var(--button-danger-bg-color), var(--important-color) 6%);
+      transform: scale(0.95);
+    }
+  }
 }
 
 .profile-moderation-menu-wrapper {
@@ -136,21 +161,28 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: transparent;
-  border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 70%);
+  background-color: var(--button-danger-bg-color);
+  border: none;
   border-radius: var(--border-radius-base);
   transition: 0.25s;
   flex-shrink: 0;
-  transform: scale(1); 
+  padding: 0;
 
   .action-ico {
     width: rem(20);
     height: rem(20);
-    color: var(--neutral-100);
+    fill: var(--important-color);
+    color: var(--important-color);
   }
 
   &:hover {
-    background: color-mix(in srgb, var(--neutral-100), transparent 95%);
+    background: color-mix(in srgb, var(--button-danger-bg-color), var(--important-color) 4%);
+    transform: scale(0.975);
+  }
+
+  &:active {
+    background: color-mix(in srgb, var(--button-danger-bg-color), var(--important-color) 6%);
+    transform: scale(0.95);
   }
 }
 
@@ -183,7 +215,7 @@
     &:hover {
       background: color-mix(in srgb, var(--neutral-100), transparent 95%);
     }
-    
+
     &.danger {
       color: var(--important-color);
     }
@@ -203,7 +235,7 @@
     background-color: var(--base4-color);
     border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 85%);
     border-radius: var(--border-radius-base);
-    
+
     .meta-label {
       font-size: rem(14);
       color: color-mix(in srgb, var(--neutral-100), transparent 50%);
@@ -235,23 +267,36 @@
   .markdown-content {
     p {
       margin: 0 0 rem(10);
-      &:last-child { margin-bottom: 0; }
+
+      &:last-child {
+        margin-bottom: 0;
+      }
     }
 
-    strong { font-weight: bold; }
-    em { font-style: italic; }
+    strong {
+      font-weight: bold;
+    }
+
+    em {
+      font-style: italic;
+    }
 
     ul, ol {
       margin: rem(8) 0 rem(12) rem(24);
       padding-left: rem(24);
     }
 
-    li { margin-bottom: rem(6); }
+    li {
+      margin-bottom: rem(6);
+    }
 
     a {
       color: var(--primary-accent);
       text-decoration: underline;
-      &:hover { text-decoration: none; }
+
+      &:hover {
+        text-decoration: none;
+      }
     }
 
     code {
@@ -302,7 +347,7 @@
       font-weight: bold;
       color: var(--neutral-100);
       margin: 0;
-      white-space: pre-wrap; 
+      white-space: pre-wrap;
     }
   }
 }
@@ -325,21 +370,21 @@
 
     &.empty {
       background-color: color-mix(in srgb, var(--neutral-100), transparent 95%);
-      
+
       .tag-text.empty {
         color: color-mix(in srgb, var(--neutral-100), transparent 50%);
         font-size: rem(14);
-      } 
+      }
     }
   }
 }
 
 .contact-item.empty {
-  width: fit-content; 
+  width: fit-content;
   padding: rem(8) rem(16);
   border-radius: var(--border-radius-base);
   background-color: color-mix(in srgb, var(--neutral-100), transparent 95%);
-        
+
   .contact-text.empty {
     color: color-mix(in srgb, var(--neutral-100), transparent 50%);
     font-size: rem(14);
@@ -375,25 +420,16 @@
   }
 }
 
-.profile-block-btn {
-  height: rem(40);
-  padding: 0 rem(16);
-  border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 70%);
-  border-radius: var(--border-radius-base);
-  background: transparent;
-  color: var(--neutral-100);
-  font-size: rem(13);
-  white-space: nowrap;
-}
-
 @media (max-width: 600px) {
   .profile-header-container {
     height: auto;
-    flex-wrap: nowrap; 
+    flex-wrap: nowrap;
     align-items: center;
 
     .contacts-list .contact-item .contact-link,
-    .profile-area-container .description-text { overflow-wrap: anywhere; }
+    .profile-area-container .description-text {
+      overflow-wrap: anywhere;
+    }
 
     .profile-avatar {
       width: rem(70);
@@ -402,7 +438,7 @@
     }
 
     .profile-username-container {
-      flex: 1; 
+      flex: 1;
       min-width: 0;
       margin-right: rem(8);
     }
@@ -411,11 +447,11 @@
       margin-left: 0;
       flex-shrink: 0;
       gap: rem(6);
-      
+
       .profile-action-btn {
         width: rem(40);
         height: rem(40);
-        
+
         .action-ico {
           width: rem(18);
           height: rem(18);
@@ -474,11 +510,10 @@
     justify-content: center;
 
     .info-ico {
-
       width: rem(125);
       height: rem(125);
       fill: var(--important-color);
-      align-self: center; 
+      align-self: center;
     }
 
     .info-comment {

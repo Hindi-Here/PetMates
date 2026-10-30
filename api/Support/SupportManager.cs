@@ -1052,10 +1052,13 @@ namespace api.Support
         }
 
         // Кого затрагивает блокировка
-        public async Task<(List<(string ResponderId, string ProjectName, string VacancyName)> Responders, List<(string InviteeId, string ProjectName, string Role)> Invitees)> GetPendingThirdParties(string ownerId)
+        public async Task<(
+            List<(string ResponderId, string ProjectId, string ProjectName, string VacancyName)> Responders,
+            List<(string InviteeId, string ProjectId, string ProjectName, string Role)> Invitees
+        )> GetPendingThirdParties(string ownerId)
         {
-            var responders = new List<(string, string, string)>();
-            var invitees = new List<(string, string, string)>();
+            var responders = new List<(string, string, string, string)>();
+            var invitees = new List<(string, string, string, string)>();
 
             var projects = await _client.From<Project>().Where(p => p.OwnerId == ownerId).Get();
 
@@ -1068,14 +1071,18 @@ namespace api.Support
                         .Where(r => r.VacancyId == vacancy.VacancyId && r.Status == "pending")
                         .Get();
                     foreach (var responderId in vacancyResponses.Models.Select(r => r.UserId).Distinct())
-                        responders.Add((responderId, project.Title, vacancy.Title));
+                    {
+                        responders.Add((responderId, project.ProjectId, project.Title, vacancy.Title));
+                    }
                 }
 
                 var invites = await _client.From<Invite>()
                     .Where(i => i.ProjectId == project.ProjectId && i.Status == "pending")
                     .Get();
                 foreach (var invite in invites.Models)
-                    invitees.Add((invite.UserId, project.Title, invite.Role));
+                {
+                    invitees.Add((invite.UserId, project.ProjectId, project.Title, invite.Role));
+                }
             }
 
             return (responders, invitees);

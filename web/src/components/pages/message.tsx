@@ -139,7 +139,7 @@ export const Messages = () => {
       >
         <div className='found-user-info'>
           <div className='found-user-avatar'>
-            <img src={user.avatarUrl || '/default-avatar.png'} alt={user.nickname} />
+            <img src={user.avatarUrl || '/default-avatar.png'} />
           </div>
           <p className='found-user-nickname'>@{user.nickname}</p>
         </div>
@@ -158,7 +158,7 @@ export const Messages = () => {
     >
       <div className='conversation-info-block'>
         <div className='conversation-avatar'>
-          <img src={conv.otherUserAvatarUrl || '/default-avatar.png'} alt={conv.otherUserNickname || 'User'} />
+          <img src={conv.otherUserAvatarUrl || '/default-avatar.png'} />
         </div>
 
         <div className='conversation-info'>

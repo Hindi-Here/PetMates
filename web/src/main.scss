@@ -74,6 +74,20 @@
 
   --font-family-base: "Roboto";
   --font-family-logo: "Rokkitt";
+
+  // Кнопки и события кнопок
+  --btn-primary-bg: color-mix(in srgb, var(--primary-accent), var(--neutral-0) 12%);
+  --btn-primary-hover: color-mix(in srgb, var(--btn-primary-bg), black 8%);
+  --btn-primary-active: color-mix(in srgb, var(--btn-primary-bg), black 14%);
+
+  --btn-danger-bg: color-mix(in srgb, var(--important-color), var(--neutral-0) 12%);
+  --btn-danger-hover: color-mix(in srgb, var(--btn-danger-bg), black 8%);
+  --btn-danger-active: color-mix(in srgb, var(--btn-danger-bg), black 14%);
+
+  --btn-neutral-bg: var(--card-bg-color);
+  --btn-neutral-hover: color-mix(in srgb, var(--card-bg-color), var(--neutral-100) 5%);
+  --btn-neutral-active: color-mix(in srgb, var(--card-bg-color), var(--neutral-100) 9%);
+  --btn-neutral-border: color-mix(in srgb, var(--neutral-100), transparent 85%);
 }
 
 // Параметры темной темы
@@ -157,12 +171,12 @@
     min-height: 100vh;
 }
 
-*{
+* {
     box-sizing: border-box;
     outline: none;
 
-    &::selection{
-        background-color: color-mix(in srgb, var(--primary-accent), transparent 75%);
+    &::selection {
+        background-color: var(--selection-color, color-mix(in srgb, var(--primary-accent), transparent 75%));
     }
 
     :focus-visible {
@@ -172,14 +186,14 @@
     input:focus-visible, textarea:focus-visible, select:focus-visible { outline: none; }
 }
 
-body{
+body {
     margin: 0;
     padding: 0;
     background-color: var(--base4-color);
     min-height: 80vh;
 }
 
-button{
+button {
     user-select: none;
     font-size: rem(14);
     font-family: var(--font-family-base);
@@ -193,12 +207,8 @@ button{
     } 
 }
 
-p{
+p {
     margin: 0;
-}
-
-.input-error::selection {
-  background-color: color-mix(in srgb, var(--important-color), transparent 75%);
 }
 
 input, textarea, select {
@@ -210,8 +220,8 @@ input, textarea, select {
         color: color-mix(in srgb, var(--neutral-100), transparent 50%);
     }
 
-    &::selection{
-        background-color: color-mix(in srgb, var(--primary-accent), transparent 75%);
+    &::selection {
+        background-color: var(--selection-color, color-mix(in srgb, var(--primary-accent), transparent 75%));
     }
 }
 
@@ -267,12 +277,219 @@ input:-webkit-autofill::selection {
 
 // Адаптивность шрифта
 @media (max-width: 1290px) {
-    html{
+    html {
         font-size: 14px;
     }
 }
 @media (max-width: 1125px) {
-    html{
+    html {
         font-size: 12px;
     }
+}
+
+
+
+// Красные зоны (ошибки, баны, предупреждения)
+.banned-owner-card, .banned-user-card, .banned-member-card,
+.form-header-container.red, .input-error, .team-invite-hint.error, .warning-container,
+.save-error-text, .complete-error-type, .invite-error-text, .field-error-text,
+.media-error-text, .event-field-error, .error-text, .owner-badge,
+.form-field-input.red, .form-field-input.message.red {
+  --selection-color: color-mix(in srgb, var(--important-color), transparent 75%);
+}
+
+// Серые зоны (пустые состояния, нейтральные элементы)
+.empty-activity, .empty-state, .media-item, .attachment-item,
+.team-invite-hint:not(.error):not(.success), .description-preview-empty {
+  --selection-color: color-mix(in srgb, var(--neutral-100), transparent 80%);
+}
+
+// Элементы интерфейса (кнопки и изображения)
+button, .dropdown-container, .sort-type-container, .sort-vector-ico-container,
+.staff-filter-container, .banned-filter-container, .toggle-container,
+.preview-label, .preview-toggle-label, .md-toggle-label,
+.send-anonymous-text, .send-anonymous-helper-text,
+.form-header-container, .form-remember-me-container, .auth-service-container,
+.auth-change-format-container, .form-complete-button,
+.tab, .activity-tab, .event-tab, .navigation-panel-item-container {
+  user-select: none;
+}
+
+img {
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+// Основные кнопки
+.manage-button, .form-manage-button, .form-complete-button, 
+.send-manage-button, .event-submit-btn, .vacancy-apply-button,
+.invite-button, .return-button, .rate-button, .search-button,
+.team-invite-btn, .warning-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: rem(6);
+  height: rem(40);
+  padding: 0 rem(16);
+  border: 1px solid transparent;
+  border-radius: var(--border-radius-base);
+  font-size: rem(14);
+  font-weight: bold;
+  line-height: 1;
+  white-space: nowrap;
+  transition: background-color 0.25s, border-color 0.25s, color 0.25s, transform 0.25s;
+  
+  background-color: var(--btn-primary-bg);
+  color: var(--button-white-text);
+  
+  &:disabled {
+    background-color: color-mix(in srgb, var(--btn-primary-bg), var(--neutral-100) 15%);
+    color: color-mix(in srgb, var(--button-white-text), transparent 50%);
+    border-color: transparent;
+    pointer-events: none;
+    transform: none !important;
   }
+  
+  &:hover:not(:disabled) {
+    background-color: var(--btn-primary-hover);
+    transform: scale(0.99);
+  }
+  
+  &:active:not(:disabled) {
+    background-color: var(--btn-primary-active);
+    transform: scale(0.975);
+  }
+  
+  &.cancellation, &.back {
+    width: rem(125);
+    background-color: var(--btn-neutral-bg);
+    color: var(--neutral-100);
+    border-color: var(--btn-neutral-border);
+    font-weight: normal;
+    filter: none;
+    
+    &:disabled {
+      background-color: color-mix(in srgb, var(--btn-neutral-bg), var(--neutral-100) 5%); // Чуть темнее обычного
+      color: color-mix(in srgb, var(--neutral-100), transparent 50%); // Тусклый черный текст
+      border-color: color-mix(in srgb, var(--neutral-100), transparent 75%);
+      pointer-events: none;
+      transform: none !important;
+    }
+    
+    &:hover:not(:disabled) {
+      background-color: var(--btn-neutral-hover);
+      transform: scale(0.99);
+    }
+    
+    &:active:not(:disabled) {
+      background-color: var(--btn-neutral-active);
+      transform: scale(0.975);
+    }
+  }
+  
+  &.red {
+    background-color: var(--btn-danger-bg);
+    color: var(--important-color);
+    
+    &:disabled {
+      background-color: color-mix(in srgb, var(--btn-danger-bg), var(--neutral-100) 15%); // Чуть приглушенный красный фон
+      color: color-mix(in srgb, var(--important-color), transparent 50%); // Тусклый красный текст
+      border-color: transparent;
+      pointer-events: none;
+      transform: none !important;
+    }
+    
+    &:hover:not(:disabled) {
+      background-color: var(--btn-danger-hover);
+    }
+    
+    &:active:not(:disabled) {
+      background-color: var(--btn-danger-active);
+    }
+  }
+}
+
+// Иконочные кнопки (40×40)
+.moderation-delete-btn, .moderation-delete-project-btn, 
+.project-moderation-delete-btn, .member-remove-badge, 
+.member-reject-badge, .conversation-delete-btn, 
+.attachment-remove-btn, .media-action-btn.delete, 
+.delete-notification-button, .contact-action.reject,
+.comment-remove-badge, .back-button, .event-app-back,
+.member-edit-badge, .conversation-pin-btn, .icon-btn,
+.date-picker-nav, .media-action-btn.copy, .profile-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: rem(40);
+  height: rem(40);
+  padding: 0;
+  border: none;
+  border-radius: var(--border-radius-base);
+  flex-shrink: 0;
+  filter: none !important;
+  will-change: transform;
+  backface-visibility: hidden;
+  transition: background-color 0.25s, transform 0.25s;
+  
+  background-color: var(--button-neutral-bg-color);
+  color: var(--text-secondary-color);
+  
+  &:disabled {
+    background-color: color-mix(in srgb, var(--button-neutral-bg-color), var(--neutral-100) 5%);
+    color: color-mix(in srgb, var(--text-secondary-color), transparent 50%);
+    pointer-events: none;
+    transform: none !important;
+  }
+  
+  &:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--button-neutral-bg-color), var(--neutral-100) 4%);
+    transform: scale(0.975);
+  }
+  
+  &:active:not(:disabled) {
+    background-color: color-mix(in srgb, var(--button-neutral-bg-color), var(--neutral-100) 8%);
+    transform: scale(0.95);
+  }
+  
+  &.reject, &.danger, &.delete {
+    background-color: var(--button-danger-bg-color);
+    color: var(--important-color);
+    
+    &:disabled {
+      background-color: color-mix(in srgb, var(--button-danger-bg-color), var(--neutral-100) 10%);
+      color: color-mix(in srgb, var(--important-color), transparent 50%);
+      pointer-events: none;
+      transform: none !important;
+    }
+    
+    &:hover:not(:disabled) {
+      background-color: color-mix(in srgb, var(--button-danger-bg-color), var(--important-color) 6%);
+    }
+    
+    &:active:not(:disabled) {
+      background-color: color-mix(in srgb, var(--button-danger-bg-color), var(--important-color) 12%);
+    }
+  }
+  
+  &.accept, &.primary {
+    background-color: var(--btn-primary-bg);
+    color: var(--button-white-text);
+    
+    &:disabled {
+      background-color: color-mix(in srgb, var(--btn-primary-bg), var(--neutral-100) 15%);
+      color: color-mix(in srgb, var(--button-white-text), transparent 50%);
+      pointer-events: none;
+      transform: none !important;
+    }
+    
+    &:hover:not(:disabled) {
+      background-color: var(--btn-primary-hover);
+    }
+    
+    &:active:not(:disabled) {
+      background-color: var(--btn-primary-active);
+    }
+  }
+}
+

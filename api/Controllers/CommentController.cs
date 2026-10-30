@@ -76,7 +76,6 @@ namespace api.Controllers
 
                 var newComment = new Comment
                 {
-                    CommentId = Guid.NewGuid().ToString(),
                     ReferenceId = dto.ReferenceId,
                     ReferenceType = dto.ReferenceType,
                     UserId = userId,
@@ -88,20 +87,24 @@ namespace api.Controllers
                     CreatedAt = DateTime.UtcNow
                 };
 
-                await _client.From<Comment>().Insert(newComment, new QueryOptions { Returning = QueryOptions.ReturnType.Minimal });
+                var inserted = (await _client.From<Comment>().Insert(newComment)).Models.FirstOrDefault();
+                if (inserted == null)
+                    return BadRequest(new { message = "Не удалось создать комментарий" });
+
                 await _SupMan.Cache.CommentsChangedAsync(dto.ReferenceType, dto.ReferenceId);
-                await _SupMan.ProcessMentions(newComment, userId);
+
+                await _SupMan.ProcessMentions(inserted, userId);
 
                 return Ok(new
                 {
-                    newComment.CommentId,
-                    newComment.UserId,
-                    newComment.ParentCommentId,
-                    newComment.Content,
-                    newComment.IsEdited,
-                    newComment.IsDeleted,
-                    newComment.DeletedByModerator,
-                    CreatedAt = newComment.CreatedAt?.ToString("o")
+                    inserted.CommentId,
+                    inserted.UserId,
+                    inserted.ParentCommentId,
+                    inserted.Content,
+                    inserted.IsEdited,
+                    inserted.IsDeleted,
+                    inserted.DeletedByModerator,
+                    CreatedAt = inserted.CreatedAt?.ToString("o")
                 });
             }
             catch (Exception ex) { return this.Fail(ex); }

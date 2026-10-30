@@ -8,21 +8,18 @@
   padding: rem(40) rem(20);
   text-align: center;
   gap: rem(24);
-
   .error-page-container-icon {
     width: rem(80);
     height: rem(80);
-    color: var(--primary-accent); 
+    color: var(--primary-accent);
     opacity: 0.85;
   }
-
   .error-page-container-title {
     font-size: rem(24);
     font-weight: 600;
     color: var(--neutral-100);
     margin: 0;
   }
-
   .error-page-container-message {
     font-size: rem(16);
     color: color-mix(in srgb, var(--neutral-100), transparent 40%);
@@ -30,7 +27,6 @@
     line-height: 1.5;
     margin: 0;
   }
-
   .error-page-container-button {
     margin-top: rem(8);
     display: flex;
@@ -39,22 +35,15 @@
     gap: rem(6);
     width: rem(175);
     height: rem(40);
-    background-color: color-mix(in srgb, var(--primary-accent), var(--neutral-0) 12%);
+    background-color: color-mix(
+      in srgb,
+      var(--primary-accent),
+      var(--neutral-0) 12%
+    );
     color: var(--button-white-text);
     font-weight: bold;
     border-radius: var(--border-radius-base);
     border: none;
-    transition: 0.25s;
     box-sizing: border-box;
-
-    &:hover {
-        filter: brightness(0.975);
-        transform: scale(0.99);
-    }
-
-    &:active {
-        transform: scale(0.95);
-        filter: brightness(0.975);
-    }
   }
 }

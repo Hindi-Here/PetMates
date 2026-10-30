@@ -22,19 +22,19 @@ a {
   transition: 0.25s;
 
   &:hover {
-    box-shadow: inset 2px 0 0 0 var(--primary-accent); 
+    box-shadow: inset 2px 0 0 0 var(--primary-accent);
   }
 
   .about-title {
     font-weight: bold;
     font-size: rem(20);
-    text-indent: rem(20); 
+    text-indent: rem(20);
   }
 
   .about-description {
     line-height: 1.5;
     text-align: justify;
-    text-indent: rem(20); 
+    text-indent: rem(20);
 
     .about-description-link {
       transition: 0.25s;
@@ -47,13 +47,15 @@ a {
         &:visited {
           color: var(--primary-accent);
         }
+
         &:hover {
           filter: brightness(0.975);
         }
+
         &:active {
           filter: brightness(0.95);
         }
-      }  
+      }
     }
   }
 
@@ -79,7 +81,7 @@ a {
     }
 
     .sort-group-container {
-      position: relative;    
+      position: relative;
       height: rem(40);
     }
 
@@ -146,13 +148,13 @@ a {
   .send-area {
     height: rem(225);
     width: 100%;
-    font-family: inherit; 
+    font-family: inherit;
     font-size: inherit;
     line-height: 1.5;
     resize: none;
     outline: none;
     transition: 0.25s;
-    border: none; 
+    border: none;
     box-shadow: inset 1px 0 0 0 color-mix(in srgb, var(--neutral-100), transparent 75%);
     border-radius: var(--border-radius-base);
     padding: rem(12);
@@ -192,14 +194,13 @@ a {
 
     &:disabled {
       opacity: 0.4;
-      pointer-events: none; 
+      pointer-events: none;
     }
   }
 
   .send-anonymous-box {
     appearance: none;
     -webkit-appearance: none;
-  
     width: rem(16);
     height: rem(16);
     border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 50%);
@@ -213,7 +214,7 @@ a {
     &:checked {
       background-color: var(--primary-accent);
       border-color: var(--primary-accent);
-    
+
       &::after {
         content: '';
         position: absolute;
@@ -231,7 +232,7 @@ a {
       opacity: 0.4;
     }
   }
-  
+
   .send-anonymous-text {
     font-size: rem(12);
     color: color-mix(in srgb, var(--neutral-100), transparent 50%);
@@ -240,12 +241,12 @@ a {
   .send-anonymous-helper-container {
     display: flex;
     gap: rem(6);
-    align-items: center; 
+    align-items: center;
     padding-top: rem(6);
     padding-bottom: rem(6);
     padding-left: rem(12);
     flex-basis: 100%;
-        
+
     .send-anonymous-helper-ico {
       width: rem(10);
       height: rem(10);
@@ -260,8 +261,13 @@ a {
 }
 
 @keyframes fadeOut {
-  from { opacity: 1; }
-  to { opacity: 0; }
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
 }
 
 .message-auto-hide {
@@ -353,6 +359,7 @@ a {
   flex-direction: column;
   gap: rem(6);
 }
+
 .attachment-item-wrapper {
   display: flex;
   align-items: center;
@@ -370,7 +377,7 @@ a {
   border-radius: var(--border-radius-base);
   background: var(--unborder-content-bg-color);
   min-width: 0;
-  height: 100%; 
+  height: 100%;
 }
 
 .attachment-name {
@@ -382,7 +389,7 @@ a {
   flex: 1;
   min-width: 0;
   margin: 0;
-  line-height: 1; 
+  line-height: 1;
 }
 
 .attachment-size {
@@ -391,38 +398,10 @@ a {
   flex-shrink: 0;
   white-space: nowrap;
   margin: 0;
-  line-height: 1; 
+  line-height: 1;
 }
 
 .attachment-remove-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: rem(40);
-  height: rem(40);
-  border-radius: var(--border-radius-base);
-  border: none;
-  background-color: var(--uncard-button-danger-bg-color);
-  color: var(--important-color);
-  transition: 0.25s;
-  flex-shrink: 0;
-  padding: 0;
-  align-self: center;
-
-  &:hover:not(:disabled) {
-    background: color-mix(in srgb, var(--uncard-button-danger-bg-color), var(--important-color) 4%);
-    transform: scale(0.975);
-  }
-
-  &:active:not(:disabled){
-    background: color-mix(in srgb, var(--uncard-button-danger-bg-color), var(--important-color) 6%);
-    transform: scale(0.95);
-  }
-
-  &:disabled {
-    opacity: 0.4;
-  }
-
   .attachment-remove-ico {
     width: rem(16);
     height: rem(16);
@@ -434,6 +413,7 @@ a {
     width: 90%;
     margin-left: 5%;
   }
+
   .about-section-container {
     padding: rem(12);
     box-shadow: none;

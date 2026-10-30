@@ -34,7 +34,6 @@ namespace api.Controllers
                         "name" => e.Vacancy.Title?.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase) == true,
                         "tag" => SupportManager.ParseSkills(string.Join(" ", e.Vacancy.RequiredTags ?? []))
                                                     .Any(t => t.Contains(query, StringComparison.CurrentCultureIgnoreCase)),
-                        "author" => e.OwnerNickname?.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase) == true,
                         "project" => e.Project?.Title?.ToLower().Contains(query, StringComparison.CurrentCultureIgnoreCase) == true,
                         _ => true,
                     })];
@@ -45,7 +44,6 @@ namespace api.Controllers
                     "date" => sortAsc ? [.. enriched.OrderBy(e => e.Vacancy.PublishedAt)] : [.. enriched.OrderByDescending(e => e.Vacancy.PublishedAt)],
                     "alphabet" => sortAsc ? [.. enriched.OrderBy(e => e.Vacancy.Title)] : [.. enriched.OrderByDescending(e => e.Vacancy.Title)],
                     "count" => sortAsc ? [.. enriched.OrderBy(e => e.Project?.RatingCount ?? 0)] : [.. enriched.OrderByDescending(e => e.Project?.RatingCount ?? 0)],
-                    "activity" => sortAsc ? [.. enriched.OrderBy(e => e.MembersCount)] : [.. enriched.OrderByDescending(e => e.MembersCount)],
                     _ => enriched
                 };
 
@@ -80,13 +78,16 @@ namespace api.Controllers
             {
                 var authHeader = Request.Headers.Authorization.ToString();
                 var currentUserId = await _SupMan.GetUserIdAsync(authHeader);
-                if (!string.IsNullOrEmpty(currentUserId)) await _SupMan.UpdateLastOnlineAsync(currentUserId);
+                if (!string.IsNullOrEmpty(currentUserId))
+                    await _SupMan.UpdateLastOnlineAsync(currentUserId);
 
                 var proj = (await _client.From<Project>().Where(p => p.ProjectId == projectId).Get()).Models.FirstOrDefault();
                 if (proj == null || !await _SupMan.CanViewProject(proj, currentUserId, await _SupMan.IsStaffAsync(currentUserId)))
                     return NotFound();
 
                 var response = await _client.From<Vacancy>().Where(v => v.ProjectId == projectId).Get();
+
+                var owner = await _SupMan.GetUserCachedAsync(proj.OwnerId);
 
                 var vacancies = response.Models.Select(v => new
                 {
@@ -101,8 +102,8 @@ namespace api.Controllers
                     PublishedAt = v.PublishedAt?.ToString("o"),
                     proj.RatingCount,
                     proj.OwnerId,
-                    OwnerSystemRole = proj.OwnerId != null ? "user" : null,
-                    OwnerIsBanned = false
+                    OwnerSystemRole = owner?.SystemRole ?? "user",
+                    OwnerIsBanned = owner?.IsBanned ?? false
                 }).ToList();
 
                 return Ok(vacancies);
@@ -176,8 +177,7 @@ namespace api.Controllers
                 var tagsToValidate = dto.RequiredTags != null ? string.Join(" ", dto.RequiredTags) : (v.RequiredTags != null ? string.Join(" ", v.RequiredTags) : null);
 
                 var error = Validator.ValidateVacancy(titleToValidate, descToValidate, tagsToValidate);
-                if (error != null)
-                    return BadRequest(new { message = error });
+                if (error != null) return BadRequest(new { message = error });
 
                 await _client.From<Vacancy>()
                     .Where(x => x.VacancyId == vacancyId)
@@ -188,9 +188,27 @@ namespace api.Controllers
                     .Set(x => x.IsOpen, dto.IsOpen ?? v.IsOpen)
                     .Update();
 
+                if (titleToValidate != v.Title)
+                {
+                    await _client.From<Invite>()
+                        .Where(i => i.ProjectId == v.ProjectId && i.Role == v.Title)
+                        .Set(i => i.Role, titleToValidate)
+                        .Update();
+                }
+
                 await _SupMan.Cache.VacanciesChangedAsync();
 
-                return Ok(new { v.VacancyId, v.ProjectId, Title = titleToValidate, Role = dto.Role ?? v.Role, Description = descToValidate, RequiredTags = dto.RequiredTags ?? v.RequiredTags, IsOpen = dto.IsOpen ?? v.IsOpen, PublishedAt = v.PublishedAt?.ToString("o") });
+                return Ok(new
+                {
+                    v.VacancyId,
+                    v.ProjectId,
+                    Title = titleToValidate,
+                    Role = dto.Role ?? v.Role,
+                    Description = descToValidate,
+                    RequiredTags = dto.RequiredTags ?? v.RequiredTags,
+                    IsOpen = dto.IsOpen ?? v.IsOpen,
+                    PublishedAt = v.PublishedAt?.ToString("o")
+                });
             }
             catch (Exception ex) { return this.Fail(ex); }
         }

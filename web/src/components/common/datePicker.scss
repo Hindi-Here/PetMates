@@ -56,8 +56,12 @@
     border-radius: var(--border-radius-base);
     box-shadow: 0 4px 4px rgba(0, 0, 0, 0.25);
 
-    &.left { left: 0; }
-    &.right { right: 0; }
+    &.left {
+      left: 0;
+    }
+    &.right {
+      right: 0;
+    }
   }
 
   .date-picker-head {
@@ -87,11 +91,19 @@
     transition: 0.25s;
 
     &:hover {
-      background: color-mix(in srgb, var(--button-neutral-bg-color), var(--neutral-100) 4%);
+      background: color-mix(
+        in srgb,
+        var(--button-neutral-bg-color),
+        var(--neutral-100) 4%
+      );
     }
 
     &:active {
-      background: color-mix(in srgb, var(--button-neutral-bg-color), var(--neutral-100) 6%);
+      background: color-mix(
+        in srgb,
+        var(--button-neutral-bg-color),
+        var(--neutral-100) 6%
+      );
     }
 
     .date-picker-nav-ico {
@@ -99,8 +111,12 @@
       height: rem(14);
       fill: color-mix(in srgb, var(--neutral-100), transparent 40%);
 
-      &.prev { transform: rotate(90deg); }
-      &.next { transform: rotate(-90deg); }
+      &.prev {
+        transform: rotate(90deg);
+      }
+      &.next {
+        transform: rotate(-90deg);
+      }
     }
   }
 
@@ -180,7 +196,9 @@
   .date-picker .date-picker-popup.left,
   .date-picker .date-picker-popup.right {
     position: fixed;
-    top: 50%; left: 50%; right: auto;
+    top: 50%;
+    left: 50%;
+    right: auto;
     transform: translate(-50%, -50%);
     width: min(#{rem(300)}, calc(100vw - 32px));
     z-index: 10001;

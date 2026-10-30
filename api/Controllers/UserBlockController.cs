@@ -29,7 +29,7 @@ namespace api.Controllers
         }
 
         // Заблокировать
-        [HttpPost("{targetId}")]
+        [HttpPost("{targetId}")] 
         [EnableRateLimiting("write")]
         public async Task<IActionResult> Block(string targetId)
         {
@@ -38,17 +38,34 @@ namespace api.Controllers
                 var actor = await _SupMan.GetActorAsync(Request.Headers.Authorization.ToString());
                 if (actor == null)
                     return Unauthorized();
+
                 if (targetId == actor.UserId)
                     return BadRequest(new { message = "Нельзя заблокировать себя" });
-                if (!(await _SupMan.GetAccessAsync(targetId)).Exists)
-                    return NotFound();
 
-                await _client.From<UserBlock>().Upsert(
-                    new UserBlock { BlockerId = actor.UserId, BlockedId = targetId },
-                    new QueryOptions { Returning = QueryOptions.ReturnType.Minimal });
+                if (!(await _SupMan.GetAccessAsync(targetId)).Exists)
+                    return NotFound(new { message = "Пользователь не найден" });
+
+                try
+                {
+                    await _client.From<UserBlock>().Insert(
+                        new UserBlock
+                        {
+                            BlockerId = actor.UserId,
+                            BlockedId = targetId,
+                            CreatedAt = DateTime.UtcNow
+                        },
+                        new QueryOptions { Returning = QueryOptions.ReturnType.Minimal });
+                }
+                catch (Exception ex) when (ex.Message.Contains("23505"))
+                {
+                }
+
                 return Ok(new { blocked = true });
             }
-            catch (Exception ex) { return this.Fail(ex); }
+            catch (Exception ex)
+            {
+                return this.Fail(ex);
+            }
         }
 
         // Разблокировать

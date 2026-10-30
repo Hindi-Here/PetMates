@@ -10,9 +10,10 @@ namespace api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class ReportController(ITelegramBotClient botClient) : ControllerBase
+    public class ReportController(ITelegramBotClient botClient, SupportManager supMan) : ControllerBase
     {
         private readonly ITelegramBotClient _bot = botClient;
+        private readonly SupportManager _supMan = supMan;
         private readonly long _chatId = long.Parse(
             Environment.GetEnvironmentVariable("TELEGRAM_CHAT_ID")!
         );
@@ -27,19 +28,20 @@ namespace api.Controllers
             if (messageError != null)
                 return BadRequest(new { error = messageError });
 
-            var nicknameError = Validator.ValidateOptionalText(request.Nickname, Limits.Report.NicknameMax, "Никнейм");
-            if (nicknameError != null)
-                return BadRequest(new { error = nicknameError });
-
             var validFiles = request.Files?.Where(f => f.Length > 0).ToList() ?? [];
 
             var filesError = Validator.ValidateReportAttachments(validFiles);
             if (filesError != null)
                 return BadRequest(new { error = filesError });
 
-            var sender = request.IsAnonymous || string.IsNullOrWhiteSpace(request.Nickname)
-                ? "Аноним"
-                : request.Nickname;
+            var userId = await _supMan.GetUserIdAsync(Request.Headers.Authorization.ToString());
+            var sender = "Аноним";
+
+            if (!request.IsAnonymous && !string.IsNullOrEmpty(userId))
+            {
+                sender = (await _supMan.GetUserCachedAsync(userId))?.Nickname ?? "Аноним";
+            }
+
             var typeLabel = SupportManager.GetReportTypeLabel(request.Type);
 
             var textError = Validator.ValidateReportText($"[{typeLabel}] от {sender}\n{request.Message}", validFiles.Count > 0);

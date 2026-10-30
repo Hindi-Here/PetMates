@@ -150,11 +150,6 @@ const AuthorizedProfile = () => {
     avatarUrl: '',
   })
   
-  const normalizeValue = (name: string, value: string) => {
-    const rule = validationRules[name as keyof typeof validationRules]
-    return rule ? rule(value) : value
-  }
-  
   useEffect(() => {
     if (user) {
       setFormData({
@@ -201,9 +196,8 @@ const AuthorizedProfile = () => {
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
-    const normalizedValue = normalizeValue(name, value)
+    setFormData(prev => ({ ...prev, [name]: value }))
     handleValidationChange(e)
-    setFormData(prev => ({ ...prev, [name]: normalizedValue ?? '' }))
   }
   
   const [isLoading, setIsLoading] = useState(false)
@@ -216,7 +210,10 @@ const AuthorizedProfile = () => {
     setSaveError(null)
     setSaveSuccess(false)
     try {
-      if (pendingAvatarFile) {
+      if (pendingAvatarDelete) {
+        await profileApi.deleteAvatar()
+        setPendingAvatarDelete(false)
+      } else if (pendingAvatarFile) {
         const result = await profileApi.uploadAvatar(pendingAvatarFile)
         setFormData(prev => ({ ...prev, avatarUrl: result.avatarUrl }))
         setPendingAvatarFile(null)
@@ -254,6 +251,7 @@ const AuthorizedProfile = () => {
   
   const handleCancel = () => {
     if (user) {
+      setPendingAvatarDelete(false)
       setPendingAvatarFile(null)
       setFormData({
         nickname: user.nickname ?? '',
@@ -287,6 +285,30 @@ const AuthorizedProfile = () => {
   }
   
   const [contacts, setContacts] = useState<ContactItem[]>([])
+
+  const previewUser = useMemo(() => {
+    if (!user) return null
+    return {
+      ...user,
+      nickname: formData.nickname,
+      realName: formData.realName,
+      age: formData.age ? Number(formData.age) : undefined,
+      gender: formData.gender,
+      country: formData.country,
+      city: formData.city,
+      workplace: formData.workplace,
+      profileRole: formData.profileRole,
+      description: formData.description,
+      hardSkills: formData.hardSkills,
+      softSkills: formData.softSkills,
+      avatarUrl: formData.avatarUrl,
+      contacts: JSON.stringify(
+        contacts
+          .filter(c => c.label.trim() && c.url.trim())
+          .map(c => ({ name: c.label, link: c.url }))
+      ),
+    } as unknown as ProfilePublicData
+  }, [user, formData, contacts])
   
   const addContact = () => {
     setContacts(prev => prev.length >= LIMITS.profile.contactsMax
@@ -326,6 +348,14 @@ const AuthorizedProfile = () => {
   
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null)
+
+  const [pendingAvatarDelete, setPendingAvatarDelete] = useState(false)
+
+  const handleAvatarRemove = () => {
+    setPendingAvatarFile(null)
+    setPendingAvatarDelete(!!user?.avatarUrl)
+    setFormData(prev => ({ ...prev, avatarUrl: '' }))
+  }
   
   const handleAvatarClick = () => fileInputRef.current?.click()
   
@@ -340,6 +370,7 @@ const AuthorizedProfile = () => {
     }
     const localUrl = URL.createObjectURL(file)
     setFormData(prev => ({ ...prev, avatarUrl: localUrl }))
+    setPendingAvatarDelete(false)
     setPendingAvatarFile(file)
     e.target.value = ''
   }
@@ -379,23 +410,30 @@ const AuthorizedProfile = () => {
       {activeTab === 'Информация' && !isProjectRoute && (
         isThirdParty ? (
           <ProfileViewer />
-        ) : isPreview && user ? (
-          <ProfilePublicView user={user as unknown as ProfilePublicData} isPreview />
-        ) : (
+          ) : isPreview && previewUser ? (
+            <ProfilePublicView user={previewUser} isPreview />
+          ) : (
           <>
-            <div className='profile-header-container'>
-              <div className='profile-avatar-wrapper' onClick={handleAvatarClick}>
-                {!user ? (
-                  <div className='avatar-skeleton' />
-                ) : (
-                  <img className='profile-avatar' src={formData.avatarUrl || '/default-avatar.png'} alt="Avatar" />
+           <div className='profile-header-container'>
+              <div className='profile-avatar-wrapper'>
+                <div onClick={handleAvatarClick}>
+                  {!user ? (
+                    <div className='avatar-skeleton' />
+                  ) : (
+                    <img className='profile-avatar' src={formData.avatarUrl || '/default-avatar.png'} />
+                  )}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    style={{ display: 'none' }}
+                    onChange={handleAvatarChange} />
+                </div>
+                {formData.avatarUrl && (
+                  <button type='button' className='avatar-remove-link' onClick={handleAvatarRemove}>
+                    Удалить
+                  </button>
                 )}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  style={{ display: 'none' }}
-                  onChange={handleAvatarChange} />
               </div>
               <div className='profile-username-container'>
                 <p className='username-label'>Имя пользователя: </p>

@@ -86,9 +86,9 @@ export const conversationApi = {
 
   // Пересылка сообщения в другой чат
   forwardMessage: async (sourceMessageId: string, targetConversationId: string): Promise<void> => {
-    const r = await authFetch('/api/conversation/message/forward', { 
-      method: 'POST', 
-      body: JSON.stringify({ sourceMessageId, targetConversationId }) 
+    const r = await authFetch(`/api/conversation/message/${sourceMessageId}/forward`, {
+      method: 'POST',
+      body: JSON.stringify({ sourceMessageId, targetConversationId })
     });
     if (!r.ok) throw new Error(await readError(r, 'Ошибка пересылки сообщения'));
   },

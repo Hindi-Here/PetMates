@@ -15,18 +15,28 @@ export interface SearchOption {
 
 // Опции поиска и сортировки для каждой вкладки (заявки, мероприятия, участники)
 export const tabOpt: Record<string, { searchOpt: SearchOption[]; sortOpt: SearchOption[] }> = {
-  vacancy: {
+    vacancy: {
     searchOpt: [
-      { id: 'name', label: 'Названию' },
+      { id: 'name', label: 'Названию заявки' },
       { id: 'tag', label: 'Тегу' },
-      { id: 'author', label: 'Автору' },
-      { id: 'project', label: 'Проекту' }
+      { id: 'project', label: 'Названию проекта' }
     ],
     sortOpt: [
       { id: 'date', label: 'Дате добавления' },
       { id: 'alphabet', label: 'Алфавиту' },
-      { id: 'count', label: 'Количеству оценок' },
-      { id: 'activity', label: 'Активности' }
+      { id: 'count', label: 'Количеству оценок' }
+    ]
+  },
+  users: {
+    searchOpt: [
+      { id: 'name', label: 'Названию' },
+      { id: 'tag', label: 'Тегу' },
+      { id: 'role', label: 'Роли' }
+    ],
+    sortOpt: [
+      { id: 'date', label: 'Дате регистрации' },
+      { id: 'alphabet', label: 'Алфавиту' },
+      { id: 'activity', label: 'Активности в проектах' }
     ]
   },
     events: {
@@ -42,20 +52,6 @@ export const tabOpt: Record<string, { searchOpt: SearchOption[]; sortOpt: Search
       { id: 'count_users', label: 'Количеству участников' }
     ]
   },
-  users: {
-    searchOpt: [
-      { id: 'name', label: 'Названию' },
-      { id: 'tag', label: 'Тегу' },
-      { id: 'role', label: 'Роли' }
-    ],
-    sortOpt: [
-      { id: 'date', label: 'Дате регистрации' },
-      { id: 'alphabet', label: 'Алфавиту' },
-      { id: 'activity', label: 'Активности' },
-      { id: 'project_count', label: 'Количеству проектов' },
-      { id: '_count', label: 'Количеству оценок' }
-    ]
-  }
 };
 
 interface SearchProps {

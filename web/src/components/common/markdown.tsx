@@ -23,9 +23,9 @@ export const Markdown = ({ children }: { children: string }) => (
     remarkPlugins={[remarkGfm]}
     rehypePlugins={[rehypeRaw, [rehypeSanitize, schema]]}
     components={{
-      img: ({ src, alt, width, height }: any) =>
+      img: ({ src, width, height }: any) =>
         typeof src === 'string' && src.startsWith(STORAGE_PREFIX)
-          ? <img src={src} alt={alt} width={width} height={height} loading='lazy' decoding='async' />
+          ? <img src={src} width={width} height={height} loading='lazy' decoding='async' />
           : null,
       a: ({ href, children }: any) =>
         <a href={href} target='_blank' rel='noopener noreferrer nofollow'>{children}</a>,

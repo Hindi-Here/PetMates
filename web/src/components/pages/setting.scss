@@ -1,5 +1,4 @@
 .section-container {
-
   .section-title {
     font-size: rem(20);
     font-weight: bold;
@@ -57,6 +56,7 @@
           box-shadow: 0 0 0 1px var(--important-color);
         }
       }
+
       .field-input.readonly {
         opacity: 0.5;
         pointer-events: none;
@@ -90,7 +90,7 @@
       color: var(--important-color);
       margin: 0;
 
-      &::selection{
+      &::selection {
         background-color: color-mix(in srgb, var(--important-color), transparent 75%);
       }
     }
@@ -102,7 +102,7 @@
     margin-bottom: rem(20);
     line-height: 1.5;
 
-    &::selection{
+    &::selection {
       background-color: color-mix(in srgb, var(--important-color), transparent 75%);
     }
   }
@@ -160,11 +160,12 @@
 
     &:not(:disabled):active {
       transform: scale(0.98);
+      filter: brightness(0.95);
     }
 
     &:disabled {
       opacity: 0.4;
-      pointer-events: none; 
+      pointer-events: none;
     }
 
     &.cancellation {
@@ -172,17 +173,30 @@
       background-color: var(--card-bg-color);
       color: var(--neutral-100);
       border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 85%);
+      filter: none;
 
       &:not(:disabled):hover {
-        background-color: var(--base4-color);
+        background-color: color-mix(in srgb, var(--card-bg-color), var(--neutral-100) 6%);
+        filter: none;
+      }
+
+      &:not(:disabled):active {
+        background-color: color-mix(in srgb, var(--card-bg-color), var(--neutral-100) 9%);
+        transform: scale(0.98);
+        filter: none;
       }
     }
   }
 }
 
 @keyframes fadeOut {
-  from { opacity: 1; }
-  to { opacity: 0; }
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
 }
 
 .message-auto-hide {
