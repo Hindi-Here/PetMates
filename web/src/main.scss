@@ -3,50 +3,106 @@
   // Header палитра
   --header-bg-color: #323232;
   --header-bg-hover-color: #383838;
-  --header-text-color: #FFFFFF;
+  --header-text-color: #ffffff;
   --header-text-muted-color: rgba(255, 255, 255, 0.6);
 
   // Основные акценты
   --card-bg-color: var(--neutral-0);
-  --card-active-bg-color: color-mix(in srgb, var(--neutral-100), transparent 98%);
-  --text-secondary-color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+  --card-active-bg-color: color-mix(
+    in srgb,
+    var(--neutral-100),
+    transparent 98%
+  );
+  --text-secondary-color: color-mix(
+    in srgb,
+    var(--neutral-100),
+    transparent 50%
+  );
   --input-bg-color: var(--neutral-0);
-  --unborder-content-bg-color: color-mix(in srgb, var(--neutral-100), transparent 95%);
+  --unborder-content-bg-color: color-mix(
+    in srgb,
+    var(--neutral-100),
+    transparent 95%
+  );
 
   // Иконки серые/красные внутри карточек и вне карт
-  --button-neutral-bg-color: color-mix(in srgb, var(--neutral-100), transparent 95%);
-  --button-danger-bg-color: color-mix(in srgb, var(--important-color), transparent 85%);
-  --uncard-button-neutral-bg-color: color-mix(in srgb, var(--neutral-100), transparent 95%);
-  --uncard-button-danger-bg-color: color-mix(in srgb, var(--important-color), transparent 85%);
+  --button-neutral-bg-color: color-mix(
+    in srgb,
+    var(--neutral-100),
+    transparent 95%
+  );
+  --button-danger-bg-color: color-mix(
+    in srgb,
+    var(--important-color),
+    transparent 85%
+  );
+  --uncard-button-neutral-bg-color: color-mix(
+    in srgb,
+    var(--neutral-100),
+    transparent 95%
+  );
+  --uncard-button-danger-bg-color: color-mix(
+    in srgb,
+    var(--important-color),
+    transparent 85%
+  );
 
   // Белый текст во всех цветных кнопках
   --button-white-text: white;
 
   // Цветовая схема для плашки с отсутствием загружаемого контента (в профиле)
   --empty-state-bg-color: var(--base4-color);
-  --empty-state-border-color: color-mix(in srgb, var(--neutral-100), transparent 85%);
-  --empty-state-content-color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+  --empty-state-border-color: color-mix(
+    in srgb,
+    var(--neutral-100),
+    transparent 85%
+  );
+  --empty-state-content-color: color-mix(
+    in srgb,
+    var(--neutral-100),
+    transparent 50%
+  );
 
   // Схема кнопок добавления (медиа, контакты, сущности)
-  --add-card-hover-color: color-mix(in srgb, var(--primary-accent), transparent 97%);
-  --add-card-active-color: color-mix(in srgb, var(--primary-accent), transparent 95%);
+  --add-card-hover-color: color-mix(
+    in srgb,
+    var(--primary-accent),
+    transparent 97%
+  );
+  --add-card-active-color: color-mix(
+    in srgb,
+    var(--primary-accent),
+    transparent 95%
+  );
 
   // Уникальные стили для конкретных частей
-  --preview-label-color: color-mix(in srgb, var(--neutral-100), transparent 40%);
-  --team-invite-bg-color: color-mix(in srgb, var(--primary-accent), transparent 95%);
+  --preview-label-color: color-mix(
+    in srgb,
+    var(--neutral-100),
+    transparent 40%
+  );
+  --team-invite-bg-color: color-mix(
+    in srgb,
+    var(--primary-accent),
+    transparent 95%
+  );
   --message-detele-myself: white;
   --profile-input-bg-color: #f7f7f7;
   --nav-item-hover-color: #e3e3e3;
-  --info-ico-text-color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+  --info-ico-text-color: color-mix(
+    in srgb,
+    var(--neutral-100),
+    transparent 50%
+  );
 
   // Шаги при удалении аккаунта и шапки форм
   --form-step-bg-color: var(--base4-color);
-  --form-important-color: #DD5E46;
-  --form-primary-accent: #40B4A4;
+  --form-important-color: #dd5e46;
+  --form-primary-accent: #40b4a4;
 
   // Базовые цвета
-  --neutral-0:  #FFFFFF;
-  --neutral-100: #000000; 
+  --neutral-0: #ffffff;
+  --neutral-100: #000000;
 
   --base1-color: #323232;
   --base2-color: #383838;
@@ -54,20 +110,20 @@
   --base4-color: #f7f7f7;
   --base5-color: #fafafa;
 
-  --primary-accent: #40B4A4;
-  --primary-light-accent: #73CFC2;
+  --primary-accent: #40b4a4;
+  --primary-light-accent: #73cfc2;
   --rate-color: #afcf73;
-  --primary-tag-text-color: #1C7C75;
+  --primary-tag-text-color: #1c7c75;
 
-  --success-color: #46DD49;
-  --success-extra-ligth-color:  #daf7db;
+  --success-color: #46dd49;
+  --success-extra-ligth-color: #daf7db;
 
-  --important-color: #DD5E46;
+  --important-color: #dd5e46;
   --important-ligth-color: #ef7b64;
 
-  --in-process-color: #DDB046;
-  
-  --info-color: #4671DD;
+  --in-process-color: #ddb046;
+
+  --info-color: #4671dd;
 
   --border-radius-base: 8px;
   --border-radius-small: 4px;
@@ -76,153 +132,221 @@
   --font-family-logo: "Rokkitt";
 
   // Кнопки и события кнопок
-  --btn-primary-bg: color-mix(in srgb, var(--primary-accent), var(--neutral-0) 12%);
+  --btn-primary-bg: color-mix(
+    in srgb,
+    var(--primary-accent),
+    var(--neutral-0) 12%
+  );
   --btn-primary-hover: color-mix(in srgb, var(--btn-primary-bg), black 8%);
   --btn-primary-active: color-mix(in srgb, var(--btn-primary-bg), black 14%);
 
-  --btn-danger-bg: color-mix(in srgb, var(--important-color), var(--neutral-0) 12%);
+  --btn-danger-bg: color-mix(
+    in srgb,
+    var(--important-color),
+    var(--neutral-0) 12%
+  );
   --btn-danger-hover: color-mix(in srgb, var(--btn-danger-bg), black 8%);
   --btn-danger-active: color-mix(in srgb, var(--btn-danger-bg), black 14%);
 
   --btn-neutral-bg: var(--card-bg-color);
-  --btn-neutral-hover: color-mix(in srgb, var(--card-bg-color), var(--neutral-100) 5%);
-  --btn-neutral-active: color-mix(in srgb, var(--card-bg-color), var(--neutral-100) 9%);
+  --btn-neutral-hover: color-mix(
+    in srgb,
+    var(--card-bg-color),
+    var(--neutral-100) 5%
+  );
+  --btn-neutral-active: color-mix(
+    in srgb,
+    var(--card-bg-color),
+    var(--neutral-100) 9%
+  );
   --btn-neutral-border: color-mix(in srgb, var(--neutral-100), transparent 85%);
 }
 
 // Параметры темной темы
 @mixin dark-theme-values {
-  --header-bg-color: #17181B;
+  --header-bg-color: #17181b;
   --header-bg-hover-color: #202226;
 
   --card-bg-color: #2e3136;
   --card-active-bg-color: #32353a;
-  --text-secondary-color: color-mix(in srgb, var(--neutral-100), transparent 30%);
+  --text-secondary-color: color-mix(
+    in srgb,
+    var(--neutral-100),
+    transparent 30%
+  );
   --input-bg-color: #2e3136;
   --unborder-content-bg-color: #2e3136;
 
-  --button-neutral-bg-color: color-mix(in srgb, var(--card-bg-color), var(--neutral-100) 10%);
+  --button-neutral-bg-color: color-mix(
+    in srgb,
+    var(--card-bg-color),
+    var(--neutral-100) 10%
+  );
   --uncard-button-neutral-bg-color: var(--card-bg-color);
-  --button-danger-bg-color: color-mix(in srgb, var(--card-bg-color), var(--important-color) 25%);
-  --uncard-button-danger-bg-color: color-mix(in srgb, var(--card-bg-color), var(--important-color) 15%);
+  --button-danger-bg-color: color-mix(
+    in srgb,
+    var(--card-bg-color),
+    var(--important-color) 25%
+  );
+  --uncard-button-danger-bg-color: color-mix(
+    in srgb,
+    var(--card-bg-color),
+    var(--important-color) 15%
+  );
 
   --button-white-text: white;
 
   --empty-state-bg-color: var(--card-bg-color);
-  --empty-state-border-color: color-mix(in srgb, var(--neutral-100), transparent 70%);
-  --empty-state-content-color: color-mix(in srgb, var(--neutral-100), transparent 20%);
+  --empty-state-border-color: color-mix(
+    in srgb,
+    var(--neutral-100),
+    transparent 70%
+  );
+  --empty-state-content-color: color-mix(
+    in srgb,
+    var(--neutral-100),
+    transparent 20%
+  );
 
-  --add-card-hover-color: color-mix(in srgb, var(--card-bg-color), var(--primary-accent) 2%);
-  --add-card-active-color: color-mix(in srgb, var(--card-bg-color), var(--primary-accent) 6%);
+  --add-card-hover-color: color-mix(
+    in srgb,
+    var(--card-bg-color),
+    var(--primary-accent) 2%
+  );
+  --add-card-active-color: color-mix(
+    in srgb,
+    var(--card-bg-color),
+    var(--primary-accent) 6%
+  );
 
   --preview-label-color: var(--neutral-100);
-  --team-invite-bg-color: color-mix(in srgb, var(--primary-accent), transparent 90%);
+  --team-invite-bg-color: color-mix(
+    in srgb,
+    var(--primary-accent),
+    transparent 90%
+  );
   --message-detele-myself: transparent;
   --profile-input-bg-color: #2e3136;
-  --nav-item-hover-color: #24262A;
-  --info-ico-text-color: color-mix(in srgb, var(--neutral-100), transparent 15%);
+  --nav-item-hover-color: #24262a;
+  --info-ico-text-color: color-mix(
+    in srgb,
+    var(--neutral-100),
+    transparent 15%
+  );
 
   --form-step-bg-color: var(--button-neutral-bg-color);
   --form-important-color: var(--header-bg-color);
   --form-primary-accent: var(--header-bg-color);
-  
-  --neutral-0:  #1b1f22;  
-  --neutral-100: #ECECEC;
 
-  --base1-color: #2A2A2E;
+  --neutral-0: #1b1f22;
+  --neutral-100: #ececec;
+
+  --base1-color: #2a2a2e;
   --base2-color: #313136;
-  --base3-color: #3D3D42;  
+  --base3-color: #3d3d42;
 
-  --base4-color: #0B0C0E;  
+  --base4-color: #0b0c0e;
   --base5-color: #141518;
 
-  --important-color: #FF6B52;
-  --important-ligth-color: #FF8F78;
+  --important-color: #ff6b52;
+  --important-ligth-color: #ff8f78;
 
-  --primary-accent: #4DC4B3;
-  --primary-light-accent: #8AD9CD;
-  --rate-color: #B8D782;
-  --primary-tag-text-color: #6FE0D1;
+  --primary-accent: #4dc4b3;
+  --primary-light-accent: #8ad9cd;
+  --rate-color: #b8d782;
+  --primary-tag-text-color: #6fe0d1;
 
-  --success-color: #52E655;
-  --success-extra-ligth-color: #1E3620; 
+  --success-color: #52e655;
+  --success-extra-ligth-color: #1e3620;
 
-  --in-process-color: #E8BE5C;
+  --in-process-color: #e8be5c;
 
-  --info-color: #5C82E8;
+  --info-color: #5c82e8;
 }
 
 // Системная тема
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
+  :root:not([data-theme="light"]) {
     @include dark-theme-values;
   }
 }
 
 // Выбранная пользователем тема
-:root[data-theme='dark'] {
+:root[data-theme="dark"] {
   @include dark-theme-values;
 }
 
 // Глобальные стили
 #root {
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
 * {
-    box-sizing: border-box;
+  box-sizing: border-box;
+  outline: none;
+
+  &::selection {
+    background-color: var(
+      --selection-color,
+      color-mix(in srgb, var(--primary-accent), transparent 75%)
+    );
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--primary-accent);
+    outline-offset: 2px;
+  }
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
     outline: none;
-
-    &::selection {
-        background-color: var(--selection-color, color-mix(in srgb, var(--primary-accent), transparent 75%));
-    }
-
-    :focus-visible {
-      outline: 2px solid var(--primary-accent);
-      outline-offset: 2px;
-    }
-    input:focus-visible, textarea:focus-visible, select:focus-visible { outline: none; }
+  }
 }
 
 body {
-    margin: 0;
-    padding: 0;
-    background-color: var(--base4-color);
-    min-height: 80vh;
+  margin: 0;
+  padding: 0;
+  background-color: var(--base4-color);
+  min-height: 80vh;
 }
 
 button {
-    user-select: none;
-    font-size: rem(14);
-    font-family: var(--font-family-base);
+  user-select: none;
+  font-size: rem(14);
+  font-family: var(--font-family-base);
 
-    &:hover {
-        transform: scale(0.99);
-    } 
+  &:hover {
+    transform: scale(0.99);
+  }
 
-    &:active {
-        transform: scale(0.975);
-    } 
+  &:active {
+    transform: scale(0.975);
+  }
 }
 
 p {
-    margin: 0;
+  margin: 0;
 }
 
-input, textarea, select {
-    background-color: var(--input-bg-color);
-    color: var(--neutral-100);
-    font-family: inherit;
+input,
+textarea,
+select {
+  background-color: var(--input-bg-color);
+  color: var(--neutral-100);
+  font-family: inherit;
 
-    &::placeholder {
-        color: color-mix(in srgb, var(--neutral-100), transparent 50%);
-    }
+  &::placeholder {
+    color: color-mix(in srgb, var(--neutral-100), transparent 50%);
+  }
 
-    &::selection {
-        background-color: var(--selection-color, color-mix(in srgb, var(--primary-accent), transparent 75%));
-    }
+  &::selection {
+    background-color: var(
+      --selection-color,
+      color-mix(in srgb, var(--primary-accent), transparent 75%)
+    );
+  }
 }
 
 // Стиль полей типа password с автовставкой
@@ -230,14 +354,14 @@ input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus,
 input:-webkit-autofill:active {
-    -webkit-box-shadow: 0 0 0 100px var(--input-bg-color) inset !important;
-    box-shadow: 0 0 0 100px var(--input-bg-color) inset !important;
-    -webkit-text-fill-color: var(--neutral-100) !important;
-    caret-color: var(--neutral-100);
-    transition: background-color 500s ease-in-out 0s;
-    
-    border: 1px solid var(--primary-accent) !important;
-    border-radius: var(--border-radius-base) !important;
+  -webkit-box-shadow: 0 0 0 100px var(--input-bg-color) inset !important;
+  box-shadow: 0 0 0 100px var(--input-bg-color) inset !important;
+  -webkit-text-fill-color: var(--neutral-100) !important;
+  caret-color: var(--neutral-100);
+  transition: background-color 500s ease-in-out 0s;
+
+  border: 1px solid var(--primary-accent) !important;
+  border-radius: var(--border-radius-base) !important;
 }
 
 input:-webkit-autofill::selection {
@@ -262,7 +386,7 @@ input:-webkit-autofill::selection {
   background: var(--primary-accent);
   border-radius: rem(5);
   border: 2px solid color-mix(in srgb, var(--neutral-0), transparent 95%);
-  background-clip: padding-box; 
+  background-clip: padding-box;
 }
 
 ::-webkit-scrollbar-corner {
@@ -271,47 +395,80 @@ input:-webkit-autofill::selection {
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--primary-accent) 
-                   color-mix(in srgb, var(--neutral-0), transparent 95%);
+  scrollbar-color: var(--primary-accent)
+    color-mix(in srgb, var(--neutral-0), transparent 95%);
 }
 
 // Адаптивность шрифта
 @media (max-width: 1290px) {
-    html {
-        font-size: 14px;
-    }
+  html {
+    font-size: 14px;
+  }
 }
 @media (max-width: 1125px) {
-    html {
-        font-size: 12px;
-    }
+  html {
+    font-size: 12px;
+  }
 }
 
-
-
-// Красные зоны (ошибки, баны, предупреждения)
-.banned-owner-card, .banned-user-card, .banned-member-card,
-.form-header-container.red, .input-error, .team-invite-hint.error, .warning-container,
-.save-error-text, .complete-error-type, .invite-error-text, .field-error-text,
-.media-error-text, .event-field-error, .error-text, .owner-badge,
-.form-field-input.red, .form-field-input.message.red {
-  --selection-color: color-mix(in srgb, var(--important-color), transparent 75%);
+// Красные зоны (ошибки, баны, предупреждения, красные модалки)
+.form-container:has(.form-header-container.red),
+.banned-owner-card,
+.banned-user-card,
+.banned-member-card,
+.form-header-container.red,
+.input-error,
+.team-invite-hint.error,
+.warning-container,
+.save-error-text,
+.complete-error-type,
+.invite-error-text,
+.field-error-text,
+.media-error-text,
+.event-field-error,
+.error-text,
+.owner-badge,
+.form-field-input.red,
+.form-field-input.message.red {
+  --selection-color: color-mix(
+    in srgb,
+    var(--important-color),
+    transparent 75%
+  );
 }
 
 // Серые зоны (пустые состояния, нейтральные элементы)
-.empty-activity, .empty-state, .media-item, .attachment-item,
-.team-invite-hint:not(.error):not(.success), .description-preview-empty {
+.empty-activity,
+.empty-state,
+.media-item,
+.attachment-item,
+.team-invite-hint:not(.error):not(.success),
+.description-preview-empty {
   --selection-color: color-mix(in srgb, var(--neutral-100), transparent 80%);
 }
 
-// Элементы интерфейса (кнопки и изображения)
-button, .dropdown-container, .sort-type-container, .sort-vector-ico-container,
-.staff-filter-container, .banned-filter-container, .toggle-container,
-.preview-label, .preview-toggle-label, .md-toggle-label,
-.send-anonymous-text, .send-anonymous-helper-text,
-.form-header-container, .form-remember-me-container, .auth-service-container,
-.auth-change-format-container, .form-complete-button,
-.tab, .activity-tab, .event-tab, .navigation-panel-item-container {
+// Запрет выделения
+button,
+.dropdown-container,
+.sort-type-container,
+.sort-vector-ico-container,
+.staff-filter-container,
+.banned-filter-container,
+.toggle-container,
+.preview-label,
+.preview-toggle-label,
+.md-toggle-label,
+.send-anonymous-text,
+.send-anonymous-helper-text,
+.form-header-container,
+.form-remember-me-container,
+.auth-service-container,
+.auth-change-format-container,
+.form-complete-button,
+.tab,
+.activity-tab,
+.event-tab,
+.navigation-panel-item-container {
   user-select: none;
 }
 
@@ -321,103 +478,101 @@ img {
 }
 
 // Основные кнопки
-.manage-button, .form-manage-button, .form-complete-button, 
-.send-manage-button, .event-submit-btn, .vacancy-apply-button,
-.invite-button, .return-button, .rate-button, .search-button,
-.team-invite-btn, .warning-button {
+.manage-button,
+.form-manage-button,
+.form-complete-button,
+.send-manage-button,
+.event-submit-btn,
+.vacancy-apply-button,
+.invite-button,
+.rate-button,
+.team-invite-btn {
+  --btn-bg: var(--btn-primary-bg);
+  --btn-fg: var(--button-white-text);
+  --btn-border: transparent;
+  --btn-tint: var(--neutral-0);
+  --btn-tint-amount: 18%;
+
   display: flex;
   align-items: center;
   justify-content: center;
   gap: rem(6);
   height: rem(40);
   padding: 0 rem(16);
-  border: 1px solid transparent;
+  border: 1px solid var(--btn-border);
   border-radius: var(--border-radius-base);
   font-size: rem(14);
   font-weight: bold;
   line-height: 1;
   white-space: nowrap;
-  transition: background-color 0.25s, border-color 0.25s, color 0.25s, transform 0.25s;
-  
-  background-color: var(--btn-primary-bg);
-  color: var(--button-white-text);
-  
+  background-color: var(--btn-bg);
+  color: var(--btn-fg) !important;
+  transition:
+    background-color 0.25s,
+    border-color 0.25s,
+    color 0.25s,
+    transform 0.25s;
+
+  &:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--btn-bg), black 4%);
+    transform: scale(0.99);
+  }
+  &:active:not(:disabled) {
+    background-color: color-mix(in srgb, var(--btn-bg), black 8%);
+    transform: scale(0.975);
+  }
+
   &:disabled {
-    background-color: color-mix(in srgb, var(--btn-primary-bg), var(--neutral-100) 15%);
-    color: color-mix(in srgb, var(--button-white-text), transparent 50%);
-    border-color: transparent;
+    background-color: color-mix(
+      in srgb,
+      var(--btn-bg),
+      var(--btn-tint) var(--btn-tint-amount)
+    );
+    color: color-mix(in srgb, var(--btn-fg), transparent 50%);
     pointer-events: none;
     transform: none !important;
   }
-  
-  &:hover:not(:disabled) {
-    background-color: var(--btn-primary-hover);
-    transform: scale(0.99);
-  }
-  
-  &:active:not(:disabled) {
-    background-color: var(--btn-primary-active);
-    transform: scale(0.975);
-  }
-  
-  &.cancellation, &.back {
+
+  &.cancellation,
+  &.back {
+    --btn-bg: var(--btn-neutral-bg);
+    --btn-fg: var(--neutral-100);
+    --btn-border: var(--btn-neutral-border);
+    --btn-tint: var(--neutral-100);
+    --btn-tint-amount: 5%;
     width: rem(125);
-    background-color: var(--btn-neutral-bg);
-    color: var(--neutral-100);
-    border-color: var(--btn-neutral-border);
     font-weight: normal;
-    filter: none;
-    
-    &:disabled {
-      background-color: color-mix(in srgb, var(--btn-neutral-bg), var(--neutral-100) 5%); // Чуть темнее обычного
-      color: color-mix(in srgb, var(--neutral-100), transparent 50%); // Тусклый черный текст
-      border-color: color-mix(in srgb, var(--neutral-100), transparent 75%);
-      pointer-events: none;
-      transform: none !important;
-    }
-    
-    &:hover:not(:disabled) {
-      background-color: var(--btn-neutral-hover);
-      transform: scale(0.99);
-    }
-    
-    &:active:not(:disabled) {
-      background-color: var(--btn-neutral-active);
-      transform: scale(0.975);
-    }
   }
-  
+
   &.red {
+    --btn-bg: var(--btn-danger-bg);
+    --btn-fg: var(--button-white-text);
     background-color: var(--btn-danger-bg);
-    color: var(--important-color);
-    
-    &:disabled {
-      background-color: color-mix(in srgb, var(--btn-danger-bg), var(--neutral-100) 15%); // Чуть приглушенный красный фон
-      color: color-mix(in srgb, var(--important-color), transparent 50%); // Тусклый красный текст
-      border-color: transparent;
-      pointer-events: none;
-      transform: none !important;
-    }
-    
-    &:hover:not(:disabled) {
-      background-color: var(--btn-danger-hover);
-    }
-    
-    &:active:not(:disabled) {
-      background-color: var(--btn-danger-active);
-    }
   }
 }
 
-// Иконочные кнопки (40×40)
-.moderation-delete-btn, .moderation-delete-project-btn, 
-.project-moderation-delete-btn, .member-remove-badge, 
-.member-reject-badge, .conversation-delete-btn, 
-.attachment-remove-btn, .media-action-btn.delete, 
-.delete-notification-button, .contact-action.reject,
-.comment-remove-badge, .back-button, .event-app-back,
-.member-edit-badge, .conversation-pin-btn, .icon-btn,
-.date-picker-nav, .media-action-btn.copy, .profile-action-btn {
+// Иконочные кнопки
+.moderation-delete-btn,
+.moderation-delete-project-btn,
+.project-moderation-delete-btn,
+.member-remove-badge,
+.member-reject-badge,
+.conversation-delete-btn,
+.attachment-remove-btn,
+.media-action-btn,
+.delete-notification-button,
+.contact-action,
+.comment-remove-badge,
+.back-button,
+.event-app-back,
+.member-edit-badge,
+.conversation-pin-btn,
+.icon-btn,
+.date-picker-nav,
+.profile-action-btn {
+  --ibtn-bg: var(--button-neutral-bg-color);
+  --ibtn-fg: var(--text-secondary-color);
+
   display: flex;
   align-items: center;
   justify-content: center;
@@ -425,71 +580,53 @@ img {
   height: rem(40);
   padding: 0;
   border: none;
-  border-radius: var(--border-radius-base);
   flex-shrink: 0;
+  border-radius: var(--border-radius-base);
+  background-color: var(--ibtn-bg);
+  color: var(--ibtn-fg);
+  transition:
+    background-color 0.25s,
+    color 0.25s,
+    transform 0.25s;
   filter: none !important;
   will-change: transform;
   backface-visibility: hidden;
-  transition: background-color 0.25s, transform 0.25s;
-  
-  background-color: var(--button-neutral-bg-color);
-  color: var(--text-secondary-color);
-  
+
+  svg,
+  .ico {
+    fill: currentColor;
+  }
+
+  &:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--ibtn-bg), var(--ibtn-fg) 5%);
+    transform: scale(0.975);
+  }
+  &:active:not(:disabled) {
+    background-color: color-mix(in srgb, var(--ibtn-bg), var(--ibtn-fg) 10%);
+    transform: scale(0.95);
+  }
   &:disabled {
-    background-color: color-mix(in srgb, var(--button-neutral-bg-color), var(--neutral-100) 5%);
-    color: color-mix(in srgb, var(--text-secondary-color), transparent 50%);
+    background-color: color-mix(in srgb, var(--ibtn-bg), var(--neutral-0) 30%);
+    color: color-mix(in srgb, var(--ibtn-fg), transparent 50%);
     pointer-events: none;
     transform: none !important;
   }
-  
-  &:hover:not(:disabled) {
-    background-color: color-mix(in srgb, var(--button-neutral-bg-color), var(--neutral-100) 4%);
-    transform: scale(0.975);
-  }
-  
-  &:active:not(:disabled) {
-    background-color: color-mix(in srgb, var(--button-neutral-bg-color), var(--neutral-100) 8%);
-    transform: scale(0.95);
-  }
-  
-  &.reject, &.danger, &.delete {
-    background-color: var(--button-danger-bg-color);
-    color: var(--important-color);
-    
-    &:disabled {
-      background-color: color-mix(in srgb, var(--button-danger-bg-color), var(--neutral-100) 10%);
-      color: color-mix(in srgb, var(--important-color), transparent 50%);
-      pointer-events: none;
-      transform: none !important;
-    }
-    
-    &:hover:not(:disabled) {
-      background-color: color-mix(in srgb, var(--button-danger-bg-color), var(--important-color) 6%);
-    }
-    
-    &:active:not(:disabled) {
-      background-color: color-mix(in srgb, var(--button-danger-bg-color), var(--important-color) 12%);
-    }
-  }
-  
-  &.accept, &.primary {
-    background-color: var(--btn-primary-bg);
-    color: var(--button-white-text);
-    
-    &:disabled {
-      background-color: color-mix(in srgb, var(--btn-primary-bg), var(--neutral-100) 15%);
-      color: color-mix(in srgb, var(--button-white-text), transparent 50%);
-      pointer-events: none;
-      transform: none !important;
-    }
-    
-    &:hover:not(:disabled) {
-      background-color: var(--btn-primary-hover);
-    }
-    
-    &:active:not(:disabled) {
-      background-color: var(--btn-primary-active);
-    }
-  }
 }
 
+// Красные по умолчанию
+.moderation-delete-btn,
+.moderation-delete-project-btn,
+.project-moderation-delete-btn,
+.member-remove-badge,
+.member-reject-badge,
+.conversation-delete-btn,
+.attachment-remove-btn,
+.media-action-btn.delete,
+.delete-notification-button,
+.contact-action.reject,
+.comment-remove-badge,
+.icon-btn.danger,
+.profile-action-btn.danger {
+  --ibtn-bg: var(--button-danger-bg-color);
+  --ibtn-fg: var(--important-color);
+}

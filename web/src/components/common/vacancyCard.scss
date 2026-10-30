@@ -1,4 +1,9 @@
 .vacancy-card-container {
+  --card-accent: var(--primary-accent);
+  box-shadow: inset 0 0 0 0 var(--card-accent), 0 4px 4px rgba(0, 0, 0, .15);
+  border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 65%);
+  transition: border-color .25s, box-shadow .25s, background-color .25s, transform .25s;
+  
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -6,53 +11,42 @@
   padding-bottom: rem(0);
   background-color: var(--card-bg-color);
   border-radius: var(--border-radius-base);
-  box-shadow: inset 0 0 0 0 var(--primary-accent), 0 4px 4px rgba(0, 0, 0, 0.15);
-  border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 65%);
-  transition: border-color 0.25s, box-shadow 0.25s;
   position: relative;
 
-  &:not(.no-active):hover {
-    box-shadow: inset 2px 0 0 0 var(--primary-accent), 0 4px 4px rgba(0, 0, 0, 0.15);
-    border-left-color: var(--primary-accent);
-    transform: scale(0.995);
+  &:hover {
+    box-shadow: inset 2px 0 0 0 var(--card-accent), 0 4px 4px rgba(0, 0, 0, .15);
+    border-left-color: var(--card-accent);
+    transform: scale(.995);
   }
-
-  &:not(.no-active):active {
+  &:active {
     background-color: var(--card-active-bg-color);
-    transform: scale(0.99);
+    transform: scale(.99);
   }
 
-  &.no-active:hover {
-    box-shadow: inset 2px 0 0 0 var(--primary-accent), 0 4px 4px rgba(0, 0, 0, 0.15);
-    border-left-color: var(--primary-accent);
+  &.no-active {
+    &:hover { transform: none; }
+    &:active { transform: none; }
   }
 
   &.banned-owner-card {
-    border: 1px solid var(--important-color);
+    --card-accent: var(--important-color);
+    --card-active-bg-color: color-mix(in srgb, var(--card-bg-color), var(--important-color) 12%);
+    border-color: var(--important-color);
     background-color: color-mix(in srgb, var(--card-bg-color), var(--important-color) 10%);
 
-    &:hover {
-      box-shadow: inset 2px 0 0 0 var(--important-color), 0 4px 4px rgba(0, 0, 0, 0.15);
-      border-left-color: var(--important-color);
+    .vacancy-apply-button {
+      --btn-bg: var(--btn-danger-bg) !important;
+      --btn-fg: var(--button-white-text) !important;
+      background-color: var(--btn-danger-bg) !important;
+      opacity: 0.7;
+      
+      &:disabled {
+        background-color: color-mix(in srgb, var(--btn-danger-bg), var(--neutral-0) 18%) !important;
+        color: color-mix(in srgb, var(--button-white-text), transparent 50%) !important;
+      }
     }
 
-    &:active {
-      background-color: color-mix(in srgb, var(--card-bg-color), var(--important-color) 12%) !important;
-    }
-
-    ::selection {
-      background-color: color-mix(in srgb, var(--important-color), transparent 75%);
-    }
-
-    .vacancy-title {
-      color: var(--important-color) !important;
-    }
-
-    .vacancy-project-name {
-      color: var(--important-color) !important;
-    }
-
-    .vacancy-role {
+    .vacancy-title, .vacancy-project-name, .vacancy-role {
       color: var(--important-color) !important;
     }
 
@@ -72,6 +66,13 @@
           }
         }
       }
+    }
+  }
+
+  .vacancy-apply-button {
+    &:disabled {
+      background-color: color-mix(in srgb, var(--btn-primary-bg), var(--neutral-0) 18%) !important;
+      color: color-mix(in srgb, var(--button-white-text), transparent 50%) !important;
     }
   }
 
@@ -169,8 +170,6 @@
 
       .vacancy-apply-button {
         width: rem(175);
-        height: rem(40);
-        font-size: rem(14);
       }
 
       .vacancy-rating {
@@ -243,8 +242,6 @@
 
         .vacancy-apply-button {
           width: rem(140);
-          height: rem(40);
-          font-size: rem(12);
         }
 
         .vacancy-rating {

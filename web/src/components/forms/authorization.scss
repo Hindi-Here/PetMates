@@ -70,6 +70,21 @@
     font-size: rem(12);
     color: var(--important-color);
   }
+
+  .form-complete-button {
+    width: rem(225);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: rem(6);
+    white-space: nowrap;
+    
+    .form-header-ico {
+      flex-shrink: 0;
+      width: rem(16);
+      height: rem(16);
+    }
+  }
 }
 
 .auth-service-container {
@@ -238,9 +253,5 @@
         }
       }
     }
-  }
-
-  .form-complete-container .form-complete-button {
-    width: 100%;
   }
 }

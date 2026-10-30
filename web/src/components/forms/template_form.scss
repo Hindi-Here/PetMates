@@ -38,16 +38,18 @@
   display: flex;
   align-items: center;
   gap: rem(12);
-  padding-left: rem(24);
-  padding-right: rem(24);
+  padding: 0 rem(24);
   flex-shrink: 0;
+
+  &.red {
+    background-color: var(--form-important-color);
+  }
 
   .form-header-ico {
     width: rem(20);
     height: rem(20);
     fill: var(--button-white-text);
   }
-
   .form-header-text {
     color: var(--button-white-text);
     font-size: rem(20);
@@ -57,76 +59,42 @@
   .form-header-close-button {
     margin-left: auto;
     border: none;
-    border-radius: var(--border-radius-small);
+    padding: 0;
     width: rem(24);
     height: rem(24);
     display: flex;
     align-items: center;
     justify-content: center;
-    outline: none;
-    transition: 0.25s;
+    border-radius: var(--border-radius-small);
     background-color: color-mix(
       in srgb,
-      var(--important-color),
-      var(--button-white-text) 12%
+      var(--button-white-text),
+      transparent 80%
     );
+    transition: 0.25s;
 
     &:hover {
-      background: color-mix(
+      background-color: color-mix(
         in srgb,
-        var(--important-color),
-        var(--button-white-text) 17%
+        var(--button-white-text),
+        transparent 70%
       );
       transform: scale(0.975);
     }
-
     &:active {
-      background: color-mix(
+      background-color: color-mix(
         in srgb,
-        var(--important-color),
-        var(--button-white-text) 22%
+        var(--button-white-text),
+        transparent 60%
       );
       transform: scale(0.95);
     }
 
+    .form-header-ico,
     .form-header-close-ico {
-      width: rem(15);
-      height: rem(15);
+      width: rem(14);
+      height: rem(14);
       fill: var(--button-white-text);
-    }
-  }
-
-  .form-header-container.red {
-    background-color: var(--form-important-color);
-
-    .form-header-close-button {
-      background-color: color-mix(
-        in srgb,
-        var(--form-important-color),
-        var(--button-white-text) 10%
-      );
-
-      &:hover {
-        background: color-mix(
-          in srgb,
-          var(--form-important-color),
-          var(--button-white-text) 15%
-        );
-        transform: scale(0.975);
-      }
-
-      &:active {
-        background: color-mix(
-          in srgb,
-          var(--form-important-color),
-          var(--button-white-text) 20%
-        );
-        transform: scale(0.95);
-      }
-
-      .form-header-close-ico {
-        fill: var(--button-white-text);
-      }
     }
   }
 }
@@ -218,6 +186,10 @@
   gap: rem(12);
   box-sizing: border-box;
   flex-shrink: 0;
+
+  .form-manage-button {
+    width: rem(175);
+  }
 }
 
 .form-header-container.red {
