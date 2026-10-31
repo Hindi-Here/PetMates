@@ -124,6 +124,16 @@
       color: var(--button-white-text);
     }
 
+    &:hover:not(:disabled) {
+      background-color: color-mix(in srgb, var(--primary-accent), black 4%);
+      transform: scale(0.975);
+    }
+
+    &:active:not(:disabled) {
+      background-color: color-mix(in srgb, var(--primary-accent), black 8%);
+      transform: scale(0.95);
+    }
+
     &:disabled {
       opacity: 0.5;
       pointer-events: none;

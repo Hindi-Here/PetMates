@@ -4,7 +4,8 @@
   align-items: flex-start;
   gap: rem(24);
   padding-bottom: rem(24);
-  border-bottom: 1px solid color-mix(in srgb, var(--neutral-100), transparent 90%);
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--neutral-100), transparent 90%);
 
   .project-info {
     display: flex;
@@ -44,8 +45,16 @@
       }
 
       &.status-working {
-        background: color-mix(in srgb, var(--in-process-color), transparent 90%);
-        border-color: color-mix(in srgb, var(--in-process-color), transparent 70%);
+        background: color-mix(
+          in srgb,
+          var(--in-process-color),
+          transparent 90%
+        );
+        border-color: color-mix(
+          in srgb,
+          var(--in-process-color),
+          transparent 70%
+        );
         color: var(--in-process-color);
 
         .status-ico {
@@ -55,7 +64,11 @@
 
       &.status-pause {
         background: color-mix(in srgb, var(--important-color), transparent 90%);
-        border-color: color-mix(in srgb, var(--important-color), transparent 70%);
+        border-color: color-mix(
+          in srgb,
+          var(--important-color),
+          transparent 70%
+        );
         color: var(--important-color);
 
         .status-ico {
@@ -78,17 +91,28 @@
       height: rem(40);
       border: none;
       border-radius: var(--border-radius-base);
-      background-color: color-mix(in srgb, var(--neutral-100), transparent 95%);
-      color: color-mix(in srgb, var(--neutral-100), transparent 50%);
-      transition: 0.25s;
+      background-color: var(--button-neutral-bg-color);
+      color: var(--text-secondary-color);
+      transition:
+        background-color 0.25s,
+        transform 0.25s;
 
       &:hover:not(:disabled) {
-        background-color: color-mix(in srgb, var(--neutral-100), transparent 90%);
-        color: color-mix(in srgb, var(--neutral-100), transparent 25%);
+        background-color: color-mix(
+          in srgb,
+          var(--button-neutral-bg-color),
+          var(--neutral-100) 5%
+        );
+        transform: scale(0.975);
       }
 
       &:active:not(:disabled) {
-        transform: scale(0.98);
+        background-color: color-mix(
+          in srgb,
+          var(--button-neutral-bg-color),
+          var(--neutral-100) 10%
+        );
+        transform: scale(0.95);
       }
 
       &:disabled {
@@ -118,22 +142,47 @@
         padding: 0 rem(16);
         font-weight: bold;
         font-size: rem(14);
-        background-color: color-mix(in srgb, var(--primary-accent), var(--neutral-0) 12%);
+        background-color: var(--btn-primary-bg);
         color: var(--button-white-text);
         border: none;
         border-radius: var(--border-radius-base);
-        transition: all 0.25s;
+        transition:
+          background-color 0.25s,
+          transform 0.25s;
+
+        &:hover:not(:disabled) {
+          background-color: color-mix(in srgb, var(--btn-primary-bg), black 4%);
+          transform: scale(0.99);
+        }
+
+        &:active:not(:disabled) {
+          background-color: color-mix(in srgb, var(--btn-primary-bg), black 8%);
+          transform: scale(0.975);
+        }
 
         &:disabled {
-          opacity: 0.4;
+          background-color: color-mix(
+            in srgb,
+            var(--btn-primary-bg),
+            var(--neutral-0) 18%
+          );
+          color: color-mix(in srgb, var(--button-white-text), transparent 50%);
           pointer-events: none;
         }
 
         &.rated {
-          background-color: color-mix(in srgb, var(--rate-color), var(--neutral-0) 12%);
+          background-color: color-mix(
+            in srgb,
+            var(--rate-color),
+            var(--neutral-0) 12%
+          );
 
-          &:hover {
-            filter: brightness(0.95);
+          &:hover:not(:disabled) {
+            background-color: color-mix(in srgb, var(--rate-color), black 4%);
+          }
+
+          &:active:not(:disabled) {
+            background-color: color-mix(in srgb, var(--rate-color), black 8%);
           }
         }
       }
@@ -169,12 +218,20 @@
       padding: 0;
 
       &:hover:not(:disabled) {
-        background: color-mix(in srgb, var(--button-danger-bg-color), var(--important-color) 4%);
+        background: color-mix(
+          in srgb,
+          var(--button-danger-bg-color),
+          var(--important-color) 4%
+        );
         transform: scale(0.975);
       }
 
       &:active:not(:disabled) {
-        background: color-mix(in srgb, var(--button-danger-bg-color), var(--important-color) 6%);
+        background: color-mix(
+          in srgb,
+          var(--button-danger-bg-color),
+          var(--important-color) 6%
+        );
         transform: scale(0.95);
       }
 
@@ -200,18 +257,30 @@
   line-height: 1.6;
   color: var(--neutral-100);
 
-  h1, h2, h3 {
+  h1,
+  h2,
+  h3 {
     margin: rem(16) 0 rem(8);
     font-weight: bold;
     color: var(--neutral-100);
   }
 
-  h1 { font-size: rem(24); }
-  h2 { font-size: rem(20); }
-  h3 { font-size: rem(16); }
+  h1 {
+    font-size: rem(24);
+  }
+  h2 {
+    font-size: rem(20);
+  }
+  h3 {
+    font-size: rem(16);
+  }
 
-  strong { font-weight: bold; }
-  em { font-style: italic; }
+  strong {
+    font-weight: bold;
+  }
+  em {
+    font-style: italic;
+  }
 }
 
 .preview-section {
@@ -244,12 +313,19 @@
   width: 100%;
   background-color: var(--card-bg-color);
   border-radius: var(--border-radius-base);
-  box-shadow: inset 0 0 0 0 var(--primary-accent), 0 4px 4px rgba(0, 0, 0, 0.15);
+  box-shadow:
+    inset 0 0 0 0 var(--primary-accent),
+    0 4px 4px rgba(0, 0, 0, 0.15);
   border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 65%);
-  transition: border-color 0.25s, box-shadow 0.25s, background-color 0.25s;
+  transition:
+    border-color 0.25s,
+    box-shadow 0.25s,
+    background-color 0.25s;
 
   &:hover {
-    box-shadow: inset 2px 0 0 0 var(--primary-accent), 0 4px 4px rgba(0, 0, 0, 0.15);
+    box-shadow:
+      inset 2px 0 0 0 var(--primary-accent),
+      0 4px 4px rgba(0, 0, 0, 0.15);
     border-left-color: var(--primary-accent);
     transform: scale(0.995);
   }
@@ -445,7 +521,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: color-mix(in srgb, var(--primary-accent), var(--neutral-0) 12%);
+    background-color: color-mix(
+      in srgb,
+      var(--primary-accent),
+      var(--neutral-0) 12%
+    );
     color: var(--neutral-0);
     font-weight: bold;
     font-size: rem(14);
@@ -506,7 +586,12 @@
   line-height: 1.6;
   color: var(--neutral-100);
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     margin-top: rem(24);
     margin-bottom: rem(12);
     font-weight: bold;
@@ -514,10 +599,18 @@
     color: var(--neutral-100);
   }
 
-  h1 { font-size: rem(28); }
-  h2 { font-size: rem(24); }
-  h3 { font-size: rem(20); }
-  h4 { font-size: rem(18); }
+  h1 {
+    font-size: rem(28);
+  }
+  h2 {
+    font-size: rem(24);
+  }
+  h3 {
+    font-size: rem(20);
+  }
+  h4 {
+    font-size: rem(18);
+  }
 
   p {
     margin-bottom: rem(16);
@@ -527,7 +620,8 @@
     }
   }
 
-  ul, ol {
+  ul,
+  ol {
     margin-bottom: rem(16);
     padding-left: rem(24);
   }
@@ -545,8 +639,12 @@
     }
   }
 
-  strong { font-weight: bold; }
-  em { font-style: italic; }
+  strong {
+    font-weight: bold;
+  }
+  em {
+    font-style: italic;
+  }
 
   del {
     text-decoration: line-through;
@@ -554,7 +652,7 @@
   }
 
   code {
-    font-family: 'Courier New', monospace;
+    font-family: "Courier New", monospace;
     background: color-mix(in srgb, var(--neutral-100), transparent 90%);
     padding: rem(2) rem(6);
     border-radius: rem(4);
@@ -586,7 +684,8 @@
 
   hr {
     border: none;
-    border-top: 1px solid color-mix(in srgb, var(--neutral-100), transparent 85%);
+    border-top: 1px solid
+      color-mix(in srgb, var(--neutral-100), transparent 85%);
     margin: rem(24) 0;
   }
 
@@ -596,7 +695,8 @@
     margin-bottom: rem(16);
     font-size: rem(14);
 
-    th, td {
+    th,
+    td {
       border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 80%);
       padding: rem(8) rem(12);
       text-align: left;

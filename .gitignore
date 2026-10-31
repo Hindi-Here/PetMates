@@ -1,11 +1,61 @@
+# General
 .vs/
 bin/
 obj/
 *.user
 *.sln.docstates
-
 *.env
 build/
-
 Thumbs.db
 *~
+.vscode/
+.ide
+.DS_Store
+desktop.ini
+*.sw?
+
+# ASP.NET Core
+[Bb]in/
+[Oo]bj/
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+*.nupkg
+.vs/
+packages/
+TestResults/
+
+# Electron
+build/
+release/
+*.blockmap
+latest*.yml
+builder-debug.yml
+builder-effective-config.yaml
+
+# Tauri
+src-tauri/target/
+src-tauri/gen/
+src-tauri/icons/
+
+# React / npm
+node_modules/
+web/node_modules/
+dist/
+dist-ssr/
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+*.tsbuildinfo
+.eslintcache
+
+# env variations
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local

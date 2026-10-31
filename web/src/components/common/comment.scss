@@ -35,12 +35,89 @@
   padding: rem(10) rem(24);
   font-size: rem(14);
   font-weight: bold;
-  color: var(--neutral-0);
+  color: var(--button-white-text);
   background-color: var(--primary-accent);
   border: none;
   border-radius: var(--border-radius-base);
+  cursor: pointer;
+  transition: background-color 0.25s, transform 0.25s;
+
+  &:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--primary-accent), black 4%);
+    transform: scale(0.99);
+  }
+
+  &:active:not(:disabled) {
+    background-color: color-mix(in srgb, var(--primary-accent), black 8%);
+    transform: scale(0.975);
+  }
+
   &:disabled {
     opacity: 0.5;
+    pointer-events: none;
+  }
+}
+
+.comment-btn {
+  padding: rem(6) rem(16);
+  font-size: rem(14);
+  font-weight: bold;
+  border: none;
+  border-radius: var(--border-radius-base);
+  cursor: pointer;
+  transition: background-color 0.25s, transform 0.25s;
+
+  &:disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  &.send {
+    color: var(--button-white-text);
+    background-color: var(--primary-accent);
+    height: rem(40);
+    font-weight: bold;
+    font-size: rem(14);
+
+    &:hover:not(:disabled) {
+      background-color: color-mix(in srgb, var(--primary-accent), black 4%);
+      transform: scale(0.99);
+    }
+
+    &:active:not(:disabled) {
+      background-color: color-mix(in srgb, var(--primary-accent), black 8%);
+      transform: scale(0.975);
+    }
+  }
+
+  &.confirm {
+    color: var(--button-white-text);
+    background-color: var(--primary-accent);
+
+    &:hover:not(:disabled) {
+      background-color: color-mix(in srgb, var(--primary-accent), black 4%);
+      transform: scale(0.99);
+    }
+
+    &:active:not(:disabled) {
+      background-color: color-mix(in srgb, var(--primary-accent), black 8%);
+      transform: scale(0.975);
+    }
+  }
+
+  &.cancel {
+    color: var(--neutral-100);
+    background-color: color-mix(in srgb, var(--neutral-100), transparent 92%);
+
+    &:hover:not(:disabled) {
+      background-color: color-mix(in srgb, var(--neutral-100), transparent 85%);
+      transform: scale(0.99);
+    }
+
+    &:active:not(:disabled) {
+      background-color: color-mix(in srgb, var(--neutral-100), transparent 78%);
+      transform: scale(0.975);
+    }
   }
 }
 .comments-list {
@@ -203,31 +280,6 @@
   display: flex;
   gap: rem(8);
   margin-top: rem(8);
-}
-.comment-btn {
-  padding: rem(6) rem(16);
-  font-size: rem(14);
-  font-weight: bold;
-  border: none;
-  border-radius: var(--border-radius-base);
-  &:disabled {
-    opacity: 0.5;
-  }
-  &.send {
-    color: var(--button-white-text);
-    background-color: var(--primary-accent);
-    height: rem(40);
-    font-weight: bold;
-    font-size: rem(14);
-  }
-  &.confirm {
-    color: var(--neutral-0);
-    background-color: var(--primary-accent);
-  }
-  &.cancel {
-    color: color-mix(in srgb, var(--neutral-100), transparent 30%);
-    background-color: color-mix(in srgb, var(--neutral-100), transparent 92%);
-  }
 }
 .comment-reply-actions {
   display: flex;
