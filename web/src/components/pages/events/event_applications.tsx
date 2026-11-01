@@ -11,6 +11,7 @@ import { Dropdown } from '../../common/dropdown'
 import { eventApi, type ApplicationListItem, type ApplicationStatus } from '../../services/event'
 import { ApplicationStatusBadge } from './event_application_status'
 import { STALE } from '@/components/scripts/query/queryClient'
+import { Avatar } from '@/components/common/avatar'
 
 type Filter = 'all' | ApplicationStatus
 
@@ -41,7 +42,7 @@ const ApplicationCard = ({ item, onOpen }: { item: ApplicationListItem; onOpen: 
       </div>
 
       <div className='event-app-applicant'>
-        <img src={item.applicant.avatarUrl || '/default-avatar.png'} />
+        <Avatar src={item.applicant.avatarUrl} alt={item.applicant.nickname} className="event-app-applicant-avatar" />
         <div className='event-app-applicant-info'>
           <p className='event-app-applicant-name'>@{item.applicant.nickname}</p>
           <p className='event-app-applicant-role'>{item.applicant.profileRole || 'Роль не указана'}</p>

@@ -116,7 +116,7 @@
       }
 
       &:disabled {
-        opacity: 0.4;
+        opacity: 0.5;
         pointer-events: none;
       }
 
@@ -534,7 +534,7 @@
     transition: 0.25s;
 
     &:disabled {
-      opacity: 0.4;
+      opacity: 0.5;
       background-color: color-mix(in srgb, var(--neutral-100), transparent 85%);
       color: var(--text-secondary-color);
     }

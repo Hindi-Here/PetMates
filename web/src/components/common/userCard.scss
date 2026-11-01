@@ -80,16 +80,18 @@
       background-color: var(--btn-danger-bg) !important;
       
       &:disabled {
-        background-color: color-mix(in srgb, var(--btn-danger-bg), var(--neutral-0) 18%) !important;
-        color: color-mix(in srgb, var(--button-white-text), transparent 50%) !important;
+        background-color: color-mix(in srgb, var(--btn-danger-bg), var(--neutral-0) 0%) !important;
+        opacity: 0.5 !important;
+        pointer-events: none;
       }
     }
   }
 
   .invite-button {
     &:disabled {
-      background-color: color-mix(in srgb, var(--btn-primary-bg), var(--neutral-0) 18%) !important;
-      color: color-mix(in srgb, var(--button-white-text), transparent 50%) !important;
+      background-color: color-mix(in srgb, var(--primary-accent), var(--neutral-0) 0%) !important;
+      opacity: 0.5 !important;
+      pointer-events: none;
     }
   }
 }
@@ -136,7 +138,7 @@
     }
     
     &:disabled {
-      opacity: 0.4;
+      opacity: 0.5;
       pointer-events: none;
     }
   }
@@ -359,7 +361,7 @@
   }
   
   &:disabled {
-    opacity: 0.4;
+    opacity: 0.5;
     pointer-events: none;
   }
   

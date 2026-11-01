@@ -21,8 +21,12 @@ import { conversationApi, type MessageData, type ConversationData } from '../ser
 import { usersApi } from '../services/users'
 import { useAuth } from '../hooks/useAuth'
 
+import LockIcon from '@icons/lock.svg?react'
+import { blocksApi, type BlockStatus } from '../services/blocks'
+
 import { LIMITS, TIMING } from '../scripts/limits'
 import { STALE } from '../scripts/query/queryClient'
+import { Avatar } from '../common/avatar'
 
 type MessageStatus = 'wait' | 'sent' | 'read'
 
@@ -30,6 +34,7 @@ interface MessagesResponse {
   messages: MessageData[];
   otherLastReadAt: string | null;
   previousLastReadAt?: string | null;
+  blockState: BlockStatus;
 }
 
 // Определение статуса доставки сообщения
@@ -110,6 +115,14 @@ export const Chat = () => {
   const messages = messagesResponse?.messages || []
   const otherLastReadAt = messagesResponse?.otherLastReadAt ?? null
 
+  const blockState: BlockStatus | null = messagesResponse?.blockState
+    ?? (currentConversation
+      ? { blockedByMe: currentConversation.blockedByMe, blockedMe: currentConversation.blockedMe }
+      : null)
+  const blockedByMe = blockState?.blockedByMe ?? false
+  const blockedMe = blockState?.blockedMe ?? false
+  const chatBlocked = blockedByMe || blockedMe
+
   useEffect(() => {
     if (messagesResponse && !hasCapturedUnreadRef.current) {
       setUnreadDividerTimestamp((messagesResponse as MessagesResponse)?.previousLastReadAt ?? null)
@@ -157,16 +170,20 @@ export const Chat = () => {
   }, [newMessage])
 
   useEffect(() => {
-    const el = messagesListRef.current
-    if (!el) return
-    const handleScroll = () => setOpenMenuId(null)
-    el.addEventListener('scroll', handleScroll)
-    window.addEventListener('resize', handleScroll)
-    return () => {
-      el.removeEventListener('scroll', handleScroll)
-      window.removeEventListener('resize', handleScroll)
+    const list = messagesListRef.current
+    const end = messagesEndRef.current
+    if (!list || !end)
+      return
+
+    const isNearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 100
+    
+    const lastMsg = messages[messages.length - 1]
+    const isMyMessage = lastMsg?.senderId === currentUserId
+
+    if (isNearBottom || isMyMessage) {
+      end.scrollIntoView({ behavior: 'auto' })
     }
-  }, [])
+  }, [messages.length, currentUserId])
 
   useEffect(() => {
     if (selectionMode) setOpenMenuId(null)
@@ -271,9 +288,22 @@ export const Chat = () => {
     },
   })
 
+  const unblockMutation = useMutation({
+    mutationFn: (id: string) => blocksApi.unblock(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.messages.byConversation(conversationId!) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.conversations.all })
+    },
+  })
+
   const submittingRef = useRef(false)
   const handleSubmit = async () => {
-    if (!newMessage.trim() || submittingRef.current) return
+    if (chatBlocked || !newMessage.trim() || submittingRef.current)
+      return
+
+    if (!newMessage.trim() || submittingRef.current)
+      return
+
     submittingRef.current = true
     try {
       if (editingMessageId) await updateMutation.mutateAsync({ messageId: editingMessageId, content: newMessage })
@@ -296,6 +326,10 @@ export const Chat = () => {
     setEditingMessageId(null)
     setNewMessage('')
   }
+
+  useEffect(() => {
+    if (chatBlocked) { cancelEdit(); setReplyingTo(null) }
+  }, [chatBlocked])
 
   const startReply = (msg: MessageData) => {
     setEditingMessageId(null)
@@ -369,23 +403,25 @@ export const Chat = () => {
         }
       }}
     >
-      <img src={c.otherUserAvatarUrl || '/default-avatar.png'} />
+      <Avatar src={c.otherUserAvatarUrl} alt={c.otherUserNickname || 'Чат'} className="forward-avatar" />
       <span>{c.otherUserNickname || 'Пользователь'}</span>
     </div>
   )
 
-  const renderMessageActions = (msg: MessageData, isMine: boolean) => (
+    const renderMessageActions = (msg: MessageData, isMine: boolean) => (
     <div className={`chat-hover-actions ${isMine ? 'mine' : 'theirs'}`}>
-      <button className='chat-hover-btn' onClick={() => startReply(msg)}>
-        <ReplyIcon className='ico' />
-      </button>
+      {!chatBlocked && (
+        <button className='chat-hover-btn' onClick={() => startReply(msg)}>
+          <ReplyIcon className='ico' />
+        </button>
+      )}
       <button className='chat-hover-btn' onClick={() => setForwardTarget(msg)}>
         <ForwardIcon className='ico' />
       </button>
       <button className='chat-hover-btn' onClick={() => handleCopy(msg)}>
         {copiedMessageId === msg.messageId ? <AcceptIcon className='ico copied' /> : <CopyIcon className='ico' />}
       </button>
-      {isMine && (
+      {isMine && !chatBlocked && (
         <button className='chat-hover-btn' onClick={() => startEdit(msg)}>
           <Edit className='ico' />
         </button>
@@ -559,7 +595,7 @@ export const Chat = () => {
           className='chat-header-user'
           onClick={() => currentConversation && navigate(`/profile/${currentConversation.otherUserId}/info`)}
         >
-          <img className='chat-header-avatar' src={otherUser?.avatarUrl || '/default-avatar.png'}/>
+          <Avatar src={otherUser?.avatarUrl} alt={otherUser?.nickname || 'Пользователь'} className='chat-header-avatar' />
           <div className='chat-header-info'>
             <p className='chat-header-nickname'>{otherUser?.nickname || currentConversation?.otherUserNickname || 'Пользователь'}</p>
             <p className='chat-header-status'>
@@ -622,7 +658,25 @@ export const Chat = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {(replyingTo || editingMessageId) && (
+      {chatBlocked ? (
+        <div className={`chat-block-banner ${blockedByMe ? 'by-me' : 'by-other'}`}>
+          <LockIcon className='ico' />
+          <p>
+            {blockedByMe
+              ? 'Вы заблокировали этого пользователя. Отправка и получение сообщений недоступны.'
+              : 'Этот пользователь вас заблокировал. Вы не можете отправлять ему сообщения.'}
+          </p>
+          {blockedByMe && currentConversation && (
+            <button
+              className='chat-btn cancel'
+              disabled={unblockMutation.isPending}
+              onClick={() => unblockMutation.mutate(currentConversation.otherUserId)}
+            >
+              Разблокировать
+            </button>
+          )}
+        </div>
+      ) : (replyingTo || editingMessageId) && (
         <div className='chat-context-preview'>
           <div className='chat-context-preview-content'>
             <p className='chat-context-label'>
@@ -642,10 +696,11 @@ export const Chat = () => {
         <textarea
           ref={textareaRef}
           className='chat-textarea'
-          placeholder='Написать сообщение'
+          placeholder={chatBlocked ? 'Отправка сообщений недоступна' : 'Написать сообщение'}
           value={newMessage}
           maxLength={LIMITS.chat.messageMax}
           onChange={(e) => setNewMessage(e.target.value)}
+          disabled={chatBlocked}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault()
@@ -656,7 +711,7 @@ export const Chat = () => {
         <button
           className='chat-btn send'
           onClick={handleSubmit}
-          disabled={!newMessage.trim() || sendMutation.isPending || updateMutation.isPending}
+          disabled={chatBlocked || !newMessage.trim() || sendMutation.isPending || updateMutation.isPending}
         >
           {editingMessageId ? 'Изменить' : 'Отправить'}
         </button>
@@ -673,7 +728,7 @@ export const Chat = () => {
             </div>
             <div className='chat-forward-list'>
               {conversations
-                .filter(c => c.conversationId !== conversationId)
+                .filter(c => c.conversationId !== conversationId && !c.blockedByMe && !c.blockedMe)
                 .map(renderForwardItem)}
             </div>
           </div>

@@ -451,8 +451,19 @@ namespace api.Support
             { "paused", "Приостановлен" }
         };
 
-        public static string ToEnumStatus(string? status) =>
-            status != null && StatusToEnum.TryGetValue(status, out var s) ? s : "in_progress";
+        public static string ToEnumStatus(string? status)
+        {
+            if (string.IsNullOrWhiteSpace(status))
+                return "in_progress";
+
+            if (EnumToStatus.ContainsKey(status.ToLower()))
+                return status.ToLower();
+
+            if (StatusToEnum.TryGetValue(status, out var s))
+                return s;
+
+            return "in_progress";
+        }
 
         public static string ToRuStatus(string? enumStatus) =>
             enumStatus != null && EnumToStatus.TryGetValue(enumStatus, out var s) ? s : "В процессе";
@@ -826,7 +837,7 @@ namespace api.Support
             var ownerNotifyData = new Dictionary<string, object> { { "eventName", ev.Title } };
             if (!string.IsNullOrEmpty(reason)) ownerNotifyData["reason"] = reason;
 
-            await SendNotificationAsync(ev.OwnerId, "system", eventId, deleteEventType, ownerNotifyData);
+            await SendNotificationAsync(ev.OwnerId, "event", eventId, deleteEventType, ownerNotifyData);
 
             foreach (var memberId in affectedMembers)
             {
@@ -1417,6 +1428,63 @@ namespace api.Support
             var u = await GetUserCachedAsync(userId);
             return u != null && !string.IsNullOrWhiteSpace(nickname) &&
                    string.Equals(u.Nickname?.Trim(), nickname.Trim(), StringComparison.OrdinalIgnoreCase);
+        }
+
+        // Состояние блокировки между двумя пользователями
+        public async Task<(bool ByMe, bool ByOther)> GetBlockStateAsync(string me, string other)
+        {
+            var mine = await _client.From<UserBlock>().Where(x => x.BlockerId == me).Where(x => x.BlockedId == other).Get();
+            var theirs = await _client.From<UserBlock>().Where(x => x.BlockerId == other).Where(x => x.BlockedId == me).Get();
+            return (mine.Models.Count > 0, theirs.Models.Count > 0);
+        }
+
+        // Все блокировки пользователя
+        public async Task<(HashSet<string> ByMe, HashSet<string> ByOthers)> GetBlockSetsAsync(string me)
+        {
+            var mine = await _client.From<UserBlock>().Where(x => x.BlockerId == me).Get();
+            var theirs = await _client.From<UserBlock>().Where(x => x.BlockedId == me).Get();
+            return (mine.Models.Select(b => b.BlockedId).ToHashSet(),
+                    theirs.Models.Select(b => b.BlockerId).ToHashSet());
+        }
+
+        // Владелец проекта/мероприятия (для проверки блокировки в комментариях)
+        public async Task<string?> GetReferenceOwnerId(string referenceType, string referenceId) => referenceType switch
+        {
+            "project" => (await _client.From<Project>().Where(p => p.ProjectId == referenceId).Get()).Models.FirstOrDefault()?.OwnerId,
+            "event" => (await _client.From<Event>().Where(e => e.EventId == referenceId).Get()).Models.FirstOrDefault()?.OwnerId,
+            _ => null
+        };
+
+        // Отмена приглашений и откликов между двумя пользователями (при блокировке)
+        public async Task CancelPendingBetweenAsync(string a, string b)
+        {
+            foreach (var (owner, guest) in new[] { (a, b), (b, a) })
+            {
+                var projectIds = (await _client.From<Project>().Where(p => p.OwnerId == owner).Get())
+                    .Models.Select(p => p.ProjectId).ToList();
+                if (projectIds.Count == 0)
+                    continue;
+
+                var inviteIds = (await _client.From<Invite>()
+                        .Filter("project_id", Supabase.Postgrest.Constants.Operator.In, projectIds)
+                        .Where(i => i.UserId == guest).Get())
+                    .Models.Select(i => i.InviteId).ToList();
+                if (inviteIds.Count > 0)
+                    await _client.From<Invite>().Where(i => inviteIds.Contains(i.InviteId)).Delete();
+
+                var vacancyIds = (await _client.From<Vacancy>()
+                        .Filter("project_id", Supabase.Postgrest.Constants.Operator.In, projectIds).Get())
+                    .Models.Select(v => v.VacancyId).ToList();
+                if (vacancyIds.Count == 0)
+                    continue;
+
+                var responseIds = (await _client.From<Response>()
+                        .Filter("vacancy_id", Supabase.Postgrest.Constants.Operator.In, vacancyIds)
+                        .Where(r => r.UserId == guest).Get())
+                    .Models.Select(r => r.ResponseId).ToList();
+                if (responseIds.Count > 0)
+                    await _client.From<Response>().Where(r => responseIds.Contains(r.ResponseId)).Delete();
+            }
         }
 
         [GeneratedRegex(@"@([a-zA-Z0-9_]+)", RegexOptions.Compiled)]

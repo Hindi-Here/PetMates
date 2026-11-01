@@ -26,14 +26,6 @@ desktop.ini
 packages/
 TestResults/
 
-# Electron
-build/
-release/
-*.blockmap
-latest*.yml
-builder-debug.yml
-builder-effective-config.yaml
-
 # Tauri
 src-tauri/target/
 src-tauri/gen/

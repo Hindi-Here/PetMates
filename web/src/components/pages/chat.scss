@@ -387,7 +387,7 @@
 @keyframes chat-status-pulse {
   0%,
   100% {
-    opacity: 0.4;
+    opacity: 0.5;
   }
 
   50% {
@@ -596,7 +596,7 @@
   transition: 0.25s;
   
   &:disabled {
-    opacity: 0.4;
+    opacity: 0.5;
     transform: none;
     filter: none;
   }
@@ -736,6 +736,33 @@
   span {
     font-size: rem(14);
   }
+}
+
+.chat-block-banner {
+  display: flex;
+  align-items: center;
+  gap: rem(12);
+  flex-shrink: 0;
+  margin-top: rem(12);
+  padding: rem(10) rem(14);
+  font-size: rem(14);
+  border-radius: var(--border-radius-base);
+  border: 1px solid color-mix(in srgb, var(--important-color), transparent 70%);
+  background: color-mix(in srgb, var(--important-color), transparent 92%);
+  color: var(--important-color);
+
+  .ico { width: rem(16); height: rem(16); fill: currentColor; flex-shrink: 0; }
+  p { flex: 1; margin: 0; }
+
+  &.by-other {
+    border-color: color-mix(in srgb, var(--neutral-100), transparent 80%);
+    background: var(--unborder-content-bg-color);
+    color: var(--text-secondary-color);
+  }
+}
+
+.chat-textarea:disabled { 
+  opacity: 0.5; 
 }
 
 @media (max-width: 480px) {

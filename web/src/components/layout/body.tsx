@@ -129,17 +129,6 @@ const RedirectUsersProfile = () => {
 const Content = () => {
   const { userId } = useAuth();
 
-  const ProtectedProfileTab = ({ children, tabName }: { children: React.ReactNode, tabName: string }) => {
-    const { profileId } = useParams<{ profileId: string }>();
-    const { userId } = useAuth();
-    
-    if (profileId && userId && profileId !== userId) {
-      return <Navigate to={`/profile/${userId}/${tabName}`} replace />;
-    }
-    
-    return <>{children}</>;
-  };
-  
   return (
     <div className='content-container'>
       <Routes>
@@ -151,24 +140,14 @@ const Content = () => {
           <Route path="activity/project/:projectId" element={<Project />} />
           <Route path="activity/event/:eventId" element={null} />
           <Route path="activity/event/:eventId/:tab" element={null} />
-          <Route
-            path="messages"
-            element={<ProtectedProfileTab tabName="messages"><Messages /></ProtectedProfileTab>}
-          />
-          <Route
-            path="messages/:conversationId"
-            element={<ProtectedProfileTab tabName="messages"><Chat /></ProtectedProfileTab>}
-          />
-          <Route
-            path="responces"
-            element={<ProtectedProfileTab tabName="responces"><Responses /></ProtectedProfileTab>}
-          />
+          
+          <Route path="messages" element={<Messages />} />
+          <Route path="messages/:conversationId" element={<Chat />} />
+          <Route path="responces" element={<Responses />} />
           <Route path="notifications" element={null} />
-          <Route
-            path="settings"
-            element={<ProtectedProfileTab tabName="settings"><Setting /></ProtectedProfileTab>}
-          />
+          <Route path="settings" element={<Setting />} />
         </Route>
+        
         <Route path="/vacancy" element={<Vacancy />} />
         <Route path="/events" element={<Events />} />
         <Route path="/users" element={<Users />} />

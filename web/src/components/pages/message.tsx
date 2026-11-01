@@ -5,14 +5,15 @@ import Delete from '@icons/reject.svg?react'
 import PinIcon from '@icons/pin.svg?react'
 import UnpinIcon from '@icons/unpin.svg?react'
 
-import { useState, useMemo } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useState, useMemo, useEffect, useRef } from 'react'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '../scripts/query/queryKeys'
 import { conversationApi, type ConversationData } from '../services/conversation'
 import { usersApi, type UserSearchResult } from '../services/users'
 
 import { LIMITS } from '../scripts/limits'
+import { Avatar } from '../common/avatar'
 
 // Форматирование даты для отображения в списке чатов
 const formatDate = (dateString: string | null | undefined) => {
@@ -81,6 +82,17 @@ export const Messages = () => {
     },
   })
 
+  const [searchParams, setSearchParams] = useSearchParams()
+  const toUserId = searchParams.get('to')
+  const startedRef = useRef(false)
+
+  useEffect(() => {
+    if (!toUserId || startedRef.current) return
+    startedRef.current = true
+    setSearchParams({}, { replace: true })
+    startConversationMutation.mutate(toUserId)
+  }, [toUserId])
+
   const handleOpenChat = (conversationId: string) => {
     navigate(`/profile/${profileId}/messages/${conversationId}`)
   }
@@ -139,7 +151,7 @@ export const Messages = () => {
       >
         <div className='found-user-info'>
           <div className='found-user-avatar'>
-            <img src={user.avatarUrl || '/default-avatar.png'} />
+            <Avatar src={user.avatarUrl} alt={user.nickname} className="avatar" />
           </div>
           <p className='found-user-nickname'>@{user.nickname}</p>
         </div>
@@ -158,12 +170,14 @@ export const Messages = () => {
     >
       <div className='conversation-info-block'>
         <div className='conversation-avatar'>
-          <img src={conv.otherUserAvatarUrl || '/default-avatar.png'} />
+          <Avatar src={conv.otherUserAvatarUrl} alt={conv.otherUserNickname || 'Чат'} className="conversation-avatar-img" />
         </div>
 
         <div className='conversation-info'>
           <div className='conversation-top-row'>
             <p className='conversation-nickname'>{conv.otherUserNickname || 'Пользователь'}</p>
+            {conv.blockedByMe && <span className='conversation-block-badge'>Заблокирован</span>}
+            {!conv.blockedByMe && conv.blockedMe && <span className='conversation-block-badge muted'>Вас заблокировали</span>}
             {conv.lastMessageAt && (
               <span className='conversation-date'>{formatDate(conv.lastMessageAt)}</span>
             )}

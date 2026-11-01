@@ -191,6 +191,20 @@
   min-width: 0;
 }
 
+.conversation-block-badge {
+  flex-shrink: 0;
+  padding: rem(2) rem(10);
+  border-radius: rem(20);
+  font-size: rem(11);
+  color: var(--important-color);
+  background: color-mix(in srgb, var(--important-color), transparent 85%);
+
+  &.muted {
+    color: var(--text-secondary-color);
+    background: color-mix(in srgb, var(--neutral-100), transparent 92%);
+  }
+}
+
 .conversation-avatar img {
   width: rem(44);
   height: rem(44);
@@ -287,7 +301,7 @@
   }
   
   &:disabled {
-    opacity: 0.4;
+    opacity: 0.5;
     pointer-events: none;
   }
   

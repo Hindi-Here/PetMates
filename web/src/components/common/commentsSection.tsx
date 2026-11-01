@@ -8,6 +8,7 @@ import { commentApi, type CommentData } from '../services/comment'
 import { useAuth } from '../hooks/useAuth'
 import { LIMITS, TIMING } from '../scripts/limits'
 import { queryKeys } from '../scripts/query/queryKeys'
+import { Avatar } from './avatar'
 
 interface CommentNode extends CommentData {
   replies: CommentNode[]
@@ -109,7 +110,7 @@ export const CommentsSection = ({
       <div key={node.commentId} className={`comment-item ${depth > 0 ? 'comment-reply' : ''}`}>
         <div className='comment-wrapper'>
           <div className='comment-avatar'>
-            <img src={node.avatarUrl || '/default-avatar.png'}/>
+            <Avatar src={node.avatarUrl} alt={node.nickname || 'Автор'} className="comment-avatar-img" />
           </div>
 
           <div className='comment-body'>

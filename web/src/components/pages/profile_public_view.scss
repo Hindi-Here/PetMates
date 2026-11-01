@@ -158,6 +158,28 @@
       transform: scale(0.95);
     }
   }
+
+    .profile-action-btn.restore {
+    --ibtn-bg: color-mix(in srgb, var(--success-color), transparent 85%);
+    --ibtn-fg: var(--success-color);
+    background-color: var(--ibtn-bg);
+
+    .action-ico { fill: var(--success-color); color: var(--success-color); }
+
+    &:hover:not(:disabled) {
+      background: color-mix(in srgb, var(--success-color), transparent 78%);
+      transform: scale(0.975);
+    }
+    &:active:not(:disabled) {
+      background: color-mix(in srgb, var(--success-color), transparent 70%);
+      transform: scale(0.95);
+    }
+  }
+}
+
+.profile-block-note {
+  font-size: rem(12);
+  color: var(--important-color);
 }
 
 .profile-moderation-menu-wrapper {

@@ -10,6 +10,7 @@ import { ApplicationStatusBadge } from './event_application_status'
 
 import { LIMITS } from '../../scripts/limits'
 import { STALE } from '@/components/scripts/query/queryClient'
+import { Avatar } from '@/components/common/avatar'
 
 interface EventApplicationDetailProps {
   eventId: string
@@ -91,7 +92,7 @@ export const EventApplicationDetail = ({ eventId, applicationId, basePath }: Eve
         </div>
 
         <div className='event-app-applicant-card'>
-          <img src={applicant.avatarUrl || '/default-avatar.png'} />
+          <Avatar src={applicant.avatarUrl} alt={applicant.nickname} className="event-app-applicant-avatar" />
           <div className='event-app-applicant-card-info'>
             <p className='event-app-applicant-name'>@{applicant.nickname}</p>
             {meta.length > 0 && <p className='event-app-applicant-meta'>{meta.join(' • ')}</p>}

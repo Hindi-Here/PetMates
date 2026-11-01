@@ -49,6 +49,8 @@ namespace api.Controllers
                 var hiddenForUser = await _client.From<MessageHiddenForUser>().Where(h => h.UserId == userId).Get();
                 var hiddenIds = hiddenForUser.Models.Select(h => h.MessageId).ToHashSet();
 
+                var (blockedByMe, blockedMe) = await _SupMan.GetBlockSetsAsync(userId);
+
                 var result = new List<object>();
                 foreach (var participation in participations.Models)
                 {
@@ -75,7 +77,9 @@ namespace api.Controllers
                         LastMessage = last.IsDeleted ? "Сообщение удалено" : last.Content,
                         LastMessageAt = last.CreatedAt?.ToString("o"),
                         HasUnread = participation.LastReadAt == null ||
-                                    (last.CreatedAt != null && last.CreatedAt > participation.LastReadAt)
+                                    (last.CreatedAt != null && last.CreatedAt > participation.LastReadAt),
+                        BlockedByMe = blockedByMe.Contains(otherUserId),
+                        BlockedMe = blockedMe.Contains(otherUserId),
                     });
                 }
 
@@ -103,8 +107,6 @@ namespace api.Controllers
                 var target = await _SupMan.GetAccessAsync(dto.TargetUserId);
                 if (!target.Exists || (target.IsBanned && !await _SupMan.IsStaffAsync(userId)))
                     return NotFound();
-                if (await _SupMan.IsBlockedBetweenAsync(userId, dto.TargetUserId))
-                    return BadRequest(new { message = "Невозможно написать этому пользователю" });
 
                 var (userOneId, userTwoId) = string.CompareOrdinal(userId, dto.TargetUserId) < 0
                     ? (userId, dto.TargetUserId)
@@ -182,19 +184,21 @@ namespace api.Controllers
 
                 var messages = await _client.From<Message>()
                     .Where(m => m.ConversationId == conversationId)
-                    .Order(m => m.CreatedAt!, Ordering.Ascending)
+                    .Order(m => m.CreatedAt!, Ordering.Descending)
+                    .Limit(100)
                     .Get();
 
-                if (conversation.UserOneId != userId && conversation.UserTwoId != userId)
-                    return Forbid();
+                var sortedMessages = messages.Models.ToList();
+                sortedMessages.Reverse();
 
                 var users = (await _SupMan.GetAllUsersAsync())
                     .Where(u => u.UserId != null).ToDictionary(u => u.UserId!);
 
-                var byId = messages.Models.ToDictionary(m => m.MessageId);
-                var missingParents = messages.Models
+                var byId = sortedMessages.ToDictionary(m => m.MessageId);
+                var missingParents = sortedMessages
                     .Where(m => m.ParentMessageId != null && !byId.ContainsKey(m.ParentMessageId))
                     .Select(m => m.ParentMessageId!).Distinct().ToList();
+
                 if (missingParents.Count > 0)
                 {
                     var extra = await _client.From<Message>()
@@ -203,7 +207,7 @@ namespace api.Controllers
                 }
 
                 var result = new List<object>();
-                foreach (var m in messages.Models)
+                foreach (var m in sortedMessages)
                 {
                     if (hiddenIds.Contains(m.MessageId)) continue;
 
@@ -235,7 +239,7 @@ namespace api.Controllers
                     });
                 }
 
-                var newestIncoming = messages.Models.LastOrDefault(m => m.SenderId != userId)?.CreatedAt;
+                var newestIncoming = sortedMessages.LastOrDefault(m => m.SenderId != userId)?.CreatedAt;
                 if (newestIncoming != null && (previousLastReadAt == null || newestIncoming > previousLastReadAt))
                 {
                     await _client.From<ConversationParticipant>()
@@ -244,11 +248,14 @@ namespace api.Controllers
                         .Update();
                 }
 
+                var (bByMe, bByOther) = await _SupMan.GetBlockStateAsync(userId, otherUserId);
+
                 return Ok(new
                 {
                     messages = result,
                     previousLastReadAt = previousLastReadAt?.ToString("o"),
-                    otherLastReadAt = otherLastReadAt?.ToString("o")
+                    otherLastReadAt = otherLastReadAt?.ToString("o"),
+                    blockState = new { blockedByMe = bByMe, blockedMe = bByOther }
                 });
             }
             catch (Exception ex) { return this.Fail(ex); }
@@ -276,6 +283,12 @@ namespace api.Controllers
                     return BadRequest(new { message = "Пользователь недоступен" });
                 if (await _SupMan.IsBlockedBetweenAsync(userId, otherId))
                     return BadRequest(new { message = "Невозможно отправить сообщение этому пользователю" });
+
+                var (byMe, byOther) = await _SupMan.GetBlockStateAsync(userId, otherId);
+                if (byMe)
+                    return BadRequest(new { message = "Вы заблокировали этого пользователя", code = "blocked_by_me" });
+                if (byOther)
+                    return BadRequest(new { message = "Этот пользователь вас заблокировал", code = "blocked_me" });
 
                 if (!string.IsNullOrEmpty(dto.ParentMessageId))
                 {
@@ -356,6 +369,12 @@ namespace api.Controllers
                     return NotFound();
                 if (await GetMyConversation(existing.ConversationId, userId) == null)
                     return NotFound();
+
+                var convo = await GetMyConversation(existing.ConversationId, userId);
+                if (convo == null) return NotFound();
+                var otherId = convo.UserOneId == userId ? convo.UserTwoId : convo.UserOneId;
+                if (await _SupMan.IsBlockedBetweenAsync(userId, otherId))
+                    return BadRequest(new { message = "Редактирование недоступно: чат заблокирован" });
 
                 await _client.From<Message>()
                     .Where(m => m.MessageId == messageId)

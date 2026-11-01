@@ -94,7 +94,19 @@ export default function ProjectViewer() {
     return <div className='loading-container' />
   }
 
-  if (!project || (!isStaff && (!ownerData || isBanned))) {
+  if (!project) {
+    return (
+      <div className='banned-gate'>
+        <div className='info-container'>
+          <LockIcon className='info-ico' />
+          <p className='info-comment'>Проект недоступен</p>
+          <p className='info-subcomment'>Он удалён или у вас нет доступа</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isStaff && (!ownerData || isBanned)) {
     return (
       <div className='banned-gate'>
         <div className='info-container'>

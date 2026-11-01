@@ -15,6 +15,7 @@ import { projectsApi } from '../services/project'
 import type { UserData } from '../services/users'
 import BanUserForm from '../forms/ban_user'
 import { useOnce } from '../hooks/useOnce'
+import { Avatar } from './avatar'
 
 // Компонент карточки пользователя (информация, логика, модерация)
 export const UserCard = ({ 
@@ -288,7 +289,7 @@ export const UserCard = ({
 
         <div className='info-place-container'>
           <div className='avatar-container'>
-            <img className='avatar-ico' src={user.avatarUrl || '/default-avatar.png'} />
+            <Avatar src={user.avatarUrl} alt={user.nickname} className="avatar" />
           </div>
           <div className='info-container'>
             <div className='nickname-row' ref={rowRef}>

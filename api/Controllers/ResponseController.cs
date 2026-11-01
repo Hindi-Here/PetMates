@@ -242,8 +242,12 @@ namespace api.Controllers
                 var vac = (await _client.From<Vacancy>().Where(v => v.VacancyId == resp.VacancyId).Get()).Models.FirstOrDefault();
                 var project = vac == null ? null
                     : (await _client.From<Project>().Where(p => p.ProjectId == vac.ProjectId).Get()).Models.FirstOrDefault();
+
                 if (vac == null || project == null || project.OwnerId != actor.UserId)
                     return Forbid();
+
+                if (accept && await _SupMan.IsBlockedBetweenAsync(actor.UserId, resp.UserId))
+                    return BadRequest(new { message = "Невозможно принять: пользователь заблокирован" });
 
                 await _client.From<Response>().Where(r => r.ResponseId == responseId).Delete();
 

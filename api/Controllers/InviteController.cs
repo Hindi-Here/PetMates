@@ -216,6 +216,9 @@ namespace api.Controllers
 
                 var project = (await _client.From<Project>().Where(p => p.ProjectId == invite.ProjectId).Get()).Models.FirstOrDefault();
 
+                if (accept && project != null && await _SupMan.IsBlockedBetweenAsync(actor.UserId, project.OwnerId))
+                    return BadRequest(new { message = "Невозможно принять: пользователь заблокирован" });
+
                 await _client.From<Invite>().Where(i => i.InviteId == inviteId).Delete();
 
                 if (project != null)

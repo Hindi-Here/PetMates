@@ -27,6 +27,7 @@ import { LIMITS, TIMING} from '../scripts/limits'
 import { invalidateProfile } from '../scripts/query/invalidate'
 import { queryKeys } from '../scripts/query/queryKeys'
 import { STALE } from '../scripts/query/queryClient'
+import { Avatar } from '../common/avatar'
 
 interface ProfileFormData {
   nickname: string
@@ -196,7 +197,8 @@ const AuthorizedProfile = () => {
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
+    const rule = validationRules[name as keyof typeof validationRules]
+    setFormData(prev => ({ ...prev, [name]: rule ? rule(value) : value }))
     handleValidationChange(e)
   }
   
@@ -420,7 +422,7 @@ const AuthorizedProfile = () => {
                   {!user ? (
                     <div className='avatar-skeleton' />
                   ) : (
-                    <img className='profile-avatar' src={formData.avatarUrl || '/default-avatar.png'} />
+                    <Avatar  className='profile-avatar' src={formData.avatarUrl} alt={formData.nickname || 'Аватар профиля'} />
                   )}
                   <input
                     ref={fileInputRef}

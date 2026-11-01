@@ -193,7 +193,7 @@ a {
     transition: 0.25s;
 
     &:disabled {
-      opacity: 0.4;
+      opacity: 0.5;
       pointer-events: none;
     }
   }
@@ -229,7 +229,7 @@ a {
     }
 
     &:disabled {
-      opacity: 0.4;
+      opacity: 0.5;
     }
   }
 

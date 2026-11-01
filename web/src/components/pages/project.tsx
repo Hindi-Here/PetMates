@@ -251,10 +251,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
   const [isSaving, setIsSaving] = useState(false)
   const [projectRating, setProjectRating] = useState(0)
   const [isPrivate, setIsPrivate] = useState(false)
-  const [hasBasicInfoDraft, setHasBasicInfoDraft] = useState(false)
-  const [hasDescriptionDraft, setHasDescriptionDraft] = useState(false)
-  const [hasTeamDraft, setHasTeamDraft] = useState(false)
-  const [hasVacanciesDraft, setHasVacanciesDraft] = useState(false)
+  
   const [loadedDraft, setLoadedDraft] = useState<ProjectDraftData | null | undefined>(undefined)
   const [name, setName] = useState('Unnamed')
   const [shortDesc, setShortDesc] = useState('')
@@ -409,7 +406,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
     }
   )
 
-    const checkProjectFormat = (fieldName: string, value: string): string | null => {
+  const checkProjectFormat = (fieldName: string, value: string): string | null => {
     const rules: Record<string, Array<[boolean, string]>> = {
       name: [
         [!validatorFormat.required(value), 'Введите название проекта'],
@@ -420,8 +417,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
       ],
     }
     const fieldRules = rules[fieldName as keyof typeof rules]
-    if (!fieldRules)
-      return null
+    if (!fieldRules) return null
     const error = fieldRules.find(([isInvalid]) => isInvalid)
     return error?.[1] ?? null
   }
@@ -570,16 +566,20 @@ export const Project = ({ onCancel }: ProjectProps) => {
     if (teamMembers.length > 0 && !teamInitializedRef.current && loadedDraft !== undefined) {
       const membersCopy = teamMembers.map(m => ({ ...m }))
       setInitialTeamState(membersCopy)
-      const draftDeletedMemberIds = loadedDraft?.deletedMemberIds || []
-      const draftEditedRoles = loadedDraft?.editedRoles || {}
-      let restored = membersCopy.filter(m => !draftDeletedMemberIds.includes(m.memberId))
-      restored = restored.map(m => draftEditedRoles[m.memberId] ? { ...m, role: draftEditedRoles[m.memberId] } : m)
+      
+      const firstInit = initialTeamState.length === 0
+      const delIds = firstInit ? (loadedDraft?.deletedMemberIds || []) : deletedMemberIds
+      const roles = firstInit ? (loadedDraft?.editedRoles || {}) : editedRoles
+      
+      let restored = membersCopy.filter(m => !delIds.includes(m.memberId))
+      restored = restored.map(m => roles[m.memberId] ? { ...m, role: roles[m.memberId] } : m)
+      
       setLocalTeamMembers(restored)
-      setDeletedMemberIds(draftDeletedMemberIds)
-      setEditedRoles(draftEditedRoles)
+      setDeletedMemberIds(delIds)
+      setEditedRoles(roles)
       teamInitializedRef.current = true
     }
-  }, [teamMembers, loadedDraft])
+  }, [teamMembers, loadedDraft, initialTeamState.length, deletedMemberIds, editedRoles])
 
   useEffect(() => {
     if (project && projectId) {
@@ -610,13 +610,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
             setStatus(draftStatus)
             setDescription(draft.fullDescription ?? cleanState.description)
             setIsPrivate(draft.isPrivate ?? cleanState.isPrivate)
-            setHasBasicInfoDraft(
-              (draft.title && draft.title !== cleanState.name) ||
-              (draft.shortDescription !== undefined && draft.shortDescription !== cleanState.shortDesc) ||
-              (draft.status && draft.status !== cleanState.status) ||
-              (draft.isPrivate !== undefined && draft.isPrivate !== cleanState.isPrivate)
-            )
-            setHasDescriptionDraft(!!(draft.fullDescription && draft.fullDescription !== cleanState.description))
             setDeletedMediaFileNames(draft.deletedMediaFiles || [])
           } else {
             const projectStatus = project.status ? (statusMap[project.status] || project.status) : STATUS_OPTIONS[0]
@@ -625,8 +618,6 @@ export const Project = ({ onCancel }: ProjectProps) => {
             setStatus(projectStatus)
             setDescription(cleanState.description)
             setIsPrivate(cleanState.isPrivate)
-            setHasBasicInfoDraft(false)
-            setHasDescriptionDraft(false)
             setDeletedMediaFileNames([])
           }
         }
@@ -655,7 +646,8 @@ export const Project = ({ onCancel }: ProjectProps) => {
   const isDescriptionChanged = description !== initialState.description
   const isTeamChanged = deletedMemberIds.length > 0 || Object.keys(editedRoles).length > 0
   const isVacanciesChanged = deletedVacancyIds.length > 0 || localVacancies.some(v => v._isNew || v._isModified)
-  const hasAnyChanges = isBasicInfoChanged || isDescriptionChanged || isTeamChanged || isVacanciesChanged
+  
+  const hasAnyChanges = isBasicInfoChanged || isDescriptionChanged || isTeamChanged || isVacanciesChanged || hasMediaChanges
 
   const draftPayload = {
     title: name,
@@ -679,61 +671,17 @@ export const Project = ({ onCancel }: ProjectProps) => {
     deletedMediaFiles: deletedMediaFileNames,
   }
 
-  useDraftAutosave({
-    enabled: !!projectId,
+  const autosave = useDraftAutosave({
+    enabled: !!projectId && loadedDraft !== undefined,
     hasChanges: hasAnyChanges,
     payload: draftPayload,
+    hasServerDraft: !!loadedDraft,
     save: payload => projectDraftApi.saveDraft(projectId!, payload),
-    onSaved: () => {
-      if (isBasicInfoChanged) setHasBasicInfoDraft(true)
-      if (isDescriptionChanged) setHasDescriptionDraft(true)
+    discard: async () => {
+      await projectDraftApi.discardDraft(projectId!)
+      setProjectMedia(await projectsApi.getMedia(projectId!))
     },
   })
-
-  useEffect(() => {
-    const hasRealChanges =
-      deletedMemberIds.length > 0 ||
-      Object.keys(editedRoles).some(memberId => {
-        const originalMember = initialTeamState.find(m => m.memberId === memberId)
-        return originalMember && originalMember.role !== editedRoles[memberId]
-      })
-    setHasTeamDraft(hasRealChanges)
-  }, [deletedMemberIds, editedRoles, initialTeamState])
-
-  useEffect(() => {
-    const hasRealChanges =
-      deletedVacancyIds.length > 0 ||
-      localVacancies.some(v => {
-        if (v._isNew) return true
-        const originalVacancy = vacanciesFromDb.find(orig => orig.vacancyId === v.vacancyId)
-        if (!originalVacancy && !v._isNew) return true
-        if (originalVacancy) {
-          return (
-            v.title !== originalVacancy.title ||
-            v.description !== originalVacancy.description ||
-            JSON.stringify(v.requiredTags || []) !== JSON.stringify(originalVacancy.requiredTags || [])
-          )
-        }
-        return false
-      })
-    setHasVacanciesDraft(hasRealChanges)
-  }, [deletedVacancyIds, localVacancies, vacanciesFromDb])
-
-  useEffect(() => {
-    if (hasBasicInfoDraft) {
-      setHasBasicInfoDraft(false)
-    }
-  }, [name, shortDesc, status, isPrivate, initialState, hasBasicInfoDraft])
-
-  useEffect(() => {
-    if (!isBasicInfoChanged && hasBasicInfoDraft) setHasBasicInfoDraft(false)
-  }, [isBasicInfoChanged, hasBasicInfoDraft])
-
-  useEffect(() => {
-    if (description === initialState.description && hasDescriptionDraft) {
-      setHasDescriptionDraft(false)
-    }
-  }, [description, initialState.description, hasDescriptionDraft])
 
   const hasVacancyChanges = useMemo(() =>
     deletedVacancyIds.length > 0 ||
@@ -793,31 +741,34 @@ export const Project = ({ onCancel }: ProjectProps) => {
   }, [name, shortDesc, localVacancies, deletedVacancyIds, description])
 
   const handleCancel = async () => {
-    if (hasChanges && projectId) {
-      try {
-        await projectDraftApi.discardDraft(projectId)
-      } catch (error) {
-        console.error('Ошибка сброса черновика:', error)
+    await autosave.pause()
+    try {
+      if (hasChanges && projectId) {
+        try {
+          await projectDraftApi.discardDraft(projectId)
+        } catch (error) {
+          console.error('Ошибка сброса черновика:', error)
+        }
       }
-    }
-    setName(initialState.name)
-    setShortDesc(initialState.shortDesc)
-    setStatus(initialState.status)
-    setDescription(initialState.description)
-    setIsPrivate(initialState.isPrivate)
-    setHasBasicInfoDraft(false)
-    setHasDescriptionDraft(false)
-    setHasTeamDraft(false)
-    setHasVacanciesDraft(false)
-    setLocalTeamMembers(initialTeamState.map(m => ({ ...m })))
-    setDeletedMemberIds([])
-    setEditedRoles({})
-    setLocalVacancies(vacanciesFromDb.map(v => ({ ...v })))
-    setDeletedVacancyIds([])
-    setDeletedMediaFileNames([])
-    if (projectId) {
-      const media = await projectsApi.getMedia(projectId)
-      setProjectMedia(media)
+      setName(initialState.name)
+      setShortDesc(initialState.shortDesc)
+      setStatus(initialState.status)
+      setDescription(initialState.description)
+      setIsPrivate(initialState.isPrivate)
+      
+      setLocalTeamMembers(initialTeamState.map(m => ({ ...m })))
+      setDeletedMemberIds([])
+      setEditedRoles({})
+      setLocalVacancies(vacanciesFromDb.map(v => ({ ...v })))
+      setDeletedVacancyIds([])
+      setDeletedMediaFileNames([])
+      
+      if (projectId) {
+        const media = await projectsApi.getMedia(projectId)
+        setProjectMedia(media)
+      }
+    } finally {
+      autosave.resume(false)
     }
   }
 
@@ -840,9 +791,15 @@ export const Project = ({ onCancel }: ProjectProps) => {
   const savingRef = useRef(false)
   const handleSave = async () => {
     if (savingRef.current || !projectId || !hasChanges || !isProjectFormValid) return
+    
+    await autosave.pause()
+    
     savingRef.current = true
     setIsSaving(true)
     setSaveError(null)
+    
+    let ok = false
+
     try {
       const commitResponse = await projectDraftApi.commitDraft(projectId, {
         title: name,
@@ -851,9 +808,11 @@ export const Project = ({ onCancel }: ProjectProps) => {
         status: reverseStatusMap[status] || status,
         isPrivate: isPrivate
       })
+      
       if (commitResponse?.fullDescription !== undefined) {
         setDescription(commitResponse.fullDescription)
       }
+      
       setDeletedMediaFileNames([])
       const media = await projectsApi.getMedia(projectId)
       setProjectMedia(media)
@@ -904,12 +863,11 @@ export const Project = ({ onCancel }: ProjectProps) => {
         description: commitResponse?.fullDescription || description,
         isPrivate
       })
-      setHasBasicInfoDraft(false)
-      setHasDescriptionDraft(false)
-      setHasTeamDraft(false)
-      setHasVacanciesDraft(false)
+      
       setSaveSuccess(true)
       setTimeout(() => setSaveSuccess(false), TIMING.toastMs)
+      
+      ok = true 
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Не удалось сохранить проект'
       setSaveError(msg)
@@ -917,6 +875,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
     } finally {
       savingRef.current = false
       setIsSaving(false)
+      autosave.resume(!ok)
     }
   }
 
@@ -953,13 +912,10 @@ export const Project = ({ onCancel }: ProjectProps) => {
           addError?.toString?.() ||
           ''
         ).toLowerCase()
+        
         if (
           errorMsg.includes('уже является участником') ||
-          errorMsg.includes('already') ||
-          errorMsg.includes('duplicate') ||
-          errorMsg.includes('conflict') ||
-          addError?.status === 409 ||
-          addError?.status === 400
+          addError?.status === 409
         ) {
           throw new Error('Этот пользователь уже в команде')
         }
@@ -1099,9 +1055,8 @@ export const Project = ({ onCancel }: ProjectProps) => {
   const handleDeleteClick = () => { if (projectId) setShowDeleteForm(true) }
 
   const handleDeleteSuccess = () => {
-  queryClient.removeQueries({ queryKey: queryKeys.projects.byId(projectId!) })
+    queryClient.removeQueries({ queryKey: queryKeys.projects.byId(projectId!) })
     invalidateProjects(queryClient)
-
     navigate(`${profilePath}/activity`, { replace: true })
   }
 
@@ -1112,8 +1067,11 @@ export const Project = ({ onCancel }: ProjectProps) => {
         if (action === 'accept') await responseApi.accept(response.responseId)
         else await responseApi.decline(response.responseId)
         await invalidateRelations(queryClient)
-      } catch (error) {
+      } catch (error: any) {
         console.error('Ошибка обработки отклика:', error)
+        const message = error?.message || error?.details?.message || 'Не удалось обработать отклик'
+        setSaveError(message)
+        setTimeout(() => setSaveError(null), TIMING.toastMs)
       }
   })
 
@@ -1151,7 +1109,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
           <section className='project-section'>
             <div className='section-header-wrapper'>
               <h2 className='project-section-title'>Базовая информация</h2>
-              {hasBasicInfoDraft && <span className='draft-indicator'>(черновик)</span>}
+              {isBasicInfoChanged && <span className='draft-indicator'>(черновик)</span>}
             </div>
             <div className='project-form-grid'>
               <div className='project-field-row'>
@@ -1216,7 +1174,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
           <section className='project-section'>
             <div className='section-header-wrapper'>
               <h2 className='project-section-title'>Описание проекта</h2>
-              {hasDescriptionDraft && <span className='draft-indicator'>(черновик)</span>}
+              {isDescriptionChanged && <span className='draft-indicator'>(черновик)</span>}
               <span className={`description-char-counter ${description.length > LIMITS.longTextMax ? 'limit' : ''}`}>
                 {description.length} / {LIMITS.longTextMax}
               </span>
@@ -1306,7 +1264,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
               <h2 className='project-section-title'>
                 Команда: <span className='project-count'>{localTeamMembers.length}</span>
               </h2>
-              {hasTeamDraft && <span className='draft-indicator'>(черновик)</span>}
+              {hasTeamChanges && <span className='draft-indicator'>(черновик)</span>}
             </div>
             <div className='team-invite-row'>
               <input
@@ -1355,7 +1313,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
               <h2 className='project-section-title'>
                 Заявки: <span className='project-count'>{localVacancies.length}</span>
               </h2>
-              {hasVacanciesDraft && <span className='draft-indicator'>(черновик)</span>}
+              {hasVacancyChanges && <span className='draft-indicator'>(черновик)</span>}
             </div>
             {showVacancyForm ? (
               <div className='vacancy-form'>

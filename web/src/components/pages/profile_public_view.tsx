@@ -17,7 +17,8 @@ import type { ThirdProfileData } from '../services/profile'
 import InviteForm from '../forms/invite_user'
 import BanUserForm from '../forms/ban_user'
 import { Markdown } from '../common/markdown'
-import { blocksApi } from '../services/blocks'
+import { blocksApi, type BlockStatus } from '../services/blocks'
+import { Avatar } from '../common/avatar'
 
 export type ProfilePublicData = ThirdProfileData & {
   systemRole?: string
@@ -145,26 +146,51 @@ export const ProfilePublicView = ({ user, isPreview = false }: ProfilePublicView
     </div>
   )
 
-  const [blockedByMe, setBlockedByMe] = useState(false)
+  const [blockState, setBlockState] = useState<BlockStatus | null>(null)
+  const [blockBusy, setBlockBusy] = useState(false)
+
   useEffect(() => {
-    if (isPreview || !isAuthenticated || userId === user.userId) return
-    blocksApi.isBlocked(user.userId).then(setBlockedByMe).catch(() => {})
+    if (isPreview || !isAuthenticated || userId === user.userId) {
+      setBlockState({ blockedByMe: false, blockedMe: false })
+      return
+    }
+    
+    blocksApi.status(user.userId)
+      .then(setBlockState)
+      .catch(() => setBlockState({ blockedByMe: false, blockedMe: false }))
   }, [user.userId, userId, isAuthenticated, isPreview])
 
   const toggleBlock = async () => {
+    if (blockBusy || !blockState) return 
+    
+    setBlockBusy(true)
     try {
-      if (blockedByMe) await blocksApi.unblock(user.userId)
-      else await blocksApi.block(user.userId)
-      setBlockedByMe(!blockedByMe)
+      if (blockState.blockedByMe) {
+        await blocksApi.unblock(user.userId)
+      } else {
+        await blocksApi.block(user.userId)
+      }
+  
+      setBlockState(prev => prev ? { 
+        ...prev, 
+        blockedByMe: !prev.blockedByMe 
+      } : null)
+      
     } catch (e) {
       console.error(e instanceof Error ? e.message : 'Не удалось выполнить действие')
+    } finally {
+      setBlockBusy(false)
     }
   }
+
+  const isLoadingBlock = blockState === null
+  const isBlockedByMe = blockState?.blockedByMe ?? false
+  const anyBlock = isBlockedByMe || (blockState?.blockedMe ?? false)
 
   return (
     <div className='profile-public-content'>
       <div className='profile-header-container'>
-        <img className='profile-avatar' src={user.avatarUrl || '/default-avatar.png'} />
+        <Avatar className='profile-avatar' src={user.avatarUrl} alt={user.nickname} />
         <div className='profile-username-container'>
           <div className='username-main'>
             <h1 className='username'>{user.nickname}</h1>
@@ -174,26 +200,36 @@ export const ProfilePublicView = ({ user, isPreview = false }: ProfilePublicView
           {renderOnlineStatus()}
         </div>
 
-        {showActions && (
+                {showActions && (
           <div className='profile-actions'>
             <button
               className='profile-action-btn'
-              disabled={isPreview}
+              disabled={isPreview || isLoadingBlock}
               onClick={() => navigate(`/profile/${userId}/messages?to=${user.userId}`)}
+              title={isLoadingBlock ? 'Загрузка...' : 'Написать'}
             >
               <ChatIcon className='action-ico' />
             </button>
-            <button className='profile-action-btn' disabled={isPreview} onClick={() => setShowInviteForm(true)}>
+            
+            <button 
+              className='profile-action-btn' 
+              disabled={isPreview || isLoadingBlock || anyBlock} 
+              onClick={() => setShowInviteForm(true)}
+              title={isLoadingBlock ? 'Загрузка...' : (anyBlock ? 'Заблокирован' : 'Пригласить')}
+            >
               <InviteIcon className='action-ico' />
             </button>
 
             {!isPreview && (
               <button
-                className='profile-action-btn danger'
+                className={`profile-action-btn ${isLoadingBlock ? '' : (isBlockedByMe ? 'restore' : 'danger')}`}
                 onClick={toggleBlock}
-                title={blockedByMe ? 'Разблокировать' : 'Заблокировать'}
+                disabled={blockBusy || isLoadingBlock}
+                title={isLoadingBlock ? 'Загрузка...' : (isBlockedByMe ? 'Разблокировать' : 'Заблокировать')}
               >
-                {blockedByMe ? <UnbanUserIcon className='action-ico' /> : <BanUserIcon className='action-ico' />}
+                {isLoadingBlock ? null : (
+                  isBlockedByMe ? <UnbanUserIcon className='action-ico' /> : <BanUserIcon className='action-ico' />
+                )}
               </button>
             )}
 
@@ -226,7 +262,7 @@ export const ProfilePublicView = ({ user, isPreview = false }: ProfilePublicView
                       <>
                         {targetSystemRole === 'admin' ? (
                           <button className='danger' disabled={busy} onClick={e => { e.stopPropagation(); handleSetRole('user') }}>
-                            Снять модератора
+                            Снять администратора
                           </button>
                         ) : targetSystemRole === 'user' ? (
                           <button disabled={busy} onClick={e => { e.stopPropagation(); handleSetRole('admin') }}>

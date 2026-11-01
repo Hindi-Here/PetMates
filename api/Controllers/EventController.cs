@@ -449,6 +449,9 @@ namespace api.Controllers
                 if (ev.OwnerId == userId)
                     return BadRequest(new { message = "Нельзя подать заявку на собственное мероприятие" });
 
+                if (await _SupMan.IsBlockedBetweenAsync(userId, ev.OwnerId))
+                    return BadRequest(new { message = "Невозможно подать заявку на это мероприятие" });
+
                 var state = SupportManager.GetRegistrationState(ev);
                 if (state != "open")
                     return BadRequest(new { message = state == "upcoming" ? "Регистрация ещё не началась" : "Регистрация закрыта" });

@@ -91,8 +91,14 @@ namespace api.Controllers
                     refreshToken = session.RefreshToken
                 });
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                if (ex.Message.Contains("banned", StringComparison.OrdinalIgnoreCase) ||
+                    ex.Message.Contains("blocked", StringComparison.OrdinalIgnoreCase))
+                {
+                    return StatusCode(403, new { message = "Аккаунт заблокирован администрацией", isBanned = true });
+                }
+
                 return Unauthorized(new { message = "Неверный email или пароль" });
             }
         }

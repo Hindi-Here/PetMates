@@ -26,6 +26,7 @@ import { useNavigate } from 'react-router-dom'
 import { getNotificationIcon, getNotificationText } from '../common/notificationText'
 
 import { LAYOUT } from '../scripts/limits';
+import { Avatar } from '../common/avatar'
 
 // Компонент логотипа сайта с переходом на главную страницу
 const Logo = () => {
@@ -301,7 +302,7 @@ const Profile = ({ user }: { user: ProfileData | null }) => {
 
       <div ref={menuRef} className={`profile-panel-container ${isOpen ? 'open' : ''}`} onClick={openMenu}>
         <div className='avatar-container'>
-          <img className='avatar-image' src={user?.avatarUrl} />
+          <Avatar className='avatar-image' src={user?.avatarUrl} alt={user?.nickname || 'Профиль'} />
         </div>
         <div className='username-container'>
           <p className='username-text'>

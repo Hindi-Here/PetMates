@@ -323,7 +323,7 @@
   transition: 0.25s;
 
   &:disabled {
-    opacity: 0.4;
+    opacity: 0.5;
   }
 
   .action-ico {
@@ -458,7 +458,7 @@
   height: rem(35);
 
   &:disabled {
-    opacity: 0.4;
+    opacity: 0.5;
     pointer-events: none;
   }
 }
@@ -566,7 +566,7 @@
   }
 
   &:disabled {
-    opacity: 0.4;
+    opacity: 0.5;
   }
 
   .ico {
@@ -600,7 +600,7 @@
   }
 
   &:disabled {
-    opacity: 0.4;
+    opacity: 0.5;
     pointer-events: none;
   }
 
@@ -635,7 +635,7 @@
   }
 
   &:disabled {
-    opacity: 0.4;
+    opacity: 0.5;
     pointer-events: none;
   }
 
@@ -726,7 +726,7 @@
 .member-remove {
   background: none;
   border: none;
-  opacity: 0.4;
+  opacity: 0.5;
   transition: 0.25s;
   display: flex;
 
@@ -1293,7 +1293,7 @@
   }
 
   &:disabled {
-    opacity: 0.4;
+    opacity: 0.5;
     pointer-events: none;
   }
 

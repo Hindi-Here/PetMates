@@ -189,6 +189,11 @@
 
   .form-manage-button {
     width: rem(175);
+
+    &:disabled {
+      opacity: 0.5;
+      pointer-events: none;
+    }
   }
 }
 

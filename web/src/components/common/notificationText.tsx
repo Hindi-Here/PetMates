@@ -237,6 +237,8 @@ export const getNotificationText = (notification: NotificationData) => {
         return <span>Мероприятие <strong style={projectStyle}>{eventName}</strong> было удалено модератором. Причина: {reason || 'не указана'}</span>
       case 'event_deleted_members_notified':
         return <span>Мероприятие <strong style={projectStyle}>{eventName}</strong>, в котором вы участвовали, было удалено</span>
+      case 'moderator_deleted_event':
+        return <span>Вы удалили мероприятие <strong style={projectStyle}>{eventName}</strong>. Причина: {reason || 'не указана'}</span>
       default:
         return <span>Уведомление о мероприятии <strong style={projectStyle}>{eventName}</strong></span>
     }

@@ -60,6 +60,8 @@ namespace api.Controllers
                 {
                 }
 
+                await _SupMan.CancelPendingBetweenAsync(actor.UserId, targetId);
+
                 return Ok(new { blocked = true });
             }
             catch (Exception ex)
@@ -79,6 +81,22 @@ namespace api.Controllers
                     return Unauthorized();
                 await _client.From<UserBlock>().Where(b => b.BlockerId == userId).Where(b => b.BlockedId == targetId).Delete();
                 return Ok(new { blocked = false });
+            }
+            catch (Exception ex) { return this.Fail(ex); }
+        }
+
+        // Состояние блокировки в обе стороны
+        [HttpGet("status/{targetId}")]
+        public async Task<IActionResult> Status(string targetId)
+        {
+            try
+            {
+                var userId = await _SupMan.GetUserIdAsync(Request.Headers.Authorization.ToString());
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+                var (byMe, byOther) = await _SupMan.GetBlockStateAsync(userId, targetId);
+
+                return Ok(new { blockedByMe = byMe, blockedMe = byOther });
             }
             catch (Exception ex) { return this.Fail(ex); }
         }

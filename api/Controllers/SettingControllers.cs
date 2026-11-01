@@ -128,7 +128,7 @@ namespace api.Controllers
                 if (userAuth == null)
                     return Unauthorized();
 
-                if (!SupportManager.IsNicknameValid(userAuth, request.Nickname))
+                if (!await _SupMan.NicknameMatchesAsync(userAuth.Id!, request.Nickname))
                     return BadRequest(new { message = "[Никнейм] введённый никнейм не совпадает с текущим" });
 
                 var provider = userAuth.AppMetadata?.GetValueOrDefault("provider")?.ToString() ?? "email";

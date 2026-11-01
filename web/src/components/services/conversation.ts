@@ -1,5 +1,7 @@
 import { authFetch, readError } from './http'
 
+import type { BlockStatus } from './blocks'
+
 export interface ConversationData {
   conversationId: string;
   otherUserId: string;
@@ -9,6 +11,8 @@ export interface ConversationData {
   lastMessage: string | null;
   lastMessageAt: string | null;
   hasUnread: boolean;
+  blockedByMe: boolean;
+  blockedMe: boolean;
 }
 
 export interface MessageData {
@@ -32,6 +36,7 @@ export interface MessagesResponse {
   messages: MessageData[];
   previousLastReadAt: string | null;
   otherLastReadAt: string | null;
+  blockState: BlockStatus;
 }
 
 export const conversationApi = {

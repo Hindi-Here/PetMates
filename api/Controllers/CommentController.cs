@@ -65,11 +65,18 @@ namespace api.Controllers
                 if (!await _SupMan.CanAccessReference(dto.ReferenceType, dto.ReferenceId, userId))
                     return NotFound();
 
+                var refOwnerId = await _SupMan.GetReferenceOwnerId(dto.ReferenceType, dto.ReferenceId);
+                if (refOwnerId != null && refOwnerId != userId && await _SupMan.IsBlockedBetweenAsync(userId, refOwnerId))
+                    return StatusCode(403, new { message = "Вы не можете оставлять комментарии здесь" });
+
                 if (!string.IsNullOrEmpty(dto.ParentCommentId))
                 {
                     var parent = (await _client.From<Comment>().Where(c => c.CommentId == dto.ParentCommentId).Get()).Models.FirstOrDefault();
                     if (parent == null || parent.ReferenceType != dto.ReferenceType || parent.ReferenceId != dto.ReferenceId)
                         return BadRequest(new { message = "Недопустимый родительский комментарий" });
+
+                    if (parent.UserId != null && await _SupMan.IsBlockedBetweenAsync(userId, parent.UserId))
+                        return BadRequest(new { message = "Нельзя ответить этому пользователю" });
                 }
 
                 await _SupMan.UpdateLastOnlineAsync(userId);
@@ -92,7 +99,6 @@ namespace api.Controllers
                     return BadRequest(new { message = "Не удалось создать комментарий" });
 
                 await _SupMan.Cache.CommentsChangedAsync(dto.ReferenceType, dto.ReferenceId);
-
                 await _SupMan.ProcessMentions(inserted, userId);
 
                 return Ok(new
