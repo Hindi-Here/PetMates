@@ -200,8 +200,8 @@
   background: color-mix(in srgb, var(--important-color), transparent 85%);
 
   &.muted {
-    color: var(--text-secondary-color);
-    background: color-mix(in srgb, var(--neutral-100), transparent 92%);
+    color: var(--important-color);
+    background: color-mix(in srgb, var(--important-color), transparent 85%);
   }
 }
 

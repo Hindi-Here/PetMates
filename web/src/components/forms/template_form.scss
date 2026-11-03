@@ -189,6 +189,7 @@
 
   .form-manage-button {
     width: rem(175);
+    font-weight: bold;
 
     &:disabled {
       opacity: 0.5;

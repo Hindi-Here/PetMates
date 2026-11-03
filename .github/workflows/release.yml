@@ -46,3 +46,43 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: 'PetMates ${{ github.ref_name }}'
           args: ${{ matrix.args }}
+
+  build-android:
+    needs: build-desktop
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: 'web/src-tauri -> target'
+      - uses: android-actions/setup-android@v3
+      - name: Install NDK
+        run: |
+          sdkmanager --install "ndk;27.2.12479018"
+          echo "NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> $GITHUB_ENV
+      - run: npm ci
+        working-directory: web
+      - name: Build APK
+        working-directory: web
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_KEY: ${{ secrets.VITE_SUPABASE_KEY }}
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+        run: npx tauri android build --apk --debug
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: web/src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          token: ${{ secrets.GITHUB_TOKEN }}

@@ -39,7 +39,6 @@
   background-color: var(--primary-accent);
   border: none;
   border-radius: var(--border-radius-base);
-  cursor: pointer;
   transition: background-color 0.25s, transform 0.25s;
 
   &:hover:not(:disabled) {
@@ -64,7 +63,6 @@
   font-weight: bold;
   border: none;
   border-radius: var(--border-radius-base);
-  cursor: pointer;
   transition: background-color 0.25s, transform 0.25s;
 
   &:disabled {

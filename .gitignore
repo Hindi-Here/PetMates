@@ -5,6 +5,8 @@ obj/
 *.user
 *.sln.docstates
 *.env
+*.env.production
+*.env.development
 build/
 Thumbs.db
 *~

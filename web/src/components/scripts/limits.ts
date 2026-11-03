@@ -49,3 +49,13 @@ export const LAYOUT = {
 
 export const maxChars = (n: number) => `Максимум ${n} символов`
 export const minChars = (n: number) => `Минимум ${n} символов`
+
+export const APP_VERSION = '0.1.1';
+export const GITHUB_RELEASES_BASE = 'https://github.com/Hindi-Here/PetMates/releases/latest/download';
+
+export const DOWNLOAD_LINKS = {
+  windows: `${GITHUB_RELEASES_BASE}/PetMates_${APP_VERSION}_x64-setup.exe`,
+  macos: `${GITHUB_RELEASES_BASE}/PetMates_${APP_VERSION}_x64.dmg`,
+  linux: `${GITHUB_RELEASES_BASE}/PetMates_${APP_VERSION}_amd64.deb`,
+  releasesPage: 'https://github.com/Hindi-Here/PetMates/releases',
+} as const;

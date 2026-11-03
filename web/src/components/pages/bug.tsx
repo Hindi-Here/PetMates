@@ -11,7 +11,7 @@ import { useProfile } from '../hooks/useProfile'
 import { reportApi, type ReportType } from '../services/report'
 import { Dropdown } from '../common/dropdown'
 
-import { LIMITS, TIMING } from '../scripts/limits'
+import { DOWNLOAD_LINKS, LIMITS, TIMING } from '../scripts/limits'
 
 interface BugFormData {
   report: string;
@@ -141,7 +141,7 @@ export default function Bug() {
           Поэтому нам очень важен ваш опыт взаимодействия с платформой и мнение. Это позволит нам расти и становиться лучше.
         </p>
         <p className='about-description'>
-          Этот раздел предназначен для нашей с вами связи.
+          Этот раздел предназначен для нашей с вами связи. Через форму, предоставленную ниже, вы можете отправить свое сообщение нам: выразить мнение, предложить свою идею, показать найденный баг, пожаловаться на определенный контент или поведение.
         </p>
       </div>
 
@@ -156,6 +156,46 @@ export default function Bug() {
         <p className='about-description'>
           Нашли баг, проблему с оптимизацией или уязвимость? Или у вас есть крутая идея? Зафиксируйте это в GitHub Issues
           нашего <span className='about-description-link'><a href='https://github.com/Hindi-Here/PetMates' target='_blank' rel='noreferrer'>репозитория</a></span>.
+        </p>
+      </div>
+
+      <div className="about-section-container">
+        <p className="about-title">Установка</p>
+        <p className="about-description">
+          PetMates полностью доступен через любой современный браузер.
+        </p>
+        <p className="about-description">
+          Вы также можете установить нативное приложение PetMates на ваш компьютер. Для корректной работы требуется подключение к интернету.
+        </p>
+        <p className="about-description">
+          <strong>Скачать для:</strong>{" "}
+          <span className='about-description-link'>
+            <a href={DOWNLOAD_LINKS.windows} target='_blank' rel='noreferrer'>
+              Windows
+            </a>
+          </span>
+          {', '}
+          <span className='about-description-link'>
+            <a href={DOWNLOAD_LINKS.macos} target='_blank' rel='noreferrer'>
+              macOS
+            </a>
+          </span>
+          {', '}
+          <span className='about-description-link'>
+            <a href={DOWNLOAD_LINKS.linux} target='_blank' rel='noreferrer'>
+              Linux
+            </a>
+          </span>
+          {"."}
+        </p>
+        <p className="about-description">
+          Все версии приложений и полный список установочных файлов можно просмотреть на странице{" "}
+          <span className="about-description-link">
+            <a href="https://github.com/Hindi-Here/PetMates/releases" target="_blank" rel="noreferrer"> 
+            релизов 
+            </a>
+          </span>
+          .
         </p>
       </div>
 
@@ -181,10 +221,7 @@ export default function Bug() {
       <div className='about-section-container'>
         <p className='about-title'>Форма отправки сообщения</p>
         <p className='about-description'>
-          Ниже предоставлена форма, через которую вы можете отправить нам свое мнение. Если вы нашли какой-то баг, уязвимость или неточность — смело обращайтесь к нам.
-        </p>
-        <p className='about-description'>
-          Вы можете оставить свое сообщение <em>анонимным</em>, если вы не авторизованы. Если сообщение не является анонимным и оно нас заинтересовало — мы можем связаться с вами.
+          Вы можете оставить свое сообщение <em>анонимным</em>, если вы не авторизованы или не хотите раскрывать свои данные. Если сообщение не является анонимным и оно нас заинтересовало — мы можем связаться с вами для обсуждения деталей, чтобы вместе решить проблему.
         </p>
 
         <div className='send-area-header-row'>

@@ -22,7 +22,7 @@ import { usersApi } from '../services/users'
 import { useAuth } from '../hooks/useAuth'
 
 import LockIcon from '@icons/lock.svg?react'
-import { blocksApi, type BlockStatus } from '../services/blocks'
+import { type BlockStatus } from '../services/blocks'
 
 import { LIMITS, TIMING } from '../scripts/limits'
 import { STALE } from '../scripts/query/queryClient'
@@ -284,14 +284,6 @@ export const Chat = () => {
       conversationApi.forwardMessage(sourceMessageId, targetConversationId),
     onSuccess: () => {
       setForwardTarget(null)
-      queryClient.invalidateQueries({ queryKey: queryKeys.conversations.all })
-    },
-  })
-
-  const unblockMutation = useMutation({
-    mutationFn: (id: string) => blocksApi.unblock(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.messages.byConversation(conversationId!) })
       queryClient.invalidateQueries({ queryKey: queryKeys.conversations.all })
     },
   })
@@ -666,15 +658,6 @@ export const Chat = () => {
               ? 'Вы заблокировали этого пользователя. Отправка и получение сообщений недоступны.'
               : 'Этот пользователь вас заблокировал. Вы не можете отправлять ему сообщения.'}
           </p>
-          {blockedByMe && currentConversation && (
-            <button
-              className='chat-btn cancel'
-              disabled={unblockMutation.isPending}
-              onClick={() => unblockMutation.mutate(currentConversation.otherUserId)}
-            >
-              Разблокировать
-            </button>
-          )}
         </div>
       ) : (replyingTo || editingMessageId) && (
         <div className='chat-context-preview'>

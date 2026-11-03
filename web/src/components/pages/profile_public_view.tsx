@@ -215,7 +215,7 @@ export const ProfilePublicView = ({ user, isPreview = false }: ProfilePublicView
               className='profile-action-btn' 
               disabled={isPreview || isLoadingBlock || anyBlock} 
               onClick={() => setShowInviteForm(true)}
-              title={isLoadingBlock ? 'Загрузка...' : (anyBlock ? 'Заблокирован' : 'Пригласить')}
+              title={isLoadingBlock ? 'Загрузка' : (anyBlock ? 'Заблокирован' : 'Пригласить')}
             >
               <InviteIcon className='action-ico' />
             </button>
@@ -225,7 +225,7 @@ export const ProfilePublicView = ({ user, isPreview = false }: ProfilePublicView
                 className={`profile-action-btn ${isLoadingBlock ? '' : (isBlockedByMe ? 'restore' : 'danger')}`}
                 onClick={toggleBlock}
                 disabled={blockBusy || isLoadingBlock}
-                title={isLoadingBlock ? 'Загрузка...' : (isBlockedByMe ? 'Разблокировать' : 'Заблокировать')}
+                title={isLoadingBlock ? 'Загрузка' : (isBlockedByMe ? 'Разблокировать' : 'Заблокировать')}
               >
                 {isLoadingBlock ? null : (
                   isBlockedByMe ? <UnbanUserIcon className='action-ico' /> : <BanUserIcon className='action-ico' />
@@ -261,7 +261,7 @@ export const ProfilePublicView = ({ user, isPreview = false }: ProfilePublicView
                     {currentSystemRole === 'admin' && (
                       <>
                         {targetSystemRole === 'admin' ? (
-                          <button className='danger' disabled={busy} onClick={e => { e.stopPropagation(); handleSetRole('user') }}>
+                          <button disabled={busy} onClick={e => { e.stopPropagation(); handleSetRole('user') }}>
                             Снять администратора
                           </button>
                         ) : targetSystemRole === 'user' ? (

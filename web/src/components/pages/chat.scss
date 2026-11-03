@@ -755,9 +755,9 @@
   p { flex: 1; margin: 0; }
 
   &.by-other {
-    border-color: color-mix(in srgb, var(--neutral-100), transparent 80%);
-    background: var(--unborder-content-bg-color);
-    color: var(--text-secondary-color);
+    border-color: color-mix(in srgb, var(--important-color), transparent 70%);
+    background: color-mix(in srgb, var(--important-color), transparent 92%);
+    color: var(--important-color);
   }
 }
 
