@@ -30,7 +30,6 @@ TestResults/
 
 # Tauri
 src-tauri/target/
-src-tauri/gen/
 
 # React / npm
 node_modules/
