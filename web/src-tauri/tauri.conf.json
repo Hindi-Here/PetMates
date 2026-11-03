@@ -18,6 +18,9 @@
     ],
     "security": {
       "csp": null
+    },
+    "android": {
+      "usesCleartextTraffic": true
     }
   },
   "bundle": {
