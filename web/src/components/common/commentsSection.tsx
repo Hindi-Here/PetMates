@@ -2,7 +2,8 @@ import './comment.scss'
 import Edit from '@icons/edit.svg?react'
 import Reject from '@icons/reject.svg?react'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState, type JSX } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { commentApi, type CommentData } from '../services/comment'
 import { useAuth } from '../hooks/useAuth'
@@ -43,6 +44,7 @@ export const CommentsSection = ({
   readOnly = false,
   canDeleteComment,
 }: CommentsSectionProps) => {
+  const navigate = useNavigate()
   const { userId, isAuthenticated } = useAuth()
   const queryClient = useQueryClient()
 
@@ -52,14 +54,13 @@ export const CommentsSection = ({
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editContent, setEditContent] = useState('')
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  const [error, setError] = useState<string | null>(null)
 
   const { data: comments = [] } = useQuery({
     queryKey: queryKeys.comments.byRef(referenceType, referenceId),
     queryFn: () => commentApi.getComments(referenceType, referenceId),
     enabled: !!referenceId,
   })
-
-  const [error, setError] = useState<string | null>(null)
 
   const createMutation = useMutation({
     mutationFn: (dto: { content: string; parentCommentId?: string }) =>
@@ -100,23 +101,85 @@ export const CommentsSection = ({
       return next
     })
 
+  const handleAvatarClick = (e: React.MouseEvent, targetUserId: string) => {
+    e.stopPropagation()
+    navigate(`/profile/${targetUserId}/info`)
+  }
+
+  // Самодостаточный компонент, который управляет своим состоянием и не вызывает циклов рендера
+  const CollapsibleText = ({ text }: { text: string }): JSX.Element => {
+    const ref = useRef<HTMLDivElement>(null)
+    const [isExpanded, setIsExpanded] = useState(false)
+    const [isOverflowing, setIsOverflowing] = useState(false)
+
+    useEffect(() => {
+      const el = ref.current
+      if (!el) return
+      
+      const check = () => {
+        const overflowing = el.scrollHeight > el.clientHeight + 1
+        // Обновляем состояние только если оно действительно изменилось
+        setIsOverflowing(prev => prev === overflowing ? prev : overflowing)
+      }
+      
+      check()
+      
+      const ro = new ResizeObserver(check)
+      ro.observe(el)
+      
+      return () => ro.disconnect()
+    }, [text, isExpanded])
+
+    return (
+      <>
+        <div 
+          ref={ref} 
+          className={`comment-content ${isExpanded ? '' : 'clamped'}`}
+        >
+          {text}
+        </div>
+        
+        {(isOverflowing || isExpanded) && (
+          <button 
+            type="button" 
+            className="comment-action-text expand-comment"
+            onClick={() => setIsExpanded(v => !v)}
+          >
+            {isExpanded ? 'Свернуть' : 'Раскрыть'}
+            <span className={`expand-icon ${isExpanded ? 'expanded' : ''}`}>▾</span>
+          </button>
+        )}
+      </>
+    )
+  }
+
   const renderNode = (node: CommentNode, depth = 0) => {
     const isAuthor = node.userId === userId
     const canDelete = isAuthor || (canDeleteComment ? canDeleteComment(node) : isOwner)
     const hasReplies = node.replies.length > 0
-    const isExpanded = expanded.has(node.commentId)
+    const isExpandedReplies = expanded.has(node.commentId)
 
     return (
       <div key={node.commentId} className={`comment-item ${depth > 0 ? 'comment-reply' : ''}`}>
         <div className='comment-wrapper'>
-          <div className='comment-avatar'>
+          <div 
+            className='comment-avatar'
+            onClick={(e) => node.userId && handleAvatarClick(e, node.userId)}
+            style={{ cursor: node.userId ? 'pointer' : 'default' }}
+          >
             <Avatar src={node.avatarUrl} alt={node.nickname || 'Автор'} className="comment-avatar-img" />
           </div>
 
           <div className='comment-body'>
             <div className='comment-header'>
               <div className='comment-meta'>
-                <span className='comment-author'>@{node.nickname || 'deleted_user'}</span>
+                <span 
+                  className='comment-author'
+                  onClick={(e) => node.userId && handleAvatarClick(e, node.userId)}
+                  style={{ cursor: node.userId ? 'pointer' : 'default' }}
+                >
+                  @{node.nickname || 'deleted_user'}
+                </span>
                 <span className='comment-date'>
                   {new Date(node.createdAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })}, {' '}
                   {new Date(node.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
@@ -157,7 +220,7 @@ export const CommentsSection = ({
                 {node.deletedByModerator ? 'Комментарий удален модератором' : 'Комментарий удален'}
               </div>
             ) : (
-              <div className='comment-content'>{node.content}</div>
+              <CollapsibleText text={node.content ?? ''} />
             )}
 
             <div className='comment-actions-left'>
@@ -173,10 +236,11 @@ export const CommentsSection = ({
                   Ответить
                 </button>
               )}
+              
               {hasReplies && (
                 <button className='comment-action-text expand-replies' onClick={() => toggleReplies(node.commentId)}>
-                  {isExpanded ? 'Скрыть ответы' : repliesLabel(node.replies.length)}
-                  <span className={`expand-icon ${isExpanded ? 'expanded' : ''}`}>▾</span>
+                  {repliesLabel(node.replies.length)}
+                  <span className={`expand-icon ${isExpandedReplies ? 'expanded' : ''}`}>▾</span>
                 </button>
               )}
             </div>
@@ -230,7 +294,7 @@ export const CommentsSection = ({
           </div>
         </div>
 
-        {hasReplies && isExpanded && (
+        {hasReplies && isExpandedReplies && (
           <div className='comment-replies'>
             {node.replies.map(reply => renderNode(reply, depth + 1))}
           </div>

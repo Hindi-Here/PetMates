@@ -262,6 +262,16 @@ namespace api.Controllers
                     .Set(e => e.Stages, stagesJson)
                     .Update();
 
+                if (newStatus != ev.Status)
+                {
+                    var memberIds = (await _client.From<EventMember>().Where(m => m.EventId == eventId).Get())
+                        .Models.Select(m => m.UserId).Distinct();
+                    foreach (var uid in memberIds)
+                        await _SupMan.SendNotificationAsync(uid, "event", eventId, "status_changed",
+                            new() { ["eventName"] = dto.Title.Trim(), ["status"] = SupportManager.ToRuStatus(newStatus) });
+                }
+
+
                 await _SupMan.ClearDraft(eventId, "general");
 
                 await _SupMan.Cache.EventsChangedAsync();
@@ -490,6 +500,10 @@ namespace api.Controllers
                 if (created == null)
                     return BadRequest(new { message = "Не удалось отправить заявку" });
 
+                var me = await _SupMan.GetUserCachedAsync(userId);
+                await _SupMan.SendNotificationAsync(ev.OwnerId, "application", eventId, "application_received",
+                    new() { ["eventName"] = ev.Title, ["nickname"] = me?.Nickname ?? "Пользователь", ["applicationId"] = created.ApplicationId });
+
                 return Ok(Mappers.ToApplicationMine(created));
             }
             catch (Exception ex) { return this.Fail(ex); }
@@ -536,6 +550,10 @@ namespace api.Controllers
                     .Set(a => a.UpdatedAt!, DateTime.UtcNow)
                     .Update();
 
+                var me = await _SupMan.GetUserCachedAsync(userId);
+                await _SupMan.SendNotificationAsync(ev.OwnerId, "application", eventId, "application_resubmitted",
+                    new() { ["eventName"] = ev.Title, ["nickname"] = me?.Nickname ?? "Пользователь", ["applicationId"] = app.ApplicationId });
+
                 var updated = await _SupMan.FindMyApplication(eventId, userId);
                 return updated == null ? NotFound() : Ok(Mappers.ToApplicationMine(updated));
             }
@@ -560,6 +578,14 @@ namespace api.Controllers
                 await _client.From<EventApplication>()
                     .Where(a => a.ApplicationId == app.ApplicationId)
                     .Delete();
+
+                var ev = (await _client.From<Event>().Where(e => e.EventId == eventId).Get()).Models.FirstOrDefault();
+                if (ev != null && (app.Status is "pending" or "revision"))
+                {
+                    var me = await _SupMan.GetUserCachedAsync(userId);
+                    await _SupMan.SendNotificationAsync(ev.OwnerId, "application", eventId, "application_withdrawn",
+                        new() { ["eventName"] = ev.Title, ["nickname"] = me?.Nickname ?? "Пользователь" });
+                }
 
                 return Ok(new { message = "Заявка отозвана" });
             }
@@ -683,6 +709,10 @@ namespace api.Controllers
                     .Set(a => a.Status, newStatus)
                     .Set(a => a.DecisionComment!, comment)
                     .Update();
+
+                await _SupMan.SendNotificationAsync(app.UserId, "application", eventId,
+                    dto.Decision switch { "accept" => "application_accepted", "reject" => "application_rejected", _ => "application_revision" },
+                    new() { ["eventName"] = ev.Title, ["comment"] = comment ?? "" });
 
                 var detail = await _SupMan.LoadApplicationDetail(ev, applicationId);
                 return detail == null ? NotFound() : Ok(detail);
@@ -810,6 +840,9 @@ namespace api.Controllers
 
             await _SupMan.DeleteEventCoreAsync(eventId, reason: dto.Reason!.Trim(), isModeration: true);
 
+            await _SupMan.SendNotificationAsync(ev.OwnerId, "event", eventId, "moderator_deleted_event",
+                new() { ["eventName"] = ev.Title, ["reason"] = dto.Reason!.Trim() });
+
             return Ok(new { message = "Мероприятие удалено модератором" });
         }
 
@@ -891,6 +924,95 @@ namespace api.Controllers
 
                 await _SupMan.ClearDraft(eventId, section);
                 return Ok(new { message = "Черновик отменён" });
+            }
+            catch (Exception ex) { return this.Fail(ex); }
+        }
+
+        // Исключить участника (только организатор)
+        [HttpDelete("{eventId}/members/{userId}")]
+        public async Task<IActionResult> RemoveEventMember(string eventId, string userId)
+        {
+            try
+            {
+                var currentUserId = await _SupMan.GetUserIdAsync(Request.Headers.Authorization.ToString());
+                if (string.IsNullOrEmpty(currentUserId)) return Unauthorized();
+
+                var ev = await _SupMan.GetOwnedEvent(eventId, currentUserId);
+                if (ev == null) return Forbid();
+
+                var memberResponse = await _client.From<EventMember>()
+                    .Where(m => m.EventId == eventId && m.UserId == userId)
+                    .Get();
+
+                if (memberResponse.Models.Count == 0)
+                    return NotFound(new { message = "Пользователь не является участником этого мероприятия" });
+
+                await _client.From<EventMember>()
+                    .Where(m => m.EventId == eventId && m.UserId == userId)
+                    .Delete();
+
+                var app = await _SupMan.FindMyApplication(eventId, userId);
+                if (app != null && app.Status == "accepted")
+                {
+                    await _client.From<EventApplication>()
+                        .Where(a => a.ApplicationId == app.ApplicationId)
+                        .Set(a => a.Status, "rejected")
+                        .Set(a => a.DecisionComment!, "Вы были исключены из участников мероприятия")
+                        .Set(a => a.UpdatedAt!, DateTime.UtcNow)
+                        .Update();
+                }
+
+                await _SupMan.Cache.EventsChangedAsync();
+
+                await _SupMan.SendNotificationAsync(userId, "event", eventId, "event_member_removed",
+                    new() { ["eventName"] = ev.Title });
+
+                return Ok(new { message = "Участник успешно удален из мероприятия" });
+            }
+            catch (Exception ex) { return this.Fail(ex); }
+        }
+
+        // Покинуть мероприятие (сам участник)
+        [HttpDelete("{eventId}/members/me")]
+        [EnableRateLimiting("write")]
+        public async Task<IActionResult> LeaveEvent(string eventId)
+        {
+            try
+            {
+                var userId = await _SupMan.GetUserIdAsync(Request.Headers.Authorization.ToString());
+                if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+                var ev = (await _client.From<Event>().Where(e => e.EventId == eventId).Get()).Models.FirstOrDefault();
+                if (ev == null) return NotFound();
+
+                if (ev.OwnerId == userId)
+                    return BadRequest(new { message = "Организатор не может покинуть мероприятие. Удалите мероприятие." });
+
+                var membership = await _client.From<EventMember>()
+                    .Where(m => m.EventId == eventId && m.UserId == userId)
+                    .Get();
+                if (membership.Models.Count == 0)
+                    return NotFound(new { message = "Вы не являетесь участником этого мероприятия" });
+
+                await _client.From<EventMember>()
+                    .Where(m => m.EventId == eventId && m.UserId == userId)
+                    .Delete();
+
+                var app = await _SupMan.FindMyApplication(eventId, userId);
+                if (app != null)
+                {
+                    await _client.From<EventApplication>()
+                        .Where(a => a.ApplicationId == app.ApplicationId)
+                        .Delete();
+                }
+
+                await _SupMan.Cache.EventsChangedAsync();
+
+                var me = await _SupMan.GetUserCachedAsync(userId);
+                await _SupMan.SendNotificationAsync(ev.OwnerId, "event", eventId, "event_member_left",
+                    new() { ["nickname"] = me?.Nickname ?? "Пользователь", ["eventName"] = ev.Title });
+
+                return Ok(new { message = "Вы покинули мероприятие" });
             }
             catch (Exception ex) { return this.Fail(ex); }
         }

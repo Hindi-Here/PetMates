@@ -14,16 +14,18 @@ interface DeleteEventFormProps {
 // Компонент формы удаления мероприятия (для владельца мероприятия)
 const Form = ({ eventId, onClose, onSuccess }: DeleteEventFormProps) => {
   const [isDeleting, setIsDeleting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleDelete = async () => {
     if (isDeleting) return
     try {
       setIsDeleting(true)
+      setError(null)
       await eventApi.delete(eventId)
       onSuccess?.()
       onClose()
-    } catch (error) {
-      console.error('Ошибка удаления мероприятия:', error)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Не удалось удалить мероприятие')
       setIsDeleting(false)
     }
   }
@@ -59,6 +61,7 @@ const Form = ({ eventId, onClose, onSuccess }: DeleteEventFormProps) => {
             Отмена
           </button>
         </div>
+        {error && <p className='invite-error-text'>{error}</p>}
       </div>
     </div>
   )

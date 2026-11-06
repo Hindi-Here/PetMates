@@ -12,29 +12,27 @@ import DropdownIcon from '@icons/dropdown.svg?react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '../scripts/query/queryKeys'
 import { notificationApi, type NotificationData } from '../services/notification'
-import { getNotificationIcon, getNotificationText } from '../common/notificationText'
+import { getNotificationIcon, getNotificationText, getNotificationLink } from '../common/notificationText'
+import { TIMING } from '../scripts/limits'
 
-type CategoryFilter = 'all' | 'project' | 'response' | 'invite' | 'system'
+type CategoryFilter = 'all' | 'projects' | 'requests' | 'system'
 
-// Маппинг категорий для отображения в UI
 const categoryLabels: Record<CategoryFilter, string> = {
   all: 'Все',
-  project: 'Проекты',
-  response: 'Отклики',
-  invite: 'Приглашения',
-  system: 'Системные'
+  projects: 'Проекты',  
+  requests: 'Заявки',    
+  system: 'Системные',
 }
 
-// Опции для выпадающего списка категорий
-const categoryOptions = [
-  { id: 'all', label: 'Все' },
-  { id: 'project', label: 'Проекты' },
-  { id: 'response', label: 'Отклики' },
-  { id: 'invite', label: 'Приглашения' },
-  { id: 'system', label: 'Системные' }
-]
+const categoryOptions = Object.entries(categoryLabels).map(([id, label]) => ({ id, label }))
 
-// Компонент для отображения уведомлений пользователя с возможностью фильтрации по категориям, отметки как прочитанных и удаления
+const CATEGORY_TYPES: Record<CategoryFilter, string[] | null> = {
+  all: null,
+  projects: ['project', 'event', 'comment'],
+  requests: ['response', 'invite', 'application'],
+  system: ['system'],
+}
+
 export const Notifications = () => {
   const { userId } = useAuth()
   const navigate = useNavigate()
@@ -45,25 +43,30 @@ export const Notifications = () => {
   
   const { isOpen: isDropdownOpen, setIsOpen: setDropdownOpen, menuRef: dropdownMenuRef } = useIsOpen()
 
-  const { data: notifications = [] } = useQuery({
-    queryKey: selectedCategory === 'all' 
-      ? queryKeys.notifications.all 
-      : queryKeys.notifications.byCategory(selectedCategory),
-    queryFn: async () => {
-      if (!userId) return []
-      const referenceType = selectedCategory === 'all' ? undefined : selectedCategory
-      return await notificationApi.getAll(referenceType)
-    },
+  const { data: allNotifications = [] } = useQuery({
+    queryKey: queryKeys.notifications.all,
+    queryFn: () => notificationApi.getAll(),
     enabled: !!userId,
     staleTime: 0,
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,
   })
 
+  const notifications = useMemo(() => {
+    const types = CATEGORY_TYPES[selectedCategory]
+    return types ? allNotifications.filter(n => types.includes(n.referenceType)) : allNotifications
+  }, [allNotifications, selectedCategory])
+
+  const [error, setError] = useState<string | null>(null)
+
   const markAsReadMutation = useMutation({
     mutationFn: (notificationId: string) => notificationApi.markAsRead(notificationId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all })
+    },
+    onError: (err: any) => {
+      setError(err.message || 'Ошибка отметки уведомления')
+      setTimeout(() => setError(null), TIMING.toastMs)
     },
   })
 
@@ -71,6 +74,10 @@ export const Notifications = () => {
     mutationFn: () => notificationApi.markAllAsRead(),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all })
+    },
+    onError: (err: any) => {
+      setError(err.message || 'Ошибка отметки всех уведомлений')
+      setTimeout(() => setError(null), TIMING.toastMs)
     },
   })
 
@@ -84,6 +91,10 @@ export const Notifications = () => {
         return newSet
       })
     },
+    onError: (err: any) => {
+      setError(err.message || 'Ошибка удаления уведомления')
+      setTimeout(() => setError(null), TIMING.toastMs)
+    },
   })
 
   const deleteSelectedNotificationsMutation = useMutation({
@@ -95,24 +106,26 @@ export const Notifications = () => {
       setSelectedNotifications(new Set())
       setIsSelectionMode(false)
     },
+    onError: (err: any) => {
+      setError(err.message || 'Ошибка удаления выбранных уведомлений')
+      setTimeout(() => setError(null), TIMING.toastMs)
+    },
   })
 
-  const handleMarkAsRead = async (notificationId: string) => {
-    try {
-      await markAsReadMutation.mutateAsync(notificationId)
-    }
-    catch (error) {
-      console.error('Ошибка отметки уведомления:', error)
-    }
+  const handleMarkAsRead = (notificationId: string) => {
+    markAsReadMutation.mutate(notificationId)
   }
 
-  const handleMarkAllAsRead = async () => {
-    try {
-      await markAllAsReadMutation.mutateAsync()
-    }
-    catch (error) {
-      console.error('Ошибка отметки всех уведомлений:', error)
-    }
+  const handleMarkAllAsRead = () => {
+    markAllAsReadMutation.mutate()
+  }
+
+  const handleDeleteSelected = () => {
+    deleteSelectedNotificationsMutation.mutate(Array.from(selectedNotifications))
+  }
+
+  const handleDeleteOne = (notificationId: string) => {
+    deleteNotificationMutation.mutate(notificationId)
   }
 
   const handleCategorySelect = (item: { id: string; label: string }) => {
@@ -144,35 +157,10 @@ export const Notifications = () => {
     }
   }
 
-  const handleDeleteSelected = async () => {
-    try {
-      await deleteSelectedNotificationsMutation.mutateAsync(Array.from(selectedNotifications))
-    }
-    catch (error) {
-      console.error('Ошибка удаления выбранных уведомлений:', error)
-    }
-  }
-
-  const handleDeleteOne = async (notificationId: string) => {
-    try {
-      await deleteNotificationMutation.mutateAsync(notificationId)
-    }
-    catch (error) {
-      console.error('Ошибка удаления уведомления:', error)
-    }
-  }
-
   const handleNotificationClick = async (notification: NotificationData) => {
-    if (!notification.isRead) {
-      await handleMarkAsRead(notification.notificationId)
-    }
-    
-    if ((notification.referenceType === 'project' || 
-         notification.referenceType === 'response' || 
-         notification.referenceType === 'invite') 
-        && notification.referenceId) {
-      navigate(`/profile/${userId}/activity/project/${notification.referenceId}`)
-    }
+    if (!notification.isRead) await handleMarkAsRead(notification.notificationId)
+    const link = getNotificationLink(notification, userId)
+    if (link) navigate(link)
   }
 
   const renderNotificationCard = (notification: NotificationData) => {
@@ -250,6 +238,12 @@ export const Notifications = () => {
         <h2 className='notifications-title'>
           Уведомления: <span className='notifications-count'>{notifications.length}</span>
         </h2>
+
+        {error && (
+          <p className='save-error-text message-auto-hide' onAnimationEnd={() => setError(null)}>
+            {error}
+          </p>
+        )}
 
         <div className='notifications-controls'>
           <div className='sort-group-container' ref={dropdownMenuRef}>

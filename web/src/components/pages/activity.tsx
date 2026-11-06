@@ -214,6 +214,8 @@ export const Activity = () => {
     staleTime: STALE.short,
   })
 
+  const [createError, setCreateError] = useState<string | null>(null)
+
   const createProjectMutation = useMutation({
     mutationFn: (data: CreateProjectDto) => projectsApi.createProject(data),
     onSuccess: (newProject) => {
@@ -222,8 +224,9 @@ export const Activity = () => {
       }
       navigate(`/profile/${authUserId}/activity/project/${newProject.projectId}`)
     },
-    onError: (error) => {
-      console.error('Ошибка создания проекта:', error)
+    onError: (error: any) => {
+      setCreateError(error.message || 'Ошибка создания проекта')
+      setTimeout(() => setCreateError(null), 3000)
     },
   })
 
@@ -238,8 +241,9 @@ export const Activity = () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.events.all })
       navigate(`/profile/${authUserId}/activity/event/${newEvent.eventId}`)
     },
-    onError: (error) => {
-      console.error('Ошибка создания мероприятия:', error)
+    onError: (error: any) => {
+      setCreateError(error.message || 'Ошибка создания мероприятия')
+      setTimeout(() => setCreateError(null), 3000)
     },
   })
 
@@ -297,16 +301,10 @@ export const Activity = () => {
   return (
     <div className="activity-page">
       <div className="activity-tabs">
-        <button
-          className={`activity-tab ${section === 'projects' ? 'active' : ''}`}
-          onClick={() => changeSection('projects')}
-        >
+        <button className={`activity-tab ${section === 'projects' ? 'active' : ''}`} onClick={() => changeSection('projects')}>
           Проекты
         </button>
-        <button
-          className={`activity-tab ${section === 'events' ? 'active' : ''}`}
-          onClick={() => changeSection('events')}
-        >
+        <button className={`activity-tab ${section === 'events' ? 'active' : ''}`} onClick={() => changeSection('events')}>
           Мероприятия
         </button>
       </div>
@@ -342,6 +340,12 @@ export const Activity = () => {
                     Создать новый проект
                   </span>
                 </button>
+              )}
+
+              {createError && (
+                <p className='save-error-text message-auto-hide' onAnimationEnd={() => setCreateError(null)}>
+                  {createError}
+                </p>
               )}
 
               <div className="projects-list">
@@ -423,6 +427,12 @@ export const Activity = () => {
                     Создать новое мероприятие
                   </span>
                 </button>
+              )}
+
+              {createError && (
+                <p className='save-error-text message-auto-hide' onAnimationEnd={() => setCreateError(null)}>
+                  {createError}
+                </p>
               )}
 
               <div className="projects-list">

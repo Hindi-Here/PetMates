@@ -14,15 +14,17 @@ interface DeleteProjectFormProps {
 // Компонент формы удаления проекта (для владельца проекта)
 const Form = ({ projectId, onClose, onSuccess }: DeleteProjectFormProps) => {
   const [isDeleting, setIsDeleting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleDelete = async () => {
     try {
       setIsDeleting(true)
+      setError(null)
       await projectsApi.deleteProject(projectId)
       onSuccess?.()
       onClose()
-    } catch (error) {
-      console.error('Ошибка удаления проекта:', error)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Не удалось удалить проект')
     } finally {
       setIsDeleting(false)
     }
@@ -67,6 +69,7 @@ const Form = ({ projectId, onClose, onSuccess }: DeleteProjectFormProps) => {
             Отмена
           </button>
         </div>
+         {error && <p className='invite-error-text'>{error}</p>}
       </div>
     </div>
   )

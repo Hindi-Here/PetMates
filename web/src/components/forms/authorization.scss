@@ -118,34 +118,40 @@
     padding-right: rem(24);
 
     .auth-service-item-container {
-      width: rem(125);
+      min-width: rem(125);
       display: flex;
+      height: rem(30) !important;
       align-items: center;
-      padding-left: rem(12);
-      gap: rem(18);
+      justify-content: center;
+      padding: rem(8) rem(12);
+      gap: rem(8);
+      height: rem(40);
       border-radius: var(--border-radius-base);
       border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 50%);
-      height: rem(30);
-      background-color: var(--card-bg-color);
+      transition: 0.25s;
 
-      .auth-service-item-ico {
-        width: rem(15);
-        height: rem(15);
-
-        &.git {
-          width: rem(18);
-          height: rem(18);
-        }
-
-        &.twitch {
-          width: rem(18);
-          height: rem(18);
-        }
+      &:hover {
+        background-color: color-mix(in srgb, var(--neutral-100), transparent 95%);
+        border-color: color-mix(in srgb, var(--neutral-100), transparent 30%);
       }
 
-      .auth-service-item-text {
-        font-size: rem(12);
-        color: color-mix(in srgb, var(--neutral-100), transparent 25%);
+      &:active {
+        transform: scale(0.98);
+        background-color: color-mix(in srgb, var(--neutral-100), transparent 92%);
+      }
+
+      .auth-service-item-ico { 
+        width: rem(18);
+        height: rem(18);
+        flex-shrink: 0;
+        display: block;
+      }
+      
+      .auth-service-item-text { 
+        line-height: 1; 
+        margin: 0;
+        font-size: rem(14);
+        white-space: nowrap;
       }
     }
   }
@@ -157,7 +163,7 @@
   justify-content: center;
   padding-left: rem(24);
   padding-right: rem(24);
-  padding-bottom: rem(75);
+  margin-bottom: rem(24);
 
   .auth-change-format-text {
     font-size: rem(12);
@@ -241,12 +247,9 @@
 
       .auth-service-item-container {
         flex: 1 1 calc(50% - #{rem(4)});
-        width: auto;
         min-width: 0;
         height: rem(40);
-        padding-left: 0;
         justify-content: center;
-        gap: rem(10);
 
         &:last-child:nth-child(odd) {
           flex-basis: 100%;

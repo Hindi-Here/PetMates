@@ -90,12 +90,15 @@ jobs:
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
         run: npx tauri android build --apk --debug --target aarch64
         
-      - name: Show generated APK path
-        run: find web/src-tauri/gen/android -name "*.apk"
-        
+      - name: Rename APK
+        run: |
+          APK=$(find web/src-tauri/gen/android -name "*.apk" | head -1)
+          echo "Found: $APK"
+          mkdir -p out
+          cp "$APK" out/PetMates-android.apk
+
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          files: |
-            web/src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          files: out/PetMates-android.apk
           token: ${{ secrets.GITHUB_TOKEN }}

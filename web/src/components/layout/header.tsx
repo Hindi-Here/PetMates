@@ -23,7 +23,7 @@ import { notificationApi, type NotificationData } from '../services/notification
 import { conversationApi } from '../services/conversation'
 import { useNavigate } from 'react-router-dom'
 
-import { getNotificationIcon, getNotificationText } from '../common/notificationText'
+import { getNotificationIcon, getNotificationText, getNotificationLink } from '../common/notificationText'
 
 import { LAYOUT } from '../scripts/limits';
 import { Avatar } from '../common/avatar'
@@ -33,7 +33,7 @@ const Logo = () => {
   const navigate = useNavigate()
 
   return (
-    <div className='logo-container' onClick={() => navigate('/vacancy')} style={{ cursor: 'pointer' }}>
+    <div className='logo-container' onClick={() => navigate('/vacancy', { state: { reset: Date.now() } })}>
       <div className='ico-container'>
         <LogoIcon className='logo-ico'></LogoIcon>
       </div>
@@ -133,17 +133,15 @@ const NotificationPanel = ({
     }
   }, [isOpen, onClose])
 
-  const handleNotificationClick = async (notification: NotificationData) => {
+    const handleNotificationClick = async (notification: NotificationData) => {
     if (!notification.isRead) {
       await markAsReadMutation.mutateAsync(notification.notificationId)
     }
-
-    if ((notification.referenceType === 'project' ||
-         notification.referenceType === 'response' ||
-         notification.referenceType === 'invite')
-        && notification.referenceId) {
-      navigate(`/profile/${userId}/activity/project/${notification.referenceId}`)
-      onClose()
+    
+    const link = getNotificationLink(notification, userId)
+    if (link) { 
+      navigate(link)
+      onClose() 
     }
   }
 

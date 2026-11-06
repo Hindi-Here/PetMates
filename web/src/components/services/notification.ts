@@ -2,11 +2,12 @@ import { authFetch, readError } from './http'
 
 export interface NotificationData {
   notificationId: string; userId: string;
-  referenceType: 'project' | 'response' | 'invite' | 'system' | 'event' | 'application' | 'comment';
+  referenceType: 'project' | 'response' | 'invite' | 'system' | 'event' | 'application' | 'comment' | 'message';
   referenceId: string;
   contextData: {
     projectName?: string; eventName?: string; vacancyName?: string; role?: string;
     nickname?: string; status?: string; eventType?: string; reason?: string;
+    applicationId?: string; refType?: string; targetName?: string; count?: number; comment?: string;
   };
   isRead: boolean; createdAt: string;
 }

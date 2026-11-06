@@ -274,8 +274,8 @@
   );
 
   --form-step-bg-color: var(--button-neutral-bg-color);
-  --form-important-color: var(--header-bg-color);
-  --form-primary-accent: var(--header-bg-color);
+  --form-important-color: color-mix(in srgb, var(--important-color), #000 25%);
+  --form-primary-accent: color-mix(in srgb, var(--primary-accent), #000 30%);
 
   --neutral-0: #1b1f22;
   --neutral-100: #ececec;
@@ -474,6 +474,13 @@ input:-webkit-autofill::selection {
     var(--important-color),
     transparent 75%
   );
+}
+
+.media-error-text {
+  font-size: rem(14); padding: rem(10) rem(16); border-radius: rem(10); margin: 0;
+  color: var(--important-color);
+  background-color: color-mix(in srgb, var(--important-color), transparent 90%);
+  border: 1px solid color-mix(in srgb, var(--important-color), transparent 70%);
 }
 
 // Серые зоны (пустые состояния, нейтральные элементы)

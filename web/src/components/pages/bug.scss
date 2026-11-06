@@ -368,16 +368,17 @@ a {
 }
 
 .attachment-item {
-  flex: 1;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: rem(12);
-  padding: rem(8) rem(12);
-  border-radius: var(--border-radius-base);
-  background: var(--unborder-content-bg-color);
   min-width: 0;
-  height: 100%;
+  overflow: hidden;
+  gap: rem(8); 
+}
+
+.attachment-name,
+.attachment-size {
+  line-height: 1.2;
+  display: block;
 }
 
 .attachment-name {
@@ -389,7 +390,6 @@ a {
   flex: 1;
   min-width: 0;
   margin: 0;
-  line-height: 1;
 }
 
 .attachment-size {
@@ -398,7 +398,6 @@ a {
   flex-shrink: 0;
   white-space: nowrap;
   margin: 0;
-  line-height: 1;
 }
 
 .attachment-remove-btn {

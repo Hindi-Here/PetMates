@@ -112,91 +112,84 @@
   --app-color: var(--info-color);
 
   display: flex;
-  flex-direction: column;
-  gap: rem(12);
-  padding: rem(16) rem(16) rem(12) rem(20);
+  align-items: center;
+  gap: rem(16);
+  padding: rem(16) rem(20);
   background: var(--card-bg-color);
   border: 1px solid color-mix(in srgb, var(--neutral-100), transparent 65%);
-  border-left: rem(4) solid var(--app-color);
   border-radius: var(--border-radius-base);
-  box-shadow: 0 4px 4px rgba(0, 0, 0, 0.15);
-  transition: background-color 0.25s, transform 0.25s;
+  box-shadow: inset 0 0 0 0 var(--app-color), 0 4px 4px rgba(0, 0, 0, 0.15);
+  transition: border-color 0.25s, box-shadow 0.25s, background-color 0.25s;
 
   &.revision { --app-color: var(--in-process-color); }
   &.accepted { --app-color: var(--success-color); }
   &.rejected { --app-color: var(--important-color); }
 
-    &:hover {
-    box-shadow: inset 2px 0 0 0 var(--app-color), 0 4px 4px rgba(0, 0, 0, 0.15);
-    transform: scale(0.995);
+  &:hover {
+    box-shadow: inset 2px 0 0 0 var(--app-color), 0 4px 4px rgba(0, 0, 0, 0.25);
+    border-color: color-mix(in srgb, var(--app-color), transparent 75%);
+    border-left-color: var(--app-color);
+    background-color: color-mix(in srgb, var(--card-bg-color), var(--app-color) 2%);
   }
 
   &:active {
     background-color: var(--card-active-bg-color);
-    transform: scale(0.99);
   }
 
-  .event-app-card-head {
+  .event-app-info-block {
     display: flex;
     align-items: center;
     gap: rem(12);
-  }
-
-  .event-app-doc-ico {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: rem(36);
-    height: rem(36);
-    flex-shrink: 0;
-    border-radius: var(--border-radius-base);
-    background: color-mix(in srgb, var(--app-color), transparent 85%);
-    color: var(--app-color);
-
-    .ico {
-      width: rem(18);
-      height: rem(18);
-      fill: currentColor;
-    }
-  }
-
-  .event-app-card-title {
     flex: 1;
     min-width: 0;
-
-    .event-app-card-name {
-      font-size: rem(16);
-      font-weight: bold;
-      color: var(--neutral-100);
-    }
-
-    .event-app-card-date {
-      font-size: rem(12);
-      color: var(--text-secondary-color);
-    }
   }
 
-  .event-app-snippet {
-    padding: rem(8) rem(12);
-    border-left: 2px solid color-mix(in srgb, var(--neutral-100), transparent 80%);
-    font-size: rem(13);
-    line-height: 1.5;
-    color: color-mix(in srgb, var(--neutral-100), transparent 25%);
-    overflow-wrap: anywhere;
-
-    .event-app-snippet-label {
-      display: block;
-      margin-bottom: rem(2);
-      font-size: rem(11);
-      color: var(--text-secondary-color);
-    }
+  .event-app-avatar {
+    width: rem(44);
+    height: rem(44);
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
   }
 
-  .event-app-open {
-    align-self: flex-end;
-    font-size: rem(13);
+  .event-app-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: rem(2);
+  }
+
+  .event-app-nickname {
+    font-size: rem(16);
     font-weight: bold;
-    color: var(--primary-accent);
+    color: var(--neutral-100);
+    margin: 0;
+    line-height: 1.3;
+  }
+
+  .event-app-date {
+    font-size: rem(12);
+    color: var(--text-secondary-color);
+    line-height: 1.3;
+  }
+
+  .event-app-side {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: rem(6);
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+
+  .event-app-banned {
+    padding: rem(2) rem(10);
+    border-radius: rem(20);
+    background: color-mix(in srgb, var(--important-color), transparent 85%);
+    color: var(--important-color);
+    font-size: rem(11);
+    font-weight: bold;
   }
 }
 
@@ -466,11 +459,17 @@
   color: var(--important-color);
   font-size: rem(14);
   font-weight: bold;
+  height: rem(40);
 
   &:disabled {
     opacity: 0.5;
     pointer-events: none;
   }
+}
+
+.event-decision-actions .manage-button.red,
+.event-decision-actions .manage-button.cancellation {
+  width: rem(150);
 }
 
 .event-decision-btn,

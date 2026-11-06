@@ -374,7 +374,8 @@ export const Project = ({ onCancel }: ProjectProps) => {
       const media = await projectsApi.getMedia(projectId)
       setProjectMedia(media)
     } catch (error) {
-      console.error('Ошибка удаления:', error)
+      setMediaError(error instanceof Error ? error.message : 'Не удалось удалить файл')
+      setTimeout(() => setMediaError(null), TIMING.toastMs)
     }
   }
 
@@ -740,6 +741,11 @@ export const Project = ({ onCancel }: ProjectProps) => {
     return nameValid && shortDescValid && vacanciesValid && descriptionValid
   }, [name, shortDesc, localVacancies, deletedVacancyIds, description])
 
+  const vacanciesView = useMemo(
+    () => localVacancies.map(v => ({ ...v, projectTitle: name })),
+    [localVacancies, name]
+  )
+
   const handleCancel = async () => {
     await autosave.pause()
     try {
@@ -1082,7 +1088,8 @@ export const Project = ({ onCancel }: ProjectProps) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all, refetchType: 'active' })
     }
     catch (error) {
-      console.error('Ошибка отмены приглашения:', error)
+      setSaveError(error instanceof Error ? error.message : 'Не удалось отменить приглашение')
+      setTimeout(() => setSaveError(null), TIMING.toastMs)
     }
   }
 
@@ -1101,7 +1108,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
             ratingCount: projectRating,
           }}
           team={localTeamMembers}
-          vacancies={localVacancies}
+          vacancies={vacanciesView}
           onBack={() => { }}
         />
       ) : (
@@ -1224,7 +1231,9 @@ export const Project = ({ onCancel }: ProjectProps) => {
                 </div>
               </div>
               {mediaError && (
-                <p className='media-error-text'>{mediaError}</p>
+                <p className='save-error-text message-auto-hide' onAnimationEnd={() => setMediaError(null)}>
+                  {mediaError}
+                </p>
               )}
               {projectMedia.length > 0 && (
                 <div className='media-list'>
@@ -1367,7 +1376,7 @@ export const Project = ({ onCancel }: ProjectProps) => {
               <button className='vacancy-add-btn' onClick={() => openVacancyForm()}><div className='add-icon-container'><Add className='add-icon' /></div><span className='add-vacancy-text'>Создать новую заявку</span></button>
             )}
             <div className='vacancy-list'>
-              {localVacancies.map(v => (<VacancyCard key={v.vacancyId} vacancy={v} onEdit={openVacancyForm} onDelete={deleteVacancy} />))}
+              {vacanciesView.map(v => (<VacancyCard key={v.vacancyId} vacancy={v} onEdit={openVacancyForm} onDelete={deleteVacancy} />))}
             </div>
           </section>
 

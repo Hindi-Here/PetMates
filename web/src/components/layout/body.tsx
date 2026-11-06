@@ -23,12 +23,35 @@ import { Messages } from '../pages/message'
 import { Chat } from '../pages/chat'
 
 import { LAYOUT } from '../scripts/limits';
+import { EventApplicationDetail } from '../pages/events/event_application_detail'
 
 interface MenuItem {
   id: string;
   label: string;
   path: string;
   Icon: React.ComponentType<{ className?: string }>;
+}
+
+const EventApplicationDetailPage = () => {
+  const { profileId, eventId, applicationId } = useParams<{
+    profileId: string
+    eventId: string
+    applicationId: string
+  }>()
+
+  if (!profileId || !eventId || !applicationId) {
+    return <Navigate to={`/profile/${profileId}/activity`} replace />
+  }
+
+  const basePath = `/profile/${profileId}/activity/event/${eventId}`
+
+  return (
+    <EventApplicationDetail
+      eventId={eventId}
+      applicationId={applicationId}
+      basePath={basePath}
+    />
+  )
 }
 
 // Компонент навигационного меню
@@ -138,8 +161,12 @@ const Content = () => {
           <Route path="info" element={null} />
           <Route path="activity" element={<Activity />} />
           <Route path="activity/project/:projectId" element={<Project />} />
-          <Route path="activity/event/:eventId" element={null} />
+
           <Route path="activity/event/:eventId/:tab" element={null} />
+          <Route path="activity/event/:eventId" element={null}>
+            <Route path="applications" element={null} />
+            <Route path="applications/:applicationId" element={<EventApplicationDetailPage />} />
+          </Route>
           
           <Route path="messages" element={<Messages />} />
           <Route path="messages/:conversationId" element={<Chat />} />

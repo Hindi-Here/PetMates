@@ -26,10 +26,12 @@ namespace api.Controllers
                     return BadRequest(new { message = "Нельзя заблокировать самого себя" });
 
                 var targetUser = (await _SupMan.System.From<User>().Where(u => u.UserId == targetUserId).Get()).Models.FirstOrDefault();
-                if (targetUser == null) return NotFound();
+                if (targetUser == null)
+                    return NotFound();
                 if (targetUser.IsBanned)
                     return BadRequest(new { message = "Пользователь уже заблокирован" });
-                if (!RoleRules.CanModerate(actor.Role, targetUser.SystemRole)) return Forbid();
+                if (!RoleRules.CanModerate(actor.Role, targetUser.SystemRole))
+                    return Forbid();
 
                 if (RoleRules.Normalize(targetUser.SystemRole) == Roles.Admin && await _SupMan.CountActiveAdminsAsync() <= 1)
                     return BadRequest(new { message = "Нельзя заблокировать последнего администратора" });
@@ -47,6 +49,9 @@ namespace api.Controllers
 
                 await _SupMan.Cache.UserChangedAsync(targetUserId);
                 await SupportManager.SetAuthBanAsync(targetUserId, "876000h");
+
+                await _SupMan.SendNotificationAsync(targetUserId, "system", targetUserId, "banned",
+                    new Dictionary<string, object> { { "reason", dto.Reason!.Trim() } });
 
                 var (responders, invitees) = await _SupMan.GetPendingThirdParties(targetUserId);
 
@@ -67,11 +72,6 @@ namespace api.Controllers
                         { "role", role }
                     });
                 }
-
-                await _SupMan.SendNotificationAsync(actor.UserId, "system", targetUserId, "moderator_banned_user", new Dictionary<string, object>
-                {
-                    { "nickname", targetUser?.Nickname ?? "Пользователь" }
-                });
 
                 return Ok(new { message = "Пользователь заблокирован" });
             }
@@ -129,11 +129,6 @@ namespace api.Controllers
 
                 await _SupMan.SendNotificationAsync(targetUserId, "system", targetUserId, "unbanned", []);
 
-                await _SupMan.SendNotificationAsync(actor.UserId, "system", targetUserId, "moderator_unbanned_user", new Dictionary<string, object>
-                {
-                    { "nickname", targetUser?.Nickname ?? "Пользователь" }
-                });
-
                 return Ok(new { message = "Пользователь разблокирован" });
             }
             catch (Exception ex) { return this.Fail(ex); }
@@ -181,11 +176,6 @@ namespace api.Controllers
                 await _SupMan.SendNotificationAsync(targetUserId, "system", targetUserId, targetEventType, new Dictionary<string, object> { { "role", dto.Role } });
 
                 string moderatorEventType = (dto.Role == Roles.Admin || dto.Role == Roles.Moderator) ? "moderator_promoted_user" : "moderator_demoted_user";
-                await _SupMan.SendNotificationAsync(actor.UserId, "system", targetUserId, moderatorEventType, new Dictionary<string, object>
-                {
-                    { "role", dto.Role },
-                    { "nickname", targetUser?.Nickname ?? "Пользователь" }
-                });
 
                 return Ok(new { message = "Роль обновлена" });
             }

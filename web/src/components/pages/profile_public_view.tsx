@@ -200,13 +200,12 @@ export const ProfilePublicView = ({ user, isPreview = false }: ProfilePublicView
           {renderOnlineStatus()}
         </div>
 
-                {showActions && (
+        {showActions && (
           <div className='profile-actions'>
             <button
               className='profile-action-btn'
               disabled={isPreview || isLoadingBlock}
               onClick={() => navigate(`/profile/${userId}/messages?to=${user.userId}`)}
-              title={isLoadingBlock ? 'Загрузка...' : 'Написать'}
             >
               <ChatIcon className='action-ico' />
             </button>
@@ -215,7 +214,6 @@ export const ProfilePublicView = ({ user, isPreview = false }: ProfilePublicView
               className='profile-action-btn' 
               disabled={isPreview || isLoadingBlock || anyBlock} 
               onClick={() => setShowInviteForm(true)}
-              title={isLoadingBlock ? 'Загрузка' : (anyBlock ? 'Заблокирован' : 'Пригласить')}
             >
               <InviteIcon className='action-ico' />
             </button>
@@ -225,7 +223,6 @@ export const ProfilePublicView = ({ user, isPreview = false }: ProfilePublicView
                 className={`profile-action-btn ${isLoadingBlock ? '' : (isBlockedByMe ? 'restore' : 'danger')}`}
                 onClick={toggleBlock}
                 disabled={blockBusy || isLoadingBlock}
-                title={isLoadingBlock ? 'Загрузка' : (isBlockedByMe ? 'Разблокировать' : 'Заблокировать')}
               >
                 {isLoadingBlock ? null : (
                   isBlockedByMe ? <UnbanUserIcon className='action-ico' /> : <BanUserIcon className='action-ico' />
@@ -264,21 +261,22 @@ export const ProfilePublicView = ({ user, isPreview = false }: ProfilePublicView
                           <button disabled={busy} onClick={e => { e.stopPropagation(); handleSetRole('user') }}>
                             Снять администратора
                           </button>
-                        ) : targetSystemRole === 'user' ? (
-                          <button disabled={busy} onClick={e => { e.stopPropagation(); handleSetRole('admin') }}>
-                            Назначить администратором
-                          </button>
-                        ) : null}
-
-                        {targetSystemRole === 'moderator' ? (
-                          <button disabled={busy} onClick={e => { e.stopPropagation(); handleSetRole('user') }}>
-                            Снять модератора
-                          </button>
-                        ) : targetSystemRole === 'user' ? (
-                          <button disabled={busy} onClick={e => { e.stopPropagation(); handleSetRole('moderator') }}>
-                            Назначить модератором
-                          </button>
-                        ) : null}
+                        ) : (
+                          <>
+                            {targetSystemRole === 'moderator' ? (
+                              <button disabled={busy} onClick={e => { e.stopPropagation(); handleSetRole('user') }}>
+                                Снять модератора
+                              </button>
+                            ) : (
+                              <button disabled={busy} onClick={e => { e.stopPropagation(); handleSetRole('moderator') }}>
+                                Назначить модератором
+                              </button>
+                            )}
+                            <button disabled={busy} onClick={e => { e.stopPropagation(); handleSetRole('admin') }}>
+                              Назначить администратором
+                            </button>
+                          </>
+                        )}
                       </>
                     )}
                   </div>

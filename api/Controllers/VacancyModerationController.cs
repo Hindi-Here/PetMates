@@ -59,8 +59,11 @@ namespace api.Controllers
                 if (!string.IsNullOrEmpty(projectData.OwnerId))
                 {
                     var invites = await _client.From<Invite>()
-                        .Where(i => i.ProjectId == vacancy.ProjectId && i.Role == vacancyTitle && i.Status == "pending")
+                        .Where(i => i.ProjectId == vacancy.ProjectId)
+                        .Where(i => i.Role == vacancyTitle)
+                        .Where(i => i.Status == "pending")
                         .Get();
+
                     affectedInvitees = [.. invites.Models.Select(i => i.UserId).Distinct()];
                     invitesToDelete = [.. invites.Models.Select(i => i.InviteId)];
                 }
@@ -99,12 +102,6 @@ namespace api.Controllers
                         { "nickname", ownerNickname }
                     });
                 }
-
-                await _SupMan.SendNotificationAsync(actor.UserId, "response", vacancy.ProjectId, "moderator_deleted_vacancy", new Dictionary<string, object>
-                {
-                    { "vacancyName", vacancyTitle },
-                    { "reason", reason }
-                });
 
                 return Ok(new { message = "Заявка удалена модератором" });
             }

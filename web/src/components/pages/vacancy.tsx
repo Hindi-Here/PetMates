@@ -3,7 +3,8 @@ import './vacancy.scss'
 
 import NotFoundContentIcon from '@icons/not_found_content.svg?react'
 
-import { useState,  } from 'react'
+import { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom' 
 import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { queryKeys } from '../scripts/query/queryKeys'
 import { vacanciesApi } from '../services/vacancy'
@@ -21,11 +22,22 @@ const FoundCount = ({ count }: { count: number }) => (
 
 // Компонент страницы со списком вакансий, включая поиск, фильтрацию и сортировку
 export default function Vacancy() {
+  const location = useLocation()
+
   const [searchInput, setSearchInput] = useState('')
   const [appliedSearch, setAppliedSearch] = useState('')
   const [searchField, setSearchField] = useState('name')
   const [sortField, setSortField] = useState('date')
   const [isSortUp, setIsSortUp] = useState(true)
+
+  useEffect(() => {
+    if (!(location.state as any)?.reset) return
+    setSearchInput('')
+    setAppliedSearch('')
+    setSearchField('name')
+    setSortField('date')
+    setIsSortUp(true)
+  }, [(location.state as any)?.reset])
 
   const currentSystemRole = useSystemRole()
   const isStaff = currentSystemRole === 'moderator' || currentSystemRole === 'admin'

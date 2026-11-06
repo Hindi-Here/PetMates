@@ -1,5 +1,4 @@
 import '../project.scss'
-import VacancyIcon from '@icons/vacancy.svg?react'
 import DropdownIcon from '@icons/dropdown.svg?react'
 
 import { useMemo, useState } from 'react'
@@ -11,7 +10,6 @@ import { Dropdown } from '../../common/dropdown'
 import { eventApi, type ApplicationListItem, type ApplicationStatus } from '../../services/event'
 import { ApplicationStatusBadge } from './event_application_status'
 import { STALE } from '@/components/scripts/query/queryClient'
-import { Avatar } from '@/components/common/avatar'
 
 type Filter = 'all' | ApplicationStatus
 
@@ -25,39 +23,21 @@ const FILTER_OPTIONS: { id: Filter; label: string }[] = [
 // Карточка заявки
 const ApplicationCard = ({ item, onOpen }: { item: ApplicationListItem; onOpen: () => void }) => {
   const created = new Date(item.createdAt)
-
   return (
     <div className={`event-app-card ${item.status}`} onClick={onOpen}>
-      <div className='event-app-card-head'>
-        <div className='event-app-doc-ico'>
-          <VacancyIcon className='ico' />
+      <div className='event-app-info-block'>
+        <img className='event-app-avatar' src={item.applicant.avatarUrl || '/default-avatar.png'} alt={item.applicant.nickname} />
+        <div className='event-app-info'>
+          <p className='event-app-nickname'>{item.applicant.nickname}</p>
+          <span className='event-app-date'>
+            {created.toLocaleDateString('ru-RU')}, {created.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+          </span>
         </div>
-        <div className='event-app-card-title'>
-          <p className='event-app-card-name'>Заявка на участие</p>
-          <p className='event-app-card-date'>
-            Подана {created.toLocaleDateString('ru-RU')}, {created.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
-          </p>
-        </div>
-        <ApplicationStatusBadge status={item.status} />
       </div>
-
-      <div className='event-app-applicant'>
-        <Avatar src={item.applicant.avatarUrl} alt={item.applicant.nickname} className="event-app-applicant-avatar" />
-        <div className='event-app-applicant-info'>
-          <p className='event-app-applicant-name'>@{item.applicant.nickname}</p>
-          <p className='event-app-applicant-role'>{item.applicant.profileRole || 'Роль не указана'}</p>
-        </div>
+      <div className='event-app-side'>
+        <ApplicationStatusBadge status={item.status} />
         {item.applicant.isBanned && <span className='event-app-banned'>Заблокирован</span>}
       </div>
-
-      {item.snippet && (
-        <p className='event-app-snippet'>
-          <span className='event-app-snippet-label'>{item.snippetLabel}</span>
-          {item.snippet}
-        </p>
-      )}
-
-      <div className='event-app-open'>Открыть заявку <span>→</span></div>
     </div>
   )
 }
@@ -118,7 +98,9 @@ export const EventApplications = ({ eventId, basePath }: EventApplicationsProps)
             <ApplicationCard
               key={item.applicationId}
               item={item}
-              onOpen={() => navigate(`${basePath}/applications/${item.applicationId}`)}
+              onOpen={() => {
+                navigate(`${basePath}/applications/${item.applicationId}`);
+              }}
             />
           ))}
         </div>

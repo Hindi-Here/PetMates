@@ -381,6 +381,9 @@ export const EventDescription = ({ event, profileId, draft, onDraftChange }: Eve
                 <Add className='event-add-stage-ico' />
                 <span>Добавить этап</span>
               </button>
+              {!form.stages.some(s => s.acceptsApplications) && (
+                <p className='event-field-hint'>Ни один этап не принимает заявки, поэтому приём открыт весь период проведения</p>
+              )}
             </div>
           </div>
 

@@ -15,7 +15,7 @@ export interface SearchOption {
 
 // Опции поиска и сортировки для каждой вкладки (заявки, мероприятия, участники)
 export const tabOpt: Record<string, { searchOpt: SearchOption[]; sortOpt: SearchOption[] }> = {
-    vacancy: {
+  vacancy: {
     searchOpt: [
       { id: 'name', label: 'Названию заявки' },
       { id: 'tag', label: 'Тегу' },
@@ -39,7 +39,7 @@ export const tabOpt: Record<string, { searchOpt: SearchOption[]; sortOpt: Search
       { id: 'activity', label: 'Активности в проектах' }
     ]
   },
-    events: {
+  events: {
     searchOpt: [
       { id: 'name', label: 'Названию' },
       { id: 'author', label: 'Автору' }
@@ -73,7 +73,6 @@ interface SearchProps {
   onToggleShowStaffOnly: () => void;
 }
 
-// Компонент поиска и сортировки (заявки, мероприятия, участники)
 export default function Search({
   activeId,
   searchValue,
@@ -116,6 +115,7 @@ export default function Search({
           <SearchIcon className='search-ico' />
           <input
             className="search-input"
+            aria-label="Поиск"
             placeholder="Поиск"
             value={searchValue}
             onChange={(e) => onSearchValueChange(e.target.value)}
@@ -128,37 +128,77 @@ export default function Search({
       </div>
       <div className="sort-line-container">
         <div className='sort-group-container'>
-          <div ref={searchMenuRef} className={`sort-type-container ${isSearchDropdownOpen ? 'active' : ''}`} onClick={() => setIsNameDropdownOpen(!isSearchDropdownOpen)}>
+          <div 
+            ref={searchMenuRef} 
+            role="button" 
+            tabIndex={0} 
+            aria-haspopup="listbox" 
+            aria-expanded={isSearchDropdownOpen}
+            className={`sort-type-container ${isSearchDropdownOpen ? 'active' : ''}`} 
+            onClick={() => setIsNameDropdownOpen(!isSearchDropdownOpen)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setIsNameDropdownOpen(!isSearchDropdownOpen);
+              }
+            }}
+          >
             <p className='sort-type-text'>По {selectedSearch?.label.toLowerCase()}</p>
             <DropdownIcon className={`sort-type-dropdown-ico ${isSearchDropdownOpen ? 'rotated' : ''}`} />
           </div>
           <Dropdown isOpen={isSearchDropdownOpen} items={currentOpt.searchOpt} onSelect={handleSearchSelect} />
         </div>
+        
         <div className='sort-group-container'>
-          <div ref={sortMenuRef} className={`sort-type-container ${isSortDropdownOpen ? 'active' : ''}`} onClick={() => setIsDateDropdownOpen(!isSortDropdownOpen)}>
+          <div 
+            ref={sortMenuRef} 
+            role="button" 
+            tabIndex={0} 
+            aria-haspopup="listbox" 
+            aria-expanded={isSortDropdownOpen}
+            className={`sort-type-container ${isSortDropdownOpen ? 'active' : ''}`} 
+            onClick={() => setIsDateDropdownOpen(!isSortDropdownOpen)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setIsDateDropdownOpen(!isSortDropdownOpen);
+              }
+            }}
+          >
             <p className='sort-type-text'>Сортировка по {selectedSort?.label.toLowerCase()}</p>
             <DropdownIcon className={`sort-type-dropdown-ico ${isSortDropdownOpen ? 'rotated' : ''}`} />
           </div>
           <Dropdown isOpen={isSortDropdownOpen} items={currentOpt.sortOpt} onSelect={handleSortSelect} />
         </div>
-        <div className='sort-vector-ico-container' onClick={onToggleSortDirection}>
-          {isSortUp ? (<SortUpIcon className='sort-vector-ico' />) : (<SortDownIcon className='sort-vector-ico' />)}
-        </div>
-        {showStaffFilter && (
-        <div className={`staff-filter-container ${showStaffOnly ? 'active' : ''}`} onClick={onToggleShowStaffOnly}>
-          <div className='staff-filter-checkbox'>
-            {showStaffOnly && <CheckIcon className='staff-filter-check-ico' />}
+
+        <button 
+          type="button" 
+          className='sort-vector-ico-container' 
+          onClick={onToggleSortDirection}
+          aria-label={isSortUp ? 'Сортировка по возрастанию' : 'Сортировка по убыванию'}
+        >
+          {isSortUp ? <SortUpIcon className='sort-vector-ico' /> : <SortDownIcon className='sort-vector-ico' />}
+        </button>
+
+        {(showStaffFilter || showBannedFilter) && (
+          <div className='filters-row'>
+            {showStaffFilter && (
+              <div className={`staff-filter-container ${showStaffOnly ? 'active' : ''}`} onClick={onToggleShowStaffOnly}>
+                <div className='staff-filter-checkbox'>
+                  {showStaffOnly && <CheckIcon className='staff-filter-check-ico' />}
+                </div>
+                <p className='staff-filter-text'>Модерация</p>
+              </div>
+            )}
+            {showBannedFilter && (
+              <div className={`banned-filter-container ${showBannedOnly ? 'active' : ''}`} onClick={onToggleShowBannedOnly}>
+                <div className='banned-filter-checkbox'>
+                  {showBannedOnly && <CheckIcon className='banned-filter-check-ico' />}
+                </div>
+                <p className='banned-filter-text'>Заблокированные</p>
+              </div>
+            )}
           </div>
-          <p className='staff-filter-text'>Модерация</p>
-        </div>
-        )}
-        {showBannedFilter && (
-        <div className={`banned-filter-container ${showBannedOnly ? 'active' : ''}`} onClick={onToggleShowBannedOnly}>
-          <div className='banned-filter-checkbox'>
-            {showBannedOnly && <CheckIcon className='banned-filter-check-ico' />}
-          </div>
-          <p className='banned-filter-text'>Заблокированные</p>
-        </div>
         )}
       </div>
     </div>

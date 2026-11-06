@@ -69,9 +69,10 @@ namespace api.Controllers
                 if (refOwnerId != null && refOwnerId != userId && await _SupMan.IsBlockedBetweenAsync(userId, refOwnerId))
                     return StatusCode(403, new { message = "Вы не можете оставлять комментарии здесь" });
 
+                Comment? parent = null;
                 if (!string.IsNullOrEmpty(dto.ParentCommentId))
                 {
-                    var parent = (await _client.From<Comment>().Where(c => c.CommentId == dto.ParentCommentId).Get()).Models.FirstOrDefault();
+                    parent = (await _client.From<Comment>().Where(c => c.CommentId == dto.ParentCommentId).Get()).Models.FirstOrDefault();
                     if (parent == null || parent.ReferenceType != dto.ReferenceType || parent.ReferenceId != dto.ReferenceId)
                         return BadRequest(new { message = "Недопустимый родительский комментарий" });
 
@@ -100,6 +101,16 @@ namespace api.Controllers
 
                 await _SupMan.Cache.CommentsChangedAsync(dto.ReferenceType, dto.ReferenceId);
                 await _SupMan.ProcessMentions(inserted, userId);
+
+                var (ownerId, title) = await _SupMan.GetReferenceInfoAsync(dto.ReferenceType, dto.ReferenceId);
+                var me = await _SupMan.GetUserCachedAsync(userId);
+                Dictionary<string, object> Ctx() => new()
+                { ["nickname"] = me?.Nickname ?? "Пользователь", ["targetName"] = title, ["refType"] = dto.ReferenceType };
+
+                if (parent?.UserId is { } parentAuthor && parentAuthor != userId)
+                    await _SupMan.SendNotificationAsync(parentAuthor, "comment", dto.ReferenceId, "comment_reply", Ctx());
+                if (ownerId != null && ownerId != userId && ownerId != parent?.UserId)
+                    await _SupMan.SendNotificationAsync(ownerId, "comment", dto.ReferenceId, "comment_new", Ctx());
 
                 return Ok(new
                 {
@@ -177,6 +188,14 @@ namespace api.Controllers
                     return Forbid();
 
                 await _SupMan.DeleteOrSoftDelete(comment, isStaffDelete);
+
+                if (!isAuthor && !string.IsNullOrEmpty(comment.UserId))
+                {
+                    var (_, title) = await _SupMan.GetReferenceInfoAsync(comment.ReferenceType, comment.ReferenceId);
+                    await _SupMan.SendNotificationAsync(comment.UserId, "comment", comment.ReferenceId,
+                        isStaffDelete ? "comment_deleted_by_moderator" : "comment_deleted_by_owner",
+                        new() { ["targetName"] = title, ["refType"] = comment.ReferenceType });
+                }
 
                 await _SupMan.Cache.CommentsChangedAsync(comment.ReferenceType, comment.ReferenceId);
 

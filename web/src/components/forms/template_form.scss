@@ -12,8 +12,8 @@
 }
 
 .form-container {
-  width: rem(500);
-  max-width: calc(100vw - #{rem(32)});
+  width: min(rem(500), calc(100vw - #{rem(32)}));
+  margin: 0;
   height: auto;
   max-height: 90vh;
   background-color: var(--card-bg-color);
@@ -269,11 +269,6 @@
 }
 
 @media (max-width: 480px) {
-  .form-container {
-    width: 100%;
-    margin: 0 rem(16);
-  }
-
   .form-manage {
     flex-wrap: wrap;
     height: auto;

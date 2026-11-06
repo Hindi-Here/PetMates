@@ -14,7 +14,6 @@ Env.Load();
 
 var url = Environment.GetEnvironmentVariable("SUPABASE_URL");
 var key = Environment.GetEnvironmentVariable("SUPABASE_KEY");
-var botToken = Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN")!;
 
 static SupabaseOptions supabaseOptions() => new()
 {
@@ -25,7 +24,12 @@ static SupabaseOptions supabaseOptions() => new()
 builder.Services.AddScoped<Supabase.Client>(_ => new Client(url!, key, supabaseOptions()));
 builder.Services.AddKeyedSingleton<Supabase.Client>("system", (_, _) => new Client(url!, key, supabaseOptions()));
 
-builder.Services.AddSingleton<ITelegramBotClient>(new TelegramBotClient(botToken));
+var botToken = Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN")!;
+var workerUrl = (Environment.GetEnvironmentVariable("TELEGRAM_WORKER_URL")
+                 ?? "https://api.telegram.org").TrimEnd('/');
+
+builder.Services.AddSingleton<ITelegramBotClient>(
+    new TelegramBotClient(new TelegramBotClientOptions(botToken, workerUrl)));
 
 builder.Services.AddControllers(o => o.Filters.Add<BanGateFilter>());
 
@@ -60,6 +64,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(o =>
     o.KnownProxies.Add(IPAddress.Loopback);
     o.KnownProxies.Add(IPAddress.IPv6Loopback);
 });
+
 static RateLimitPartition<string> PerIp(HttpContext c, int permit, TimeSpan window) =>
     RateLimitPartition.GetFixedWindowLimiter(
         c.Connection.RemoteIpAddress?.ToString() ?? "unknown",
@@ -68,6 +73,10 @@ static RateLimitPartition<string> PerIp(HttpContext c, int permit, TimeSpan wind
 builder.Services.AddRateLimiter(o =>
 {
     o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    o.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(
+        c => PerIp(c, 300, TimeSpan.FromMinutes(1)));
+
     o.AddPolicy("report", c => PerIp(c, 3, TimeSpan.FromMinutes(10)));
     o.AddPolicy("auth", c => PerIp(c, 10, TimeSpan.FromMinutes(5)));
     o.AddPolicy("lookup", c => PerIp(c, 20, TimeSpan.FromMinutes(1)));
@@ -87,6 +96,22 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+_ = Task.Run(async () =>
+{
+    using var scope = app.Services.CreateScope();
+    var sm = scope.ServiceProvider.GetRequiredService<SupportManager>();
+    try
+    {
+        await sm.GetAllUsersAsync();
+        await sm.GetVacancyListAsync();
+        await sm.GetPublicEventsAsync();
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[Cache Warmup] Ошибка прогрева кэша: {ex.Message}");
+    }
+});
 
 app.UseForwardedHeaders();
 

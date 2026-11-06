@@ -80,8 +80,6 @@ namespace api.Controllers
                     return BadRequest(new { message = "Не удалось добавить участника" });
 
                 var projTitle = (await _client.From<Project>().Where(p => p.ProjectId == dto.ProjectId).Get()).Models.FirstOrDefault()?.Title ?? "Проект";
-                await _SupMan.SendNotificationAsync(actor.UserId, "project", dto.ProjectId, "added",
-                    new() { ["nickname"] = target.Nickname ?? "Пользователь", ["projectName"] = projTitle, ["role"] = dto.Role });
                 await _SupMan.SendNotificationAsync(dto.UserId, "project", dto.ProjectId, "added_self",
                     new() { ["projectName"] = projTitle, ["role"] = dto.Role });
 
@@ -178,7 +176,7 @@ namespace api.Controllers
                 await _SupMan.Cache.ProjectChangedAsync(member.ProjectId);
 
                 var me = await _SupMan.GetUserCachedAsync(actor.UserId);
-                await _SupMan.SendNotificationAsync(proj.OwnerId, "project", proj.ProjectId, "removed",
+                await _SupMan.SendNotificationAsync(proj.OwnerId, "project", proj.ProjectId, "member_left",
                     new() { ["nickname"] = me?.Nickname ?? "Пользователь", ["projectName"] = proj.Title });
 
                 return Ok(new { message = "Вы покинули проект" });

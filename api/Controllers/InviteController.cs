@@ -181,7 +181,6 @@ namespace api.Controllers
 
                 var me = await _SupMan.GetUserCachedAsync(actor.UserId);
                 var ctx = new Dictionary<string, object> { ["projectName"] = project.Title, ["vacancyName"] = dto.Role };
-                await _SupMan.SendNotificationAsync(actor.UserId, "invite", project.ProjectId, "invite_sent", new(ctx));
                 await _SupMan.SendNotificationAsync(dto.UserId, "invite", project.ProjectId, "invite_received",
                     new(ctx) { ["nickname"] = me?.Nickname ?? "Пользователь" });
 

@@ -715,14 +715,18 @@
 
 @media (max-width: 600px) {
   .project-preview-header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: rem(16);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: rem(12);
 
     .project-actions {
-      align-items: flex-start;
       flex-direction: row;
-      justify-content: space-between;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      max-width: rem(190);
+
+      .rate-column .rate-button { width: rem(100); }
     }
   }
 

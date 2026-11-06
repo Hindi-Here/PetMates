@@ -13,7 +13,7 @@ import RejectIcon from '@icons/reject.svg?react'
 
 import { useEffect, useState, type ReactNode } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { invalidateModeration } from '../../scripts/query/invalidate'
 
 import { useAuth } from '../../hooks/useAuth'
@@ -26,6 +26,8 @@ import { EventTabs, PUBLIC_EVENT_TABS } from './event_tabs'
 import { EventMembers } from './event_members'
 import { EventApplicationForm } from './event_application_form'
 import { Markdown } from '@/components/common/markdown'
+import { STALE } from '@/components/scripts/query/queryClient'
+import { useOnce } from '@/components/hooks/useOnce'
 
 export interface EventPublicData {
   eventId: string
@@ -123,6 +125,25 @@ export const EventPublicView = ({
   const [showDeleteForm, setShowDeleteForm] = useState(false)
 
   const isOwner = userId === data.ownerId
+
+  const { data: membersData } = useQuery({
+    queryKey: queryKeys.events.members(data.eventId),
+    queryFn: () => eventApi.getMembers(data.eventId),
+    enabled: !isPreview && !!userId && !isOwner,
+    staleTime: STALE.short,
+  })
+  const isMember = !!membersData?.members.some(m => m.userId === userId)
+
+  const once = useOnce()
+  const handleLeave = () => once('leave-event', async () => {
+    try {
+      await eventApi.leave(data.eventId)
+      onBack()
+      queryClient.invalidateQueries({ queryKey: queryKeys.events.all })
+    } catch (error) {
+      console.error(error, 'Не удалось покинуть мероприятие')
+    }
+  })
 
   useEffect(() => {
     if (isPreview || !userId || isOwner) return
@@ -284,6 +305,9 @@ export const EventPublicView = ({
           <button className='back-button' onClick={onBack} disabled={isPreview}>
             <BackIcon className='ico' />
           </button>
+          {!isPreview && isMember && (
+            <button className='rate-button' onClick={handleLeave}>Покинуть</button>
+          )}
           {canModerateDelete && (
             <button className='moderation-delete-project-btn' onClick={() => setShowDeleteForm(true)}>
               <RejectIcon className='ico' />

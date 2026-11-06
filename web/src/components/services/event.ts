@@ -176,12 +176,14 @@ export const eventApi = {
     return await r.json()
   },
 
+  // Оценить
   addRating: async (eventId: string): Promise<{ success: boolean; ratingCount: number }> => {
     const r = await authFetch(`/api/event/${eventId}/rating`, { method: 'POST' })
     if (!r.ok) throw new Error(await readError(r, 'Ошибка оценки мероприятия'))
     return await r.json()
   },
 
+  // Убрать оценку
   removeRating: async (eventId: string): Promise<{ success: boolean; ratingCount: number }> => {
     const r = await authFetch(`/api/event/${eventId}/rating`, { method: 'DELETE' })
     if (!r.ok) throw new Error(await readError(r, 'Ошибка отмены оценки'))
@@ -338,5 +340,15 @@ export const eventApi = {
     const r = await authFetch(`/api/event?${query.toString()}`)
     if (!r.ok) throw new Error(await readError(r, 'Ошибка загрузки мероприятий'))
     return await r.json()
+  },
+  // Удалить участника из мероприятия
+  removeMember: async (eventId: string, userId: string): Promise<void> => {
+    const r = await authFetch(`/api/event/${eventId}/members/${userId}`, { method: 'DELETE' })
+    if (!r.ok) throw new Error(await readError(r, 'Не удалось удалить участника'))
+  },
+  // Покинуть мероприятие (участник)
+  leave: async (eventId: string): Promise<void> => {
+    const r = await authFetch(`/api/event/${eventId}/members/me`, { method: 'DELETE' })
+    if (!r.ok) throw new Error(await readError(r, 'Не удалось покинуть мероприятие'))
   },
 }

@@ -1816,29 +1816,7 @@
     margin-left: 0;
   }
 
-  .media-item-wrapper {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .media-item {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .media-preview {
-    width: 100%;
-    height: rem(150);
-  }
-
-  .media-actions {
-    width: 100%;
-    justify-content: flex-end;
-  }
-
-  .media-action-btn span {
-    display: none;
-  }
+  .media-item { height: rem(40); }
 }
 
 @media (max-width: 480px) {

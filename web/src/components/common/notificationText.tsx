@@ -10,7 +10,7 @@ export const getNotificationIcon = (referenceType: string, contextData: any) => 
     if (
       [
         'removed', 'removed_self', 'project_deleted', 'owner_banned', 
-        'owner_deleted', 'project_deleted_by_moderator', 'project_deleted_by_owner', 'moderator_deleted_project'
+        'owner_deleted', 'project_deleted_by_moderator', 'project_deleted_by_owner'
       ].includes(eventType)
     ) {
       return { icon: RejectIcon, color: 'reject', borderColor: 'var(--important-color)' }
@@ -27,10 +27,9 @@ export const getNotificationIcon = (referenceType: string, contextData: any) => 
     } else if (
       [
         'response_rejected', 'response_cancelled', 'vacancy_deleted_by_moderator',
-        'moderator_deleted_vacancy', 'responses_revoked_project_deleted',
-        'responses_revoked_vacancy_deleted', 'responses_revoked_project_deleted_by_moderator',
-        'responses_revoked_vacancy_deleted_by_moderator', 'response_paused_owner_banned',
-        'response_resumed_owner_unbanned'
+        'responses_revoked_project_deleted', 'responses_revoked_vacancy_deleted', 
+        'responses_revoked_project_deleted_by_moderator', 'responses_revoked_vacancy_deleted_by_moderator', 
+        'response_paused_owner_banned', 'response_resumed_owner_unbanned'
       ].includes(eventType)
     ) {
       return { icon: RejectIcon, color: 'reject', borderColor: 'var(--important-color)' }
@@ -57,24 +56,32 @@ export const getNotificationIcon = (referenceType: string, contextData: any) => 
   }
 
   if (referenceType === 'system') {
-    if (
-      ['promoted_to_admin', 'promoted_to_moderator', 'moderator_promoted_user', 'moderator_unbanned_user'].includes(eventType)
-    ) {
+    if (['promoted_to_admin', 'promoted_to_moderator', 'unbanned'].includes(eventType)) {
       return { icon: AcceptIcon, color: 'accept', borderColor: 'var(--success-color)' }
     }
-    if (
-      ['demoted_from_admin', 'demoted_from_moderator', 'moderator_demoted_user', 'moderator_banned_user'].includes(eventType)
-    ) {
+    if (['demoted_from_admin', 'demoted_from_moderator', 'banned'].includes(eventType)) {
       return { icon: RejectIcon, color: 'reject', borderColor: 'var(--important-color)' }
-    }
-    if (eventType === 'unbanned') {
-      return { icon: AcceptIcon, color: 'accept', borderColor: 'var(--success-color)' }
     }
     return { icon: InfoIcon, color: 'info', borderColor: 'var(--info-color)' }
   }
 
-  if (['event', 'application', 'comment'].includes(referenceType)) {
+  if (referenceType === 'event') {
+    return ['event_deleted_by_owner', 'event_deleted_by_moderator', 'event_deleted_members_notified'].includes(eventType)
+      ? { icon: RejectIcon, color: 'reject', borderColor: 'var(--important-color)' }
+      : { icon: InfoIcon, color: 'info', borderColor: 'var(--info-color)' }
+  }
+
+  if (referenceType === 'application') {
+    if (eventType === 'application_accepted') return { icon: AcceptIcon, color: 'accept', borderColor: 'var(--success-color)' }
+    if (['application_rejected', 'application_revoked_event_deleted'].includes(eventType))
+      return { icon: RejectIcon, color: 'reject', borderColor: 'var(--important-color)' }
     return { icon: InfoIcon, color: 'info', borderColor: 'var(--info-color)' }
+  }
+
+  if (referenceType === 'comment') {
+    return ['comment_deleted_by_moderator', 'comment_deleted_by_owner'].includes(eventType)
+      ? { icon: RejectIcon, color: 'reject', borderColor: 'var(--important-color)' }
+      : { icon: InfoIcon, color: 'info', borderColor: 'var(--info-color)' }
   }
 
   return { icon: InfoIcon, color: 'info', borderColor: 'var(--info-color)' }
@@ -91,11 +98,14 @@ export const getNotificationText = (notification: NotificationData) => {
   const status = contextData?.status
   const reason = contextData?.reason
 
+  const comment = contextData?.comment
+  const targetName = contextData?.targetName || 'объект'
+  const note = comment ? <> Комментарий: {comment}</> : null
+
   const nicknameStyle = { fontWeight: 600, fontStyle: 'italic' }
   const projectStyle = { fontWeight: 600, fontStyle: 'italic', color: 'var(--primary-accent)' }
   const roleStyle = { fontWeight: 600, fontStyle: 'italic', color: 'var(--primary-accent)' }
   const statusStyle = { fontWeight: 600, fontStyle: 'italic', color: 'var(--primary-accent)' }
-
   // Системные уведомления
   if (referenceType === 'system') {
     switch (eventType) {
@@ -109,20 +119,14 @@ export const getNotificationText = (notification: NotificationData) => {
         return <span>С вас сняли роль <strong style={roleStyle}>модератора</strong></span>
       case 'unbanned':
         return <span>Вы были разблокированы</span>
-      case 'moderator_promoted_user':
-        return <span>Вы назначили пользователя <strong style={nicknameStyle}>{nickname}</strong> на роль <strong style={roleStyle}>{role}</strong></span>
-      case 'moderator_demoted_user':
-        return <span>Вы сняли роль <strong style={roleStyle}>{role}</strong> с пользователя <strong style={nicknameStyle}>{nickname}</strong></span>
-      case 'moderator_unbanned_user':
-        return <span>Вы разблокировали пользователя <strong style={nicknameStyle}>{nickname}</strong></span>
-      case 'moderator_banned_user':
-        return <span>Вы заблокировали пользователя <strong style={nicknameStyle}>{nickname}</strong></span>
+      case 'banned':
+        return <span>Ваш аккаунт был заблокирован. Причина: {reason || 'не указана'}</span>
       default:
         return <span>Системное уведомление</span>
     }
   }
 
-  // Уведомления по проекту
+  // Уведомления о проектах
   if (referenceType === 'project') {
     switch (eventType) {
       case 'added':
@@ -149,22 +153,24 @@ export const getNotificationText = (notification: NotificationData) => {
         return <span>Ваш проект <strong style={projectStyle}>{projectName}</strong> был удалён модератором. Причина: {reason || 'не указана'}</span>
       case 'project_deleted_by_owner': 
         return <span>Ваш проект <strong style={projectStyle}>{projectName}</strong> был удалён</span>
-      case 'moderator_deleted_project':
-        return <span>Вы удалили проект <strong style={projectStyle}>{projectName}</strong>. Причина: {reason || 'не указана'}</span>
+      case 'member_left':
+        return <span><strong style={nicknameStyle}>{nickname || 'Пользователь'}</strong> покинул(а) проект <strong style={projectStyle}>{projectName}</strong></span>
       default:
         return <span>Уведомление о проекте <strong style={projectStyle} onClick={(e) => { e.stopPropagation() }}>{projectName}</strong></span>
     }
   }
 
-  // Уведомления по откликам
+  // Уведомления о откликах
   if (referenceType === 'response') {
     switch (eventType) {
-      case 'response_sent':
-        return <span>Отклик на участие в проекте <strong style={projectStyle} onClick={(e) => { e.stopPropagation() }}>{projectName}</strong> на роль <strong style={roleStyle}>{vacancyName}</strong> был отправлен</span>
+      case 'response_received':
+        return <span>Вы получили отклик от <strong style={nicknameStyle}>{nickname || 'Пользователь'}</strong> к проекту <strong style={projectStyle} onClick={(e) => { e.stopPropagation() }}>{projectName}</strong> на роль <strong style={roleStyle}>{vacancyName}</strong></span>
       case 'response_accepted':
         return <span>Отклик на участие в проекте <strong style={projectStyle} onClick={(e) => { e.stopPropagation() }}>{projectName}</strong> на роль <strong style={roleStyle}>{vacancyName}</strong> был принят</span>
       case 'response_rejected':
         return <span>Ваш отклик на участие в проекте <strong style={projectStyle} onClick={(e) => { e.stopPropagation() }}>{projectName}</strong> на роль <strong style={roleStyle}>{vacancyName}</strong> был отклонен</span>
+      case 'response_cancelled':
+        return <span>Полученный отклик от <strong style={nicknameStyle}>{nickname || 'Пользователь'}</strong> к проекту <strong style={projectStyle} onClick={(e) => { e.stopPropagation() }}>{projectName}</strong> на роль <strong style={roleStyle}>{vacancyName}</strong> был отозван</span>
       case 'responses_revoked_owner_deleted':
         return <span>Все отклики к проектам <strong style={nicknameStyle}>{nickname || 'пользователя'}</strong> были отозваны. Владелец проекта удалил свой аккаунт</span>
       case 'responses_revoked_project_deleted':
@@ -179,30 +185,26 @@ export const getNotificationText = (notification: NotificationData) => {
         return <span>Рассмотрение вашего отклика на роль <strong style={roleStyle}>{vacancyName}</strong> в проекте <strong style={projectStyle} onClick={(e) => { e.stopPropagation() }}>{projectName}</strong> приостановлено. Владелец проекта заблокирован</span>
       case 'response_resumed_owner_unbanned':
         return <span>Рассмотрение вашего отклика на роль <strong style={roleStyle}>{vacancyName}</strong> в проекте <strong style={projectStyle} onClick={(e) => { e.stopPropagation() }}>{projectName}</strong> возобновлено. Владелец проекта разблокирован</span>
-      case 'response_received':
-        return <span>Вы получили отклик от <strong style={nicknameStyle}>{nickname || 'Пользователь'}</strong> к проекту <strong style={projectStyle} onClick={(e) => { e.stopPropagation() }}>{projectName}</strong> на роль <strong style={roleStyle}>{vacancyName}</strong></span>
       case 'responses_revoked_user_deleted':
         return <span>Все полученные отклики от <strong style={nicknameStyle}>{nickname || 'Пользователь'}</strong> были отозваны. Пользователь удалил свой аккаунт</span>
-      case 'response_cancelled':
-        return <span>Полученный отклик от <strong style={nicknameStyle}>{nickname || 'Пользователь'}</strong> к проекту <strong style={projectStyle} onClick={(e) => { e.stopPropagation() }}>{projectName}</strong> на роль <strong style={roleStyle}>{vacancyName}</strong> был отозван. Отклик отменен отправителем</span>
       case 'vacancy_deleted_by_moderator':
         return <span>Ваша заявка <strong style={roleStyle}>{vacancyName}</strong> была удалена модератором. Причина: {reason || 'не указана'}</span>
-      case 'moderator_deleted_vacancy':
-        return <span>Вы удалили заявку <strong style={roleStyle}>{vacancyName}</strong>. Причина: {reason || 'не указана'}</span>
       default:
         return <span>Уведомление об отклике к проекту <strong style={projectStyle} onClick={(e) => { e.stopPropagation() }}>{projectName}</strong></span>
     }
   }
 
-  // Уведомления по приглашениям
+  // Уведомления о приглашениях
   if (referenceType === 'invite') {
     switch (eventType) {
-      case 'invite_sent':
-        return <span>Приглашение на участие в проекте <strong style={projectStyle} onClick={(e) => { e.stopPropagation() }}>{projectName}</strong> на роль <strong style={roleStyle}>{vacancyName}</strong> было отправлено</span>
+      case 'invite_received':
+        return <span>Вы получили приглашение от <strong style={nicknameStyle}>{nickname || 'Пользователь'}</strong> к проекту <strong style={projectStyle} onClick={(e) => { e.stopPropagation() }}>{projectName}</strong> на роль <strong style={roleStyle}>{vacancyName}</strong></span>
       case 'invite_accepted':
         return <span>Приглашение на участие в проекте <strong style={projectStyle} onClick={(e) => { e.stopPropagation() }}>{projectName}</strong> на роль <strong style={roleStyle}>{vacancyName}</strong> было принято</span>
       case 'invite_rejected':
         return <span>Ваше приглашение на участие в проекте <strong style={projectStyle} onClick={(e) => { e.stopPropagation() }}>{projectName}</strong> на роль <strong style={roleStyle}>{vacancyName}</strong> было отклонено</span>
+      case 'invite_cancelled':
+        return <span>Полученное приглашение от <strong style={nicknameStyle}>{nickname || 'Пользователь'}</strong> к проекту <strong style={projectStyle} onClick={(e) => { e.stopPropagation() }}>{projectName}</strong> на роль <strong style={roleStyle}>{vacancyName}</strong> было отозвано</span>
       case 'invites_revoked_owner_deleted':
         return <span>Все приглашения к проектам <strong style={nicknameStyle}>{nickname || 'пользователя'}</strong> были отозваны. Владелец проекта удалил свой аккаунт</span>
       case 'invites_revoked_project_deleted':
@@ -217,18 +219,13 @@ export const getNotificationText = (notification: NotificationData) => {
         return <span>Рассмотрение вашего приглашения на роль <strong style={roleStyle}>{role}</strong> в проекте <strong style={projectStyle} onClick={(e) => { e.stopPropagation() }}>{projectName}</strong> приостановлено. Владелец проекта заблокирован</span>
       case 'invite_resumed_owner_unbanned':
         return <span>Рассмотрение вашего приглашения на роль <strong style={roleStyle}>{role}</strong> в проекте <strong style={projectStyle} onClick={(e) => { e.stopPropagation() }}>{projectName}</strong> возобновлено. Владелец проекта разблокирован</span>
-      case 'invite_received':
-        return <span>Вы получили приглашение от <strong style={nicknameStyle}>{nickname || 'Пользователь'}</strong> к проекту <strong style={projectStyle} onClick={(e) => { e.stopPropagation() }}>{projectName}</strong> на роль <strong style={roleStyle}>{vacancyName}</strong></span>
       case 'invites_revoked_user_deleted':
         return <span>Все полученные приглашения от <strong style={nicknameStyle}>{nickname || 'Пользователь'}</strong> были отозваны. Пользователь удалил свой аккаунт</span>
-      case 'invite_cancelled':
-        return <span>Полученное приглашение от <strong style={nicknameStyle}>{nickname || 'Пользователь'}</strong> к проекту <strong style={projectStyle} onClick={(e) => { e.stopPropagation() }}>{projectName}</strong> на роль <strong style={roleStyle}>{vacancyName}</strong> было отозвано. Приглашение отменено отправителем</span>
       default:
         return <span>Уведомление о приглашении к проекту <strong style={projectStyle} onClick={(e) => { e.stopPropagation() }}>{projectName}</strong></span>
     }
   }
-
-  // Уведомления по мероприятиями
+  // Уведомления по мероприятиям
   if (referenceType === 'event') {
     switch (eventType) {
       case 'event_deleted_by_owner':
@@ -237,16 +234,28 @@ export const getNotificationText = (notification: NotificationData) => {
         return <span>Мероприятие <strong style={projectStyle}>{eventName}</strong> было удалено модератором. Причина: {reason || 'не указана'}</span>
       case 'event_deleted_members_notified':
         return <span>Мероприятие <strong style={projectStyle}>{eventName}</strong>, в котором вы участвовали, было удалено</span>
-      case 'moderator_deleted_event':
-        return <span>Вы удалили мероприятие <strong style={projectStyle}>{eventName}</strong>. Причина: {reason || 'не указана'}</span>
+      case 'status_changed':
+        return <span>Статус мероприятия <strong style={projectStyle}>{eventName}</strong> был изменён на <strong style={statusStyle}>{status}</strong></span>
       default:
         return <span>Уведомление о мероприятии <strong style={projectStyle}>{eventName}</strong></span>
     }
   }
 
-  // Уведомления по заявкам к мероприятию
+  // Уведомления по заявкам к мероприятиям
   if (referenceType === 'application') {
     switch (eventType) {
+      case 'application_received':
+        return <span><strong style={nicknameStyle}>{nickname}</strong> подал(а) заявку на мероприятие <strong style={projectStyle}>{eventName}</strong></span>
+      case 'application_resubmitted':
+        return <span><strong style={nicknameStyle}>{nickname}</strong> повторно отправил(а) заявку на мероприятие <strong style={projectStyle}>{eventName}</strong></span>
+      case 'application_withdrawn':
+        return <span><strong style={nicknameStyle}>{nickname}</strong> отозвал(а) заявку на мероприятие <strong style={projectStyle}>{eventName}</strong></span>
+      case 'application_accepted':
+        return <span>Ваша заявка на мероприятие <strong style={projectStyle}>{eventName}</strong> принята.{note}</span>
+      case 'application_rejected':
+        return <span>Ваша заявка на мероприятие <strong style={projectStyle}>{eventName}</strong> отклонена.{note}</span>
+      case 'application_revision':
+        return <span>Организатор просит доработать вашу заявку на мероприятие <strong style={projectStyle}>{eventName}</strong>.{note}</span>
       case 'application_revoked_event_deleted':
         return <span>Ваша заявка на мероприятие <strong style={projectStyle}>{eventName}</strong> была отменена в связи с удалением мероприятия</span>
       default:
@@ -259,10 +268,41 @@ export const getNotificationText = (notification: NotificationData) => {
     switch (eventType) {
       case 'comment_mention':
         return <span><strong style={nicknameStyle}>{nickname}</strong> упомянул(а) вас в комментарии</span>
+      case 'comment_reply':
+        return <span><strong style={nicknameStyle}>{nickname}</strong> ответил(а) на ваш комментарий к <strong style={projectStyle}>{targetName}</strong></span>
+      case 'comment_new':
+        return <span><strong style={nicknameStyle}>{nickname}</strong> оставил(а) комментарий к <strong style={projectStyle}>{targetName}</strong></span>
+      case 'comment_deleted_by_moderator':
+        return <span>Ваш комментарий к <strong style={projectStyle}>{targetName}</strong> был удалён модератором</span>
+      case 'comment_deleted_by_owner':
+        return <span>Ваш комментарий к <strong style={projectStyle}>{targetName}</strong> был удалён владельцем</span>
       default:
         return <span>Новое действие в комментариях</span>
     }
   }
 
   return <span>Уведомление</span>
+}
+
+const NO_LINK = /deleted|revoked|owner_banned|^removed/
+
+export const getNotificationLink = (n: NotificationData, userId: string | null): string | null => {
+  if (!userId) return null
+  const t = n.contextData?.eventType ?? ''
+  if (!['comment'].includes(n.referenceType) && NO_LINK.test(t)) return null
+  const id = n.referenceId
+  switch (n.referenceType) {
+    case 'project': case 'response': case 'invite':
+      return `/profile/${userId}/activity/project/${id}`
+    case 'event':
+      return `/profile/${userId}/activity/event/${id}`
+    case 'application':
+      return (t === 'application_received' || t === 'application_resubmitted') && n.contextData?.applicationId
+        ? `/profile/${userId}/activity/event/${id}/applications/${n.contextData.applicationId}`
+        : `/profile/${userId}/activity/event/${id}`
+    case 'comment':
+      return `/profile/${userId}/activity/${n.contextData?.refType === 'event' ? 'event' : 'project'}/${id}`
+    default:
+      return null
+  }
 }

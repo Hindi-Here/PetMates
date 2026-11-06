@@ -127,14 +127,13 @@
     border: none;
     font-size: rem(14);
     
-    font-weight: 400;
+    font-weight: normal;
     -webkit-font-smoothing: antialiased; 
     font-smooth: always;
 
     color: var(--neutral-100);
     transition: background-color 0.2s ease;
     white-space: nowrap;
-    cursor: pointer;
 
     &:hover {
       background: color-mix(in srgb, var(--neutral-100), transparent 92%);

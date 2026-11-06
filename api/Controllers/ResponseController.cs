@@ -174,7 +174,6 @@ namespace api.Controllers
                     ["projectName"] = projectData.Title,
                     ["vacancyName"] = vacancy.Title,
                 };
-                await _SupMan.SendNotificationAsync(actor.UserId, "response", projectData.ProjectId, "response_sent", new(ctx));
                 await _SupMan.SendNotificationAsync(projectData.OwnerId, "response", projectData.ProjectId, "response_received",
                     new(ctx) { ["nickname"] = me?.Nickname ?? "Пользователь" });
 

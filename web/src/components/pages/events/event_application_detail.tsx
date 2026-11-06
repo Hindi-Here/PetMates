@@ -1,4 +1,4 @@
-import '../project.scss'
+import './event_application_detail.scss'
 import BackIcon from '@icons/back.svg?react'
 
 import { useState } from 'react'
@@ -7,10 +7,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '../../scripts/query/queryKeys'
 import { eventApi, type ApplicationDecision } from '../../services/event'
 import { ApplicationStatusBadge } from './event_application_status'
+import { UserCard } from '../../common/userCard'
 
 import { LIMITS } from '../../scripts/limits'
 import { STALE } from '@/components/scripts/query/queryClient'
-import { Avatar } from '@/components/common/avatar'
 
 interface EventApplicationDetailProps {
   eventId: string
@@ -18,7 +18,6 @@ interface EventApplicationDetailProps {
   basePath: string
 }
 
-// Компонент для отображения деталей заявки на участие в мероприятии, включая информацию о заявителе, ответы на вопросы и возможность принять или отклонить заявку
 export const EventApplicationDetail = ({ eventId, applicationId, basePath }: EventApplicationDetailProps) => {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -28,6 +27,8 @@ export const EventApplicationDetail = ({ eventId, applicationId, basePath }: Eve
   const [mode, setMode] = useState<'revision' | 'reject' | null>(null)
   const [comment, setComment] = useState('')
   const [error, setError] = useState<string | null>(null)
+  
+  const [confirmRemove, setConfirmRemove] = useState(false)
 
   const { data: app, isLoading } = useQuery({
     queryKey: detailKey,
@@ -51,6 +52,20 @@ export const EventApplicationDetail = ({ eventId, applicationId, basePath }: Eve
     onError: (e: Error) => setError(e.message),
   })
 
+  const removeMutation = useMutation({
+    mutationFn: (userId: string) => eventApi.removeMember(eventId, userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: detailKey })
+      queryClient.invalidateQueries({ queryKey: queryKeys.events.applications(eventId) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.events.members(eventId) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.events.byId(eventId) })
+      setConfirmRemove(false)
+      setError(null)
+      navigate(listPath)
+    },
+    onError: (e: Error) => setError(e.message),
+  })
+
   if (isLoading) return <div className='loading-container' />
 
   if (!app) {
@@ -62,7 +77,6 @@ export const EventApplicationDetail = ({ eventId, applicationId, basePath }: Eve
   }
 
   const applicant = app.applicant
-  const meta = [applicant.realName, applicant.age && `${applicant.age} лет`, applicant.city].filter(Boolean)
   const canDecide = app.status === 'pending' || app.status === 'revision'
   const limitReached = app.participantLimit !== null && app.membersCount >= app.participantLimit
   const banned = applicant.isBanned === true
@@ -78,50 +92,50 @@ export const EventApplicationDetail = ({ eventId, applicationId, basePath }: Eve
     decideMutation.mutate({ decision: mode, comment: comment.trim() })
   }
 
+  const handleRemove = () => {
+    if (removeMutation.isPending) return
+    removeMutation.mutate(applicant.userId)
+  }
+
   const created = new Date(app.createdAt)
 
   return (
-    <>
-      <section className='project-section'>
-        <div className='event-app-detail-head'>
-          <button className='event-app-back' onClick={() => navigate(listPath)}>
+    <div className='application-detail-page'>
+      <div className='application-header'>
+        <div className='header-left'>
+          <button className='back-button' onClick={() => navigate(listPath)}>
             <BackIcon className='ico' />
           </button>
-          <h2 className='project-section-title'>Заявка на участие</h2>
-          <ApplicationStatusBadge status={app.status} />
-        </div>
-
-        <div className='event-app-applicant-card'>
-          <Avatar src={applicant.avatarUrl} alt={applicant.nickname} className="event-app-applicant-avatar" />
-          <div className='event-app-applicant-card-info'>
-            <p className='event-app-applicant-name'>@{applicant.nickname}</p>
-            {meta.length > 0 && <p className='event-app-applicant-meta'>{meta.join(' • ')}</p>}
-            <p className='event-app-applicant-role'>{applicant.profileRole || 'Роль не указана'}</p>
+          <div className='title-wrapper'>
+            <h2 className='page-title'>Заявка на участие</h2>
+            <span className='submitted-date'>
+              Подана {created.toLocaleDateString('ru-RU')}, {created.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+            </span>
           </div>
-          <button className='event-app-profile-btn' onClick={() => navigate(`/profile/${applicant.userId}/info`)}>
-            Открыть профиль
-          </button>
         </div>
+        <ApplicationStatusBadge status={app.status} />
+      </div>
 
-        <p className='event-field-hint'>
-          Подана {created.toLocaleDateString('ru-RU')}, {created.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
-          {app.updatedAt !== app.createdAt && ` • доработана ${new Date(app.updatedAt).toLocaleDateString('ru-RU')}`}
-        </p>
-      </section>
+      <UserCard
+        user={applicant}
+        disabledInvite={true}
+        showModerationMenu={false}
+        role={applicant.profileRole || undefined}
+      />
 
-      <section className='project-section'>
-        <h2 className='project-section-title'>Ответы</h2>
-        <div className='event-app-answers'>
+      <section className='form-section'>
+        <h3 className='section-title'>Форма</h3>
+        <div className='answers-list'>
           {app.answers.length === 0 && (
-            <p className='event-field-hint'>В форме не было вопросов: заявка подана без ответов</p>
+            <p className='status-hint'>В форме не было вопросов: заявка подана без ответов</p>
           )}
           {app.answers.map(answer => (
-            <div key={answer.fieldId} className='event-app-answer'>
-              <p className='event-app-answer-label'>
+            <div key={answer.fieldId} className='answer-item'>
+              <p className='answer-label'>
                 {answer.label}
                 {answer.required && <span className='required-mark'> *</span>}
               </p>
-              <p className={`event-app-answer-value ${answer.value ? '' : 'empty'}`}>
+              <p className={`answer-value ${answer.value ? '' : 'empty'}`}>
                 {answer.value || 'Не заполнено'}
               </p>
             </div>
@@ -130,7 +144,7 @@ export const EventApplicationDetail = ({ eventId, applicationId, basePath }: Eve
       </section>
 
       {app.decisionComment && (
-        <section className='project-section'>
+        <section className='form-section'>
           <div className={`event-app-banner ${app.status}`}>
             <p className='event-app-banner-title'>
               {app.status === 'revision' ? 'Комментарий для доработки' : 'Комментарий к решению'}
@@ -140,80 +154,101 @@ export const EventApplicationDetail = ({ eventId, applicationId, basePath }: Eve
         </section>
       )}
 
-      <section className='project-section'>
-        <h2 className='project-section-title'>Решение</h2>
+      {canDecide && (
+        <section className='decision-section'>
+          <h3 className='section-title'>Решение</h3>
+          
+          {error && <p className='error-message'>{error}</p>}
 
-        {canDecide ? (
-          <div className='event-decision-panel'>
-            <p className='event-field-hint'>
-              Участников: {app.membersCount}{app.participantLimit ? ` / ${app.participantLimit}` : ''}
-              {limitReached && ' — лимит исчерпан, принять заявку нельзя'}
-              {banned && ' — пользователь заблокирован, принять заявку нельзя'}
-            </p>
-
-            <div className='event-decision-actions'>
-              <button className='event-decision-btn accept' onClick={handleAccept} disabled={!canAccept || decideMutation.isPending}>
-                Принять
-              </button>
-              <button
-                className={`event-decision-btn neutral ${mode === 'revision' ? 'active' : ''}`}
-                onClick={() => { setMode(mode === 'revision' ? null : 'revision'); setComment('') }}
-                disabled={decideMutation.isPending}
-              >
-                На доработку
-              </button>
-              <button
-                className={`event-decision-btn danger ${mode === 'reject' ? 'active' : ''}`}
-                onClick={() => { setMode(mode === 'reject' ? null : 'reject'); setComment('') }}
-                disabled={decideMutation.isPending}
-              >
-                Отклонить
-              </button>
-            </div>
-
-            {mode && (
-              <div className='event-decision-comment'>
-                <textarea
-                  className='event-answer-input'
-                  value={comment}
-                  maxLength={LIMITS.event.decisionCommentMax}
-                  placeholder={mode === 'revision' ? 'Что нужно доработать (обязательно)' : 'Причина отказа (необязательно)'}
-                  onChange={e => setComment(e.target.value)}
-                />
-                <div className='event-decision-confirm'>
-                  <button
-                    className={`event-decision-btn ${mode === 'reject' ? 'danger active' : 'neutral active'}`}
-                    onClick={handleConfirm}
-                    disabled={decideMutation.isPending || (mode === 'revision' && !comment.trim())}
-                  >
-                    {mode === 'revision' ? 'Отправить на доработку' : 'Подтвердить отказ'}
-                  </button>
-                  <button className='event-decision-btn neutral' onClick={() => { setMode(null); setComment('') }}>
-                    Отмена
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {error && <p className='event-field-error'>{error}</p>}
+          <div className='decision-buttons'>
+            <button className='decision-btn accept' onClick={handleAccept} disabled={!canAccept || decideMutation.isPending}>
+              Принять
+            </button>
+            <button
+              className={`decision-btn revision ${mode === 'revision' ? 'active' : ''}`}
+              onClick={() => { setMode(mode === 'revision' ? null : 'revision'); setComment('') }}
+              disabled={decideMutation.isPending}
+            >
+              На доработку
+            </button>
+            <button
+              className='decision-btn reject'
+              onClick={() => decideMutation.mutate({ decision: 'reject', comment: '' })}
+              disabled={decideMutation.isPending}
+            >
+              Отклонить
+            </button>
           </div>
-        ) : (
-          <div className='event-decision-panel'>
-            <p className='event-field-hint'>
-              {app.status === 'accepted'
-                ? 'Заявка принята. Пользователь добавлен в участников мероприятия.'
-                : 'Заявка отклонена. Пользователь может исправить её и отправить повторно.'}
-            </p>
-            {app.status === 'accepted' && (
-              <div className='event-decision-actions'>
-                <button className='event-decision-btn neutral' onClick={() => navigate(`${basePath}/members`)}>
-                  К участникам
+
+          {mode === 'revision' && (
+            <div className='comment-area'>
+              <textarea
+                className='comment-textarea'
+                value={comment}
+                maxLength={LIMITS.event.decisionCommentMax}
+                placeholder='Что нужно доработать (обязательно)'
+                onChange={e => setComment(e.target.value)}
+              />
+              <div className='comment-actions'>
+                <button
+                  className='comment-btn confirm'
+                  onClick={handleConfirm}
+                  disabled={decideMutation.isPending || !comment.trim()}
+                >
+                  Отправить на доработку
+                </button>
+                <button className='comment-btn cancel' onClick={() => { setMode(null); setComment('') }}>
+                  Отмена
                 </button>
               </div>
-            )}
-          </div>
-        )}
-      </section>
-    </>
+            </div>
+          )}
+        </section>
+      )}
+
+      {!canDecide && (
+        <section className='decision-section'>
+          <h3 className='section-title'>Решение</h3>
+          <p className='status-hint'>
+            {app.status === 'accepted'
+              ? 'Заявка принята. Пользователь добавлен в участников мероприятия.'
+              : 'Заявка отклонена. Пользователь может исправить её и отправить повторно.'}
+          </p>
+          
+          {error && <p className='error-message'>{error}</p>}
+
+          {app.status === 'accepted' && (
+            <>
+              {confirmRemove && (
+                <p className='status-hint' style={{ color: 'var(--important-color)', marginTop: 'rem(8)' }}>
+                  Исключить <strong>@{applicant.nickname}</strong> из участников? Пользователь получит уведомление и сможет подать заявку заново.
+                </p>
+              )}
+              <div className='decision-buttons' style={{ marginTop: 'rem(8)' }}>
+                {confirmRemove ? (
+                  <>
+                    <button className='decision-btn red' onClick={handleRemove} disabled={removeMutation.isPending}>
+                      {removeMutation.isPending ? 'Удаление...' : 'Подтвердить'}
+                    </button>
+                    <button className='decision-btn cancellation' onClick={() => setConfirmRemove(false)} disabled={removeMutation.isPending}>
+                      Отмена
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button className='decision-btn red' onClick={() => setConfirmRemove(true)}>
+                      Удалить из мероприятия
+                    </button>
+                    <button className='decision-btn cancellation' onClick={() => navigate(`${basePath}/members`)}>
+                      К участникам
+                    </button>
+                  </>
+                )}
+              </div>
+            </>
+          )}
+        </section>
+      )}
+    </div>
   )
 }

@@ -131,7 +131,6 @@ export const EventApplicationForm = ({ data }: { data: EventPublicData }) => {
                   onChange={e => { setValues(prev => ({ ...prev, [field.id]: e.target.value })); setTouched(prev => ({ ...prev, [field.id]: true })) }}
                   onBlur={() => setTouched(prev => ({ ...prev, [field.id]: true }))}
                 />
-                {fieldError && <p className='event-field-error'>{fieldError}</p>}
               </div>
             )
           })}
@@ -156,7 +155,11 @@ export const EventApplicationForm = ({ data }: { data: EventPublicData }) => {
         {hint && <p className='event-field-hint'>{hint}</p>}
       </div>
 
-      {error && <p className='event-field-error'>{error}</p>}
+      {error && (
+        <p className='save-error-text message-auto-hide' onAnimationEnd={() => setError(null)}>
+          {error}
+        </p>
+      )}
     </section>
   )
 }

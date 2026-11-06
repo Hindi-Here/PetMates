@@ -150,6 +150,12 @@ const AuthorizedProfile = () => {
     contacts: '',
     avatarUrl: '',
   })
+
+  const serverKey = useMemo(() => user ? JSON.stringify([
+    user.nickname, user.realName, user.age, user.gender, user.country, user.city,
+    user.workplace, user.profileRole, user.description, user.hardSkills,
+    user.softSkills, user.contacts, user.avatarUrl,
+  ]) : '', [user])
   
   useEffect(() => {
     if (user) {
@@ -184,7 +190,7 @@ const AuthorizedProfile = () => {
         setContacts([])
       }
     }
-  }, [user])
+  }, [serverKey])
   
   const hasChanges = useMemo(() => {
     if (!user) return false

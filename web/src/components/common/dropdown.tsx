@@ -24,7 +24,7 @@ export function HeaderDropdownNavigation({
     path: string;
   }
 
-  // Десктоп меню
+  // Десктоп меню (только для авторизованных)
   const desktopMenuItems: NavItem[] = userId ? [
     { id: 'info', label: 'Информация', path: `/profile/${userId}/info` },
     { id: 'activity', label: 'Активность', path: `/profile/${userId}/activity` },
@@ -34,22 +34,8 @@ export function HeaderDropdownNavigation({
     { id: 'settings', label: 'Настройки', path: `/profile/${userId}/settings` },
   ] : [];
 
-  // Мобильное меню
-  const mobileMenuItemsAuthenticated: NavItem[] = userId ? [
-    { id: 'info', label: 'Профиль', path: `/profile/${userId}/info` },
-    { id: 'applications', label: 'Заявки', path: '/vacancy' },
-    { id: 'events', label: 'Мероприятия', path: '/events' },
-    { id: 'users', label: 'Участники', path: '/users' },
-    { id: 'activity', label: 'Активность', path: `/profile/${userId}/activity` },
-    { id: 'responses', label: 'Отклики', path: `/profile/${userId}/responces` },
-    { id: 'messages', label: 'Сообщения', path: `/profile/${userId}/messages` },
-    { id: 'notifications', label: 'Уведомления', path: `/profile/${userId}/notifications` },
-    { id: 'beta', label: 'Бета-тестирование', path: '/bug' },
-    { id: 'settings', label: 'Настройки', path: `/profile/${userId}/settings` },
-  ] : [];
-
-  // Режим гостя
-  const mobileMenuItemsGuestTop: NavItem[] = [
+  // Мобильное меню (гость, авторизованный)
+  const mobileMenuItems: NavItem[] = [
     { id: 'profile', label: 'Профиль', path: '/profile' },
     { id: 'applications', label: 'Заявки', path: '/vacancy' },
     { id: 'events', label: 'Мероприятия', path: '/events' },
@@ -73,9 +59,7 @@ export function HeaderDropdownNavigation({
       <hr className='separator' />
 
       {!isShortVer && desktopMenuItems.map(renderNavItem)}
-
-      {isShortVer && isAuthenticated && mobileMenuItemsAuthenticated.map(renderNavItem)}
-      {isShortVer && !isAuthenticated && mobileMenuItemsGuestTop.map(renderNavItem)}
+      {isShortVer && mobileMenuItems.map(renderNavItem)}
 
       <hr className='separator' />
 

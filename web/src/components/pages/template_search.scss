@@ -25,6 +25,7 @@
   flex-direction: column;
   gap: rem(24);
   width: 100%;
+  padding-bottom: rem(24);
 }
 
 .content-item-container {
@@ -63,20 +64,7 @@
   }
 }
 
-.found-content-container,
-.search-content-container {
-  width: 80%;
-  margin-left: 10%;
-
-  @media (max-width: 900px) {
-    width: 92%;
-    margin-left: 4%;
-  }
-
-  @media (max-width: 480px) {
-    width: 100%;
-    margin-left: 0;
-    padding-left: rem(12);
-    padding-right: rem(12);
-  }
+.found-content-container {
+  @media (max-width: 900px) { width: 92%; margin-left: 4%; }
+  @media (max-width: 480px) { width: 100%; margin-left: 0; padding-left: rem(12); padding-right: rem(12); }
 }

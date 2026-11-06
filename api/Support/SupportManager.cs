@@ -820,24 +820,36 @@ namespace api.Support
             if (ev == null) return;
 
             var members = await _client.From<EventMember>().Where(m => m.EventId == eventId).Get();
-            var affectedMembers = members.Models.Select(m => m.UserId).Distinct().ToList();
+            var affectedMembers = members.Models
+                .Select(m => m.UserId)
+                .Where(id => !string.IsNullOrEmpty(id))
+                .Distinct()
+                .ToList();
 
-            var applications = await _client.From<EventApplication>()
-                .Where(a => a.EventId == eventId && (a.Status == "pending" || a.Status == "revision"))
-                .Get();
-            var affectedApplicants = applications.Models.Select(a => a.UserId).Distinct().ToList();
+            var applications = await _client.From<EventApplication>().Where(a => a.EventId == eventId).Get();
+            var affectedApplicants = applications.Models
+                .Where(a => a.Status == "pending" || a.Status == "revision")
+                .Select(a => a.UserId)
+                .Where(id => !string.IsNullOrEmpty(id))
+                .Distinct()
+                .ToList();
 
             await _client.From<Event>().Where(e => e.EventId == eventId).Delete();
-
             await DeleteEventMedia(eventId);
-
             await Cache.EventsChangedAsync();
 
             var deleteEventType = isModeration ? "event_deleted_by_moderator" : "event_deleted_by_owner";
-            var ownerNotifyData = new Dictionary<string, object> { { "eventName", ev.Title } };
-            if (!string.IsNullOrEmpty(reason)) ownerNotifyData["reason"] = reason;
 
-            await SendNotificationAsync(ev.OwnerId, "event", eventId, deleteEventType, ownerNotifyData);
+            if (!string.IsNullOrEmpty(ev.OwnerId))
+            {
+                var ownerNotifyData = new Dictionary<string, object> { { "eventName", ev.Title } };
+                if (!string.IsNullOrEmpty(reason))
+                {
+                    ownerNotifyData["reason"] = reason;
+                }
+
+                await SendNotificationAsync(ev.OwnerId, "event", eventId, deleteEventType, ownerNotifyData);
+            }
 
             foreach (var memberId in affectedMembers)
             {
@@ -845,7 +857,7 @@ namespace api.Support
                 {
                     { "eventName", ev.Title }
                 });
-             }
+            }
 
             foreach (var applicantId in affectedApplicants)
             {
@@ -1058,7 +1070,7 @@ namespace api.Support
 
                 await SendNotificationAsync(
                     mentionedUser.UserId!, "comment", comment.ReferenceId, "comment_mention",
-                    new Dictionary<string, object> { ["nickname"] = authorNickname, ["commentId"] = comment.CommentId });
+                    new Dictionary<string, object> { ["nickname"] = authorNickname, ["commentId"] = comment.CommentId, ["refType"] = comment.ReferenceType });
             }
         }
 
@@ -1485,6 +1497,18 @@ namespace api.Support
                 if (responseIds.Count > 0)
                     await _client.From<Response>().Where(r => responseIds.Contains(r.ResponseId)).Delete();
             }
+        }
+
+        // Владелец и название объекта комментариев
+        public async Task<(string? OwnerId, string Title)> GetReferenceInfoAsync(string type, string id)
+        {
+            if (type == "event")
+            {
+                var e = (await _client.From<Event>().Where(x => x.EventId == id).Get()).Models.FirstOrDefault();
+                return (e?.OwnerId, e?.Title ?? "Мероприятие");
+            }
+            var p = (await _client.From<Project>().Where(x => x.ProjectId == id).Get()).Models.FirstOrDefault();
+            return (p?.OwnerId, p?.Title ?? "Проект");
         }
 
         [GeneratedRegex(@"@([a-zA-Z0-9_]+)", RegexOptions.Compiled)]

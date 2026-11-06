@@ -155,7 +155,7 @@ export const EventMarkdownEditor = ({
           </div>
         </div>
 
-        {mediaError && <p className='media-error-text'>{mediaError}</p>}
+        {mediaError && <p className='media-error-text message-auto-hide'>{mediaError}</p>}
 
         {media.length > 0 && (
           <div className='media-list'>
